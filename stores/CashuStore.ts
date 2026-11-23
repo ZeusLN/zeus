@@ -376,6 +376,10 @@ export default class CashuStore {
     // Bumped by reset() so background work started for one wallet session
     // can tell that the wallet changed while it ran
     private walletSession = 0;
+    // The offline-token sweep in flight for each wallet (node dir). reset()
+    // also runs when the same wallet reconnects, and a sweep started then
+    // waits for this one instead of submitting its tokens again (#5579)
+    private offlineSweeps = new Map<string, Promise<void>>();
     // The node dir initializeWallets() loaded the offline queues from. A
     // wallet switch points getNodeDir() at the next wallet before reset()
     // runs, and the store holds this wallet's queues until then
@@ -6401,6 +6405,58 @@ export default class CashuStore {
         // at the next wallet, so remember which wallet this sweep is for
         const session = this.walletSession;
         const nodeDir = this.getNodeDir();
+
+        // One sweep at a time for a wallet. A sweep that reset() stopped
+        // still has a claim at the mint, and its token is in the stored
+        // queue this wallet has just loaded again. Wait for that sweep and
+        // go on from the queue it leaves
+        const previous = this.offlineSweeps.get(nodeDir);
+        const run = (async () => {
+            if (previous) {
+                await previous.catch(() => {});
+                await this.loadOfflineQueues(session, nodeDir);
+            }
+            // Ends at once, with nothing written, if reset() came meanwhile
+            await this.runOfflineSweep(session, nodeDir);
+        })();
+        this.offlineSweeps.set(nodeDir, run);
+        try {
+            await run;
+        } finally {
+            if (this.offlineSweeps.get(nodeDir) === run) {
+                this.offlineSweeps.delete(nodeDir);
+            }
+        }
+    };
+
+    /**
+     * Read a wallet's stored offline queues into the store, as left by a
+     * sweep that reset() stopped. Leaves the store alone if another
+     * reset() came meanwhile
+     */
+    private loadOfflineQueues = async (session: number, nodeDir: string) => {
+        const storedPending = await Storage.getItem(
+            `${nodeDir}-cashu-offline-pending-tokens`
+        );
+        const storedSpent = await Storage.getItem(
+            `${nodeDir}-cashu-offline-spent-tokens`
+        );
+        if (session !== this.walletSession) return;
+        const toTokens = (stored: any): CashuToken[] =>
+            stored
+                ? JSON.parse(stored).map((token: any) => new CashuToken(token))
+                : [];
+        runInAction(() => {
+            this.offlinePendingTokens = toTokens(storedPending);
+            this.offlinePendingBalance = this.offlinePendingTokens.reduce(
+                (sum, t) => sum + t.getAmount,
+                0
+            );
+            this.offlineSpentTokens = toTokens(storedSpent);
+        });
+    };
+
+    private runOfflineSweep = async (session: number, nodeDir: string) => {
         let stoppedAt = -1;
 
         try {

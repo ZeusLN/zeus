@@ -48,7 +48,11 @@ const mockCdk = {
     answerAddMint: undefined as (() => void) | undefined,
     failAddMint: undefined as ((error: Error) => void) | undefined,
     // Runs once when the next getBalances() call arrives
-    onGetBalances: undefined as (() => void) | undefined
+    onGetBalances: undefined as (() => void) | undefined,
+    // Every receive() call in the order it reached the mint, and the tokens
+    // the mint has redeemed: a second claim of one fails as already spent
+    submitted: [] as string[],
+    redeemed: [] as string[]
 };
 const mockOpenDatabase = () => mockCdk.databases[mockCdk.openMnemonic];
 jest.mock('../cashu-cdk', () => ({
@@ -71,6 +75,7 @@ jest.mock('../cashu-cdk', () => ({
     getMintUrls: async () => [...mockOpenDatabase().mints],
     receive: async (encodedToken: string) => {
         const database = mockOpenDatabase();
+        mockCdk.submitted.push(encodedToken);
         if (!mockCdk.answerFirstClaim) {
             await new Promise<void>((resolve) => {
                 mockCdk.answerFirstClaim = resolve;
@@ -84,12 +89,16 @@ jest.mock('../cashu-cdk', () => ({
                 mockCdk.heldClaims[encodedToken] = resolve;
             });
         }
-        if (mockCdk.spentTokens.includes(encodedToken)) {
+        if (
+            mockCdk.spentTokens.includes(encodedToken) ||
+            mockCdk.redeemed.includes(encodedToken)
+        ) {
             throw new Error('Token already spent');
         }
         if (mockCdk.failTokens.includes(encodedToken)) {
             throw new Error('Mint returned an unknown error');
         }
+        mockCdk.redeemed.push(encodedToken);
         database.received.push(encodedToken);
         return 100;
     },
@@ -206,6 +215,8 @@ const startOnWalletA = async (
     mockCdk.answerAddMint = undefined;
     mockCdk.failAddMint = undefined;
     mockCdk.onGetBalances = undefined;
+    mockCdk.submitted = [];
+    mockCdk.redeemed = [];
 
     storeWallet(
         'walletA',
@@ -580,5 +591,182 @@ describe('CashuStore offline-token sweep started during a wallet switch', () => 
             'token-2-for-wallet-A'
         ]);
         expect(mockCdk.databases[SEED_A].received).toEqual([]);
+    });
+});
+
+// Wallet.fetchDataCore() also resets the store when the selected wallet
+// connects again, and initializeWallets() then loads the stored queue, which
+// still holds the token whose claim is at the mint (#5579)
+describe('CashuStore offline-token sweep across a reconnect of the same wallet', () => {
+    const PENDING = 'walletA-cashu-offline-pending-tokens';
+    const SPENT = 'walletA-cashu-offline-spent-tokens';
+    const encoded = (tokens: CashuToken[]) =>
+        tokens.map((token) => token.encodedToken);
+
+    const reconnectWalletA = async () => {
+        store.reset();
+        await store.initializeWallets();
+        await new Promise(setImmediate);
+    };
+
+    beforeEach(async () => {
+        await startOnWalletA(['token-1-for-wallet-A', 'token-2-for-wallet-A']);
+        expect(mockCdk.answerFirstClaim).toBeDefined();
+    });
+
+    it('submits each token once', async () => {
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        await reconnectWalletA();
+
+        // The new sweep waits for the claim the first one has at the mint
+        expect(sweeps).toHaveBeenCalledTimes(2);
+        expect(mockCdk.submitted).toEqual(['token-1-for-wallet-A']);
+        expect((store as any).isSweeping).toBe(true);
+        // A third trigger, such as a network reconnect, starts nothing
+        await store.sweepOfflinePendingTokens();
+
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+        await sweeps.mock.results[1].value;
+
+        expect(mockCdk.submitted).toEqual([
+            'token-1-for-wallet-A',
+            'token-2-for-wallet-A'
+        ]);
+        expect(mockCdk.databases[SEED_A].received).toEqual([
+            'token-1-for-wallet-A',
+            'token-2-for-wallet-A'
+        ]);
+        expect(store.offlinePendingTokens).toEqual([]);
+        expect(store.offlinePendingBalance).toBe(0);
+        expect(store.offlineSpentTokens).toEqual([]);
+        expect(store.showOfflineSpentAlert).toBe(false);
+        expect(storedTokens(PENDING)).toEqual([]);
+        expect(storedTokens(SPENT)).toEqual([]);
+        // The summary counts the one token the second sweep claimed
+        expect(alert).toHaveBeenCalledTimes(1);
+        expect(alert.mock.calls[0][1]).toBe(
+            '1 cashu.offlinePending.claimedMessage'
+        );
+        expect((store as any).isSweeping).toBe(false);
+        expect((store as any).offlineSweeps.size).toBe(0);
+    });
+
+    it('shows a token the sender spent once, from the list the first sweep stored', async () => {
+        mockCdk.spentTokens = ['token-1-for-wallet-A'];
+        mockCdk.holdTokens = ['token-2-for-wallet-A'];
+        await reconnectWalletA();
+        // the reconnect loaded the queue before the first sweep filed it
+        expect(encoded(store.offlinePendingTokens)).toEqual([
+            'token-1-for-wallet-A',
+            'token-2-for-wallet-A'
+        ]);
+        expect(store.offlinePendingBalance).toBe(200);
+
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+        await new Promise(setImmediate);
+        // The second sweep is claiming what the first one left
+        expect(mockCdk.heldClaims['token-2-for-wallet-A']).toBeDefined();
+        expect(encoded(store.offlinePendingTokens)).toEqual([
+            'token-2-for-wallet-A'
+        ]);
+        expect(store.offlinePendingBalance).toBe(100);
+        mockCdk.heldClaims['token-2-for-wallet-A']();
+        await sweeps.mock.results[1].value;
+
+        expect(mockCdk.submitted).toEqual([
+            'token-1-for-wallet-A',
+            'token-2-for-wallet-A'
+        ]);
+        expect(encoded(store.offlineSpentTokens)).toEqual([
+            'token-1-for-wallet-A'
+        ]);
+        expect(storedTokens(SPENT)).toEqual(['token-1-for-wallet-A']);
+        expect(store.offlinePendingTokens).toEqual([]);
+        expect(store.offlinePendingBalance).toBe(0);
+    });
+
+    it('leaves the queue alone when another wallet is selected while it waits', async () => {
+        await reconnectWalletA();
+        switchToWalletB();
+
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+        await sweeps.mock.results[1].value;
+
+        expect(mockCdk.submitted).toEqual(['token-1-for-wallet-A']);
+        expect(storedTokens(PENDING)).toEqual(['token-2-for-wallet-A']);
+        // wallet B's lists, which its own connect has not loaded yet
+        expect(store.offlinePendingTokens).toEqual([]);
+        expect((store as any).isSweeping).toBe(false);
+    });
+
+    it('leaves the queue alone when another wallet is selected while it reads the stored queue', async () => {
+        await reconnectWalletA();
+        const getItem = Storage.getItem as jest.Mock;
+        const read = getItem.getMockImplementation()!;
+        getItem.mockImplementation(async (key: string) => {
+            const value = await read(key);
+            if (key === SPENT) {
+                getItem.mockImplementation(read);
+                switchToWalletB();
+            }
+            return value;
+        });
+
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+        await sweeps.mock.results[1].value;
+
+        expect(mockCdk.submitted).toEqual(['token-1-for-wallet-A']);
+        expect(storedTokens(PENDING)).toEqual(['token-2-for-wallet-A']);
+        expect(store.offlinePendingTokens).toEqual([]);
+        expect(store.offlineSpentTokens).toEqual([]);
+    });
+
+    it('waits for the second sweep after the first one has ended', async () => {
+        mockCdk.holdTokens = ['token-2-for-wallet-A'];
+        await reconnectWalletA();
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+        await new Promise(setImmediate);
+        expect(mockCdk.heldClaims['token-2-for-wallet-A']).toBeDefined();
+
+        // The wallet reconnects again during the second sweep's claim
+        await reconnectWalletA();
+        expect(sweeps).toHaveBeenCalledTimes(3);
+        expect(mockCdk.submitted).toEqual([
+            'token-1-for-wallet-A',
+            'token-2-for-wallet-A'
+        ]);
+
+        mockCdk.heldClaims['token-2-for-wallet-A']();
+        await Promise.all(sweeps.mock.results.map((result) => result.value));
+
+        expect(mockCdk.submitted).toEqual([
+            'token-1-for-wallet-A',
+            'token-2-for-wallet-A'
+        ]);
+        expect(store.offlineSpentTokens).toEqual([]);
+        expect(storedTokens(PENDING)).toEqual([]);
+        expect((store as any).offlineSweeps.size).toBe(0);
+    });
+
+    it('claims the rest of the queue after a second reconnect', async () => {
+        await reconnectWalletA();
+        await reconnectWalletA();
+        expect(sweeps).toHaveBeenCalledTimes(3);
+
+        mockCdk.answerFirstClaim!();
+        await Promise.all(sweeps.mock.results.map((result) => result.value));
+
+        expect(mockCdk.submitted).toEqual([
+            'token-1-for-wallet-A',
+            'token-2-for-wallet-A'
+        ]);
+        expect(storedTokens(PENDING)).toEqual([]);
+        expect(store.offlinePendingTokens).toEqual([]);
+        expect((store as any).isSweeping).toBe(false);
     });
 });
