@@ -1147,7 +1147,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                         'secondaryText'
                                                     ),
                                                     fontFamily:
-                                                        'PPNeueMontreal-Book',
+                                                        'Roboto-Regular',
                                                     fontSize: 14
                                                 }}
                                             >
@@ -1173,7 +1173,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                                 'highlight'
                                                             ),
                                                             fontFamily:
-                                                                'PPNeueMontreal-Book',
+                                                                'Roboto-Regular',
                                                             fontSize: 16,
                                                             marginTop: 10
                                                         }}
