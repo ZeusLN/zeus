@@ -1492,6 +1492,9 @@ export default class LSPStore {
 
     public lsps1GetOrderREST(id: string, RESTHost: string) {
         this.loadingLSPS1 = true;
+        // Only the latest get_order request reports back
+        const requestId = uuidv4();
+        this.getOrderId = requestId;
         const endpoint = `${RESTHost}/api/v1/get_order?order_id=${id}`;
 
         console.log('Sending data to:', endpoint);
@@ -1500,6 +1503,7 @@ export default class LSPStore {
             'Content-Type': 'application/json'
         })
             .then((response) => {
+                if (this.getOrderId !== requestId) return;
                 const responseData = JSON.parse(response.data);
                 console.log('Response received:', responseData);
                 runInAction(() => {
@@ -1514,6 +1518,7 @@ export default class LSPStore {
             })
             .catch((error) => {
                 console.error('Error sending custom message:', error);
+                if (this.getOrderId !== requestId) return;
                 const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
                     this.error = true;
@@ -1720,9 +1725,13 @@ export default class LSPStore {
         this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
+        // Only the latest get_order request reports back
+        const requestId = uuidv4();
+        this.getOrderId = requestId;
 
         try {
             const response = await BackendUtils.checkLsps1OrderStatus(orderId);
+            if (this.getOrderId !== requestId) return;
 
             runInAction(() => {
                 // Transform response to match expected format
@@ -1755,6 +1764,7 @@ export default class LSPStore {
                 this.loadingLSPS1 = false;
             });
         } catch (err: any) {
+            if (this.getOrderId !== requestId) return;
             const errorMessage =
                 err?.message || err?.toString() || 'Unknown error';
             runInAction(() => {
@@ -1990,16 +2000,21 @@ export default class LSPStore {
 
         // Use native LSPS7 method if available (LDK Node backend)
         if (BackendUtils.supportsLSPS7native()) {
+            // Only the latest get_order request reports back
+            const requestId = uuidv4();
+            this.getExtensionOrderId = requestId;
             try {
                 const response = await BackendUtils.lsps7CheckOrderStatus(
                     orderId
                 );
+                if (this.getExtensionOrderId !== requestId) return;
                 runInAction(() => {
                     this.getExtensionOrderResponse = { result: response };
                     this.loadingLSPS7 = false;
                 });
                 return;
             } catch (error: any) {
+                if (this.getExtensionOrderId !== requestId) return;
                 runInAction(() => {
                     this.error = true;
                     this.error_msg =
