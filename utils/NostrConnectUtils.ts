@@ -118,6 +118,8 @@ export enum Nip47ErrorCode {
     FAILED_TO_PAY_INVOICE = 'FAILED_TO_PAY_INVOICE',
     FAILED_TO_CREATE_INVOICE = 'FAILED_TO_CREATE_INVOICE',
     NOT_FOUND = 'NOT_FOUND',
+    /** NIP-47: the command is not known or is intentionally not implemented. */
+    NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
     /** NIP-47: pubkey has no wallet connected (e.g. unknown connection). */
     UNAUTHORIZED = 'UNAUTHORIZED',
     INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',

@@ -5533,6 +5533,100 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
         expect(connection.activity[0].paymentHash).toBe(hex);
     });
 
+    it('rejects a description_hash request instead of making a plain invoice', async () => {
+        const { store, connection } = setup();
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-plain',
+            r_hash: 'ee'
+        });
+
+        const response = await (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000,
+            description_hash: 'ab'.repeat(32)
+        });
+
+        expect(response.error?.code).toBe(Nip47ErrorCode.NOT_IMPLEMENTED);
+        expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+        expect(connection.activity).toHaveLength(0);
+    });
+
+    // LNbits sends description_hash: null with every plain invoice request
+    it.each([null, ''])(
+        'still makes an invoice when description_hash is %p',
+        async (descriptionHash) => {
+            const { store, connection } = setup();
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-plain',
+                r_hash: 'ff'
+            });
+
+            const response = await (store as any).handleMakeInvoice(
+                connection,
+                { amount: 1000_000, description_hash: descriptionHash }
+            );
+
+            expect(response.error).toBeUndefined();
+            expect(response.result.invoice).toBe('lnbc-plain');
+        }
+    );
+
+    it('answers RATE_LIMITED without calling the backend when a limit is hit', async () => {
+        const { store, connection } = setup();
+        jest.spyOn(store as any, 'checkMakeInvoiceLimits').mockReturnValue(
+            NostrConnectUtils.createNip47Error(
+                'limit reached',
+                Nip47ErrorCode.RATE_LIMITED
+            )
+        );
+
+        const response = await (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000
+        });
+
+        expect(response.result).toBeUndefined();
+        expect(response.error?.code).toBe(Nip47ErrorCode.RATE_LIMITED);
+        expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+        expect(connection.activity).toHaveLength(0);
+    });
+
+    it.each([{}, { paymentRequest: '' }, { paymentRequest: 42 }, undefined])(
+        'answers INTERNAL_ERROR when the invoice comes back as %p',
+        async (invoiceResult) => {
+            const { store, connection, invoicesStore } = setup();
+            (invoicesStore as any).createUnifiedInvoice = jest
+                .fn()
+                .mockResolvedValue(invoiceResult);
+
+            const response = await (store as any).handleMakeInvoice(
+                connection,
+                { amount: 1000_000 }
+            );
+
+            expect(response.result).toBeUndefined();
+            expect(response.error?.code).toBe(Nip47ErrorCode.INTERNAL_ERROR);
+            // the missing invoice is reported as such, not as a TypeError
+            expect(response.error?.message).toBe(
+                'stores.NostrWalletConnectStore.error.failedToCreateInvoice'
+            );
+            expect(connection.activity).toHaveLength(0);
+        }
+    );
+
+    it.each([undefined, null])(
+        'answers a make_invoice request with %p params with an error',
+        async (request) => {
+            const { store, connection } = setup();
+
+            const response = await (store as any).handleMakeInvoice(
+                connection,
+                request
+            );
+
+            expect(response.result).toBeUndefined();
+            expect(response.error?.code).toBe(Nip47ErrorCode.INTERNAL_ERROR);
+        }
+    );
+
     it('does not replace the invoice shown on the Receive screen', async () => {
         const { store, connection, invoicesStore } = setup();
         invoicesStore.payment_request = 'lnbc-on-screen';
@@ -5643,6 +5737,46 @@ describe('NostrWalletConnectStore make_invoice from Cashu', () => {
             undefined as any
         );
     });
+
+    it('rejects a description_hash request without making a Cashu invoice', async () => {
+        const { store, connection, cashuStore } = setup();
+        cashuStore.createInvoice = jest.fn();
+
+        const response = await (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000,
+            description_hash: 'ab'.repeat(32)
+        });
+
+        expect(response.error?.code).toBe(Nip47ErrorCode.NOT_IMPLEMENTED);
+        expect(cashuStore.createInvoice).not.toHaveBeenCalled();
+        expect(connection.activity).toHaveLength(0);
+    });
+
+    it.each([{}, undefined])(
+        'answers FAILED_TO_CREATE_INVOICE when the Cashu invoice comes back as %p',
+        async (cashuInvoice) => {
+            const { store, connection, cashuStore } = setup();
+            cashuStore.createInvoice = jest
+                .fn()
+                .mockResolvedValue(cashuInvoice);
+
+            const response = await (store as any).handleMakeInvoice(
+                connection,
+                { amount: 1000_000 }
+            );
+
+            expect(response.result).toBeUndefined();
+            expect(response.error?.code).toBe(
+                Nip47ErrorCode.FAILED_TO_CREATE_INVOICE
+            );
+            // a mint error resolves undefined: report the missing invoice,
+            // not a TypeError from reading it
+            expect(response.error?.message).toBe(
+                'stores.NostrWalletConnectStore.error.failedToCreateCashuInvoice'
+            );
+            expect(connection.activity).toHaveLength(0);
+        }
+    );
 
     it('answers overlapping make_invoice requests with their own invoices', async () => {
         const { store, connection, cashuStore } = setup();
