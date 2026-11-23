@@ -1821,6 +1821,7 @@
     "utils.handleAnything.nostrProfileError": "Nostrプロフィール取得エラー",
     "utils.handleAnything.addressError": "アドレス取得エラー",
     "utils.handleAnything.invalidNoffer": "Could not decode CLINK noffer",
+    "stores.ChannelsStore.batchNeedsNativeSegWit": "Opening several channels at once needs UTXOs from SegWit (P2WKH) or Taproot (P2TR) addresses. At least one UTXO funding this batch is Nested SegWit (NP2WKH) or legacy, so ZEUS stopped before spending anything. Select SegWit or Taproot UTXOs, or open the channels one at a time.",
     "stores.ChannelsStore.openOutcomeUnknown": "ノードから時間内の返答が確認できなかったため、ZEUSはチャンネル開設の成否を通知できません。新たなチャンネルを開く前に保留中のチャンネルを確認してください。",
     "stores.ChannelsStore.openStreamTimeout": "ノードがこのチャンネルに資産をアップロード開始しなかったため、お支払いの前にZEUSが開設を停止しました。もう一度試してください。",
     "stores.ChannelBackupStore.invalidBackup": "サーバーから受信したバックアップが無効です",
