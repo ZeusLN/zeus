@@ -4390,10 +4390,14 @@ export default class NostrWalletConnectStore {
         const cashuPayments = this.cashuStore.payments;
         const quote = (activity.payment as CashuPayment | null | undefined)
             ?.meltResponse?.quote?.quote;
+        // The activity id is the decoded, lowercased invoice. CashuStore
+        // keeps the invoice as the NWC client sent it, which may be
+        // uppercase.
+        const invoice = activity.id.toLowerCase();
         const payment = cashuPayments?.find(
             (p) =>
                 (!!quote && p.meltResponse?.quote?.quote === quote) ||
-                p.getPaymentRequest === activity.id ||
+                p.getPaymentRequest?.toLowerCase() === invoice ||
                 (!!activity.paymentHash &&
                     p.paymentHash === activity.paymentHash)
         );
@@ -4407,7 +4411,9 @@ export default class NostrWalletConnectStore {
                 this.cashuStore.cdkInitialized &&
                 !!cashuPayments &&
                 !this.cashuStore.pendingMelts.some((melt) =>
-                    quote ? melt.quote === quote : melt.request === activity.id
+                    quote
+                        ? melt.quote === quote
+                        : melt.request?.toLowerCase() === invoice
                 );
             if (dropped) {
                 runInAction(() => {

@@ -8905,6 +8905,50 @@ describe('NostrWalletConnectStore cashu pay_invoice in-flight melt', () => {
             expect(connection.activity[0].isBudgetDebited).toBeFalsy();
             expect(connection.pendingSpendSats).toBe(0);
         });
+
+        // The activity id is the lowercased decode; CashuStore keeps the
+        // invoice as the client sent it
+        it('is kept while a melt for its invoice in uppercase is tracked', async () => {
+            const { store, connection, cashuStore } = await withoutQuote();
+            cashuStore.pendingMelts = [
+                { quote: 'quote-1', request: invoice.toUpperCase() }
+            ];
+
+            await (store as any).reconcilePendingPayInvoiceActivities(
+                connection
+            );
+
+            expect(connection.activity[0].status).toBe('pending');
+            expect(connection.pendingSpendSats).toBe(103);
+        });
+
+        // No payment_hash, as for a payment reconcilePendingMelts recorded
+        // again after a restart
+        it('is debited once a melt recorded with its invoice in uppercase settles', async () => {
+            const { store, connection, cashuStore } = await withoutQuote();
+            cashuStore.pendingMelts = [];
+            cashuStore.payments = [
+                new CashuPayment({
+                    bolt11: invoice.toUpperCase(),
+                    amount: 100,
+                    fee: 1,
+                    status: 'SUCCEEDED',
+                    payment_preimage: 'b'.repeat(64),
+                    meltResponse: {
+                        quote: { quote: 'quote-1', amount: 100, fee_reserve: 3 }
+                    }
+                })
+            ];
+
+            await (store as any).reconcilePendingPayInvoiceActivities(
+                connection
+            );
+
+            expect(connection.activity[0].status).toBe('success');
+            expect(connection.activity[0].isBudgetDebited).toBe(true);
+            expect(connection.totalSpendSats).toBe(101);
+            expect(connection.pendingSpendSats).toBe(0);
+        });
     });
 
     it('releases a hold whose melt is gone while a newer melt of its invoice is tracked', async () => {
