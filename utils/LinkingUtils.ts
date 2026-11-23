@@ -1,4 +1,4 @@
-import { Linking, Platform, NativeModules } from 'react-native';
+import { Alert, Linking, Platform, NativeModules } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { localeString } from './LocaleUtils';
@@ -132,7 +132,11 @@ class LinkingUtils {
             Linking.openURL(url);
         } else {
             handleAnything(url)
-                .then(([route, props]) => {
+                .then((response) => {
+                    // nothing to open: handleAnything has already alerted,
+                    // or the user declined
+                    if (!response) return;
+                    const [route, props] = response;
                     // navigate() only reuses an existing route when it is the
                     // currently focused one, so a payment request arriving
                     // while another screen sits on top of PaymentRequest
@@ -164,12 +168,19 @@ class LinkingUtils {
                         navigation.navigate(route, props);
                     }
                 })
-                .catch((err) =>
-                    console.error(
-                        localeString('views.Wallet.Wallet.error'),
-                        err
-                    )
-                );
+                .catch((err) => {
+                    Alert.alert(
+                        localeString('general.error'),
+                        err?.message ?? String(err),
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
+                        { cancelable: false }
+                    );
+                });
         }
     };
 

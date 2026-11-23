@@ -1515,11 +1515,29 @@ export default class SwapDetails extends React.Component<
                         }}
                         onPress={() => {
                             if (swapData.qrCodeValue) {
-                                handleAnything(swapData.qrCodeValue).then(
-                                    ([route, props]) => {
+                                handleAnything(swapData.qrCodeValue)
+                                    .then((response) => {
+                                        // nothing to open: handleAnything has
+                                        // already alerted, or the user declined
+                                        if (!response) return;
+                                        const [route, props] = response;
                                         navigation.navigate(route, props);
-                                    }
-                                );
+                                    })
+                                    .catch((err) => {
+                                        Alert.alert(
+                                            localeString('general.error'),
+                                            err?.message ?? String(err),
+                                            [
+                                                {
+                                                    text: localeString(
+                                                        'general.ok'
+                                                    ),
+                                                    onPress: () => void 0
+                                                }
+                                            ],
+                                            { cancelable: false }
+                                        );
+                                    });
                             }
                         }}
                         secondary

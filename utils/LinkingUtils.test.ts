@@ -25,7 +25,7 @@ jest.mock('react-native-restart', () => ({
     default: { getReason: () => Promise.resolve(mockRestartReason) }
 }));
 
-import { Linking, Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 
 import handleAnything from './handleAnything';
 import { IN_APP_RESTART } from './InAppRestartUtils';
@@ -181,6 +181,59 @@ describe('LinkingUtils.handleDeepLink', () => {
         await flushPromises();
 
         expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
+    });
+
+    describe('a link that cannot be opened', () => {
+        let alert: jest.SpyInstance;
+
+        beforeEach(() => {
+            alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            alert.mockRestore();
+        });
+
+        // handleAnything has alerted already, or the user declined
+        it.each([undefined, false])(
+            'does nothing more when handleAnything resolves %s',
+            async (result) => {
+                mockHandleAnythingResult = result as any;
+                const navigation = makeNavigation(['Wallet']);
+
+                LinkingUtils.handleDeepLink(
+                    'lightning:lnurl1...',
+                    navigation as any
+                );
+                await flushPromises();
+
+                expect(navigation.navigate).not.toHaveBeenCalled();
+                expect(navigation.popTo).not.toHaveBeenCalled();
+                expect(navigation.replace).not.toHaveBeenCalled();
+                expect(alert).not.toHaveBeenCalled();
+            }
+        );
+
+        it('shows the error when handleAnything fails', async () => {
+            (handleAnything as jest.Mock).mockRejectedValueOnce(
+                new Error('Could not parse lnurl params')
+            );
+            const navigation = makeNavigation(['Wallet']);
+
+            LinkingUtils.handleDeepLink(
+                'lightning:lnurl1...',
+                navigation as any
+            );
+            await flushPromises();
+
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(alert).toHaveBeenCalledWith(
+                'general.error',
+                'Could not parse lnurl params',
+                expect.any(Array),
+                { cancelable: false }
+            );
+        });
     });
 });
 

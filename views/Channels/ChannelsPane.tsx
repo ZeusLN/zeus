@@ -47,7 +47,6 @@ import Channel from '../../models/Channel';
 import { Status } from '../../models/Status';
 import ClosedChannel from '../../models/ClosedChannel';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
-import handleAnything from '../../utils/handleAnything';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Peer from '../../models/Peer';
 import ModalBox from '../../components/ModalBox';
@@ -117,13 +116,6 @@ export default class ChannelsPane extends React.PureComponent<
             this.disposeReaction();
         }
     }
-
-    validateNodeUri = (text: string) => {
-        const { navigation } = this.props;
-        handleAnything(text).then(([route, props]) => {
-            navigation.navigate(route, props);
-        });
-    };
 
     openDisconnectModal(peer: any) {
         this.setState({

@@ -307,6 +307,26 @@ export default class ReceiveEcash extends React.Component<
         });
     };
 
+    readTokenFromClipboard = async () => {
+        const { navigation } = this.props;
+        try {
+            const clipboard = await Clipboard.getString();
+            const response = await handleAnything(clipboard);
+            // nothing to open: handleAnything has already alerted, or the
+            // user declined
+            if (!response) return;
+            const [route, props] = response;
+            navigation.navigate(route, props);
+        } catch (err: any) {
+            Alert.alert(
+                localeString('general.error'),
+                err?.message ?? String(err),
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
+        }
+    };
+
     scanNfc = async () => {
         const str = await scanNfcTag(this.props.ModalStore, 'withdraw');
         if (!str || this.isUnmounted) return;
@@ -997,20 +1017,9 @@ export default class ReceiveEcash extends React.Component<
                                                 title={localeString(
                                                     'views.Cashu.ReceiveEcash.readTokenFromClipboard'
                                                 )}
-                                                onPress={async () => {
-                                                    const clipboard =
-                                                        await Clipboard.getString();
-                                                    const response =
-                                                        await handleAnything(
-                                                            clipboard
-                                                        );
-                                                    const [route, props] =
-                                                        response;
-                                                    navigation.navigate(
-                                                        route,
-                                                        props
-                                                    );
-                                                }}
+                                                onPress={
+                                                    this.readTokenFromClipboard
+                                                }
                                                 secondary
                                             />
                                         </View>

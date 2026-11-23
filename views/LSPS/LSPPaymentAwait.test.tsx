@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { act, render, screen } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
 jest.mock('mobx-react', () => ({
@@ -53,6 +54,7 @@ jest.mock('../../utils/LocaleUtils');
 
 import Storage from '../../storage';
 import { buildPaymentAwaitParams, LSPService } from '../../models/LSP';
+import handleAnything from '../../utils/handleAnything';
 import LSPPaymentAwait from './LSPPaymentAwait';
 
 // 100 000 sat and amountless invoices from utils/LspUtils.test.ts
@@ -103,6 +105,72 @@ const viewFor = (payment: any, service = LSPService.LSPS1) => (
 
 const renderView = (payment: any, service = LSPService.LSPS1) =>
     render(viewFor(payment, service));
+
+describe('LSPPaymentAwait pay from ZEUS', () => {
+    let alert: jest.SpyInstance;
+
+    beforeEach(() => {
+        (Storage.getItem as jest.Mock).mockResolvedValue(storedOrders);
+        lspStore = {
+            lsps1GetOrderREST: jest.fn(() => Promise.resolve())
+        };
+        navigation.navigate.mockClear();
+        alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        alert.mockRestore();
+        (handleAnything as jest.Mock).mockReset();
+    });
+
+    // presses the button and waits for handleAnything's result to be used
+    const payFromZeus = async () => {
+        await renderView({
+            bolt11: { invoice: INVOICE_100K, order_total_sat: '100000' }
+        });
+
+        await fireEvent.press(screen.getByText(PAY_FROM_ZEUS));
+        await act(() => new Promise((resolve) => setImmediate(resolve)));
+
+        expect(handleAnything).toHaveBeenCalledWith(INVOICE_100K);
+    };
+
+    it('opens the route for the invoice', async () => {
+        (handleAnything as jest.Mock).mockResolvedValue(['PaymentRequest', {}]);
+
+        await payFromZeus();
+
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(alert).not.toHaveBeenCalled();
+    });
+
+    // handleAnything has alerted already, or the user declined
+    it.each([undefined, false])(
+        'does nothing more when the invoice cannot be routed (%s)',
+        async (result) => {
+            (handleAnything as jest.Mock).mockResolvedValue(result);
+
+            await payFromZeus();
+
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(alert).not.toHaveBeenCalled();
+        }
+    );
+
+    it('shows the error when the invoice cannot be handled', async () => {
+        (handleAnything as jest.Mock).mockRejectedValue(new Error('not valid'));
+
+        await payFromZeus();
+
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(alert).toHaveBeenCalledWith(
+            'general.error',
+            'not valid',
+            expect.any(Array),
+            { cancelable: false }
+        );
+    });
+});
 
 describe('LSPPaymentAwait invoice check', () => {
     beforeEach(() => {

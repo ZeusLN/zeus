@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
+import {
+    Alert,
+    ScrollView,
+    StyleSheet,
+    View,
+    TouchableOpacity
+} from 'react-native';
 import { Divider } from '@rneui/themed';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
@@ -257,9 +263,27 @@ export default class OpenChannel extends React.Component<
 
     validateNodeUri = (text: string) => {
         const { navigation } = this.props;
-        handleAnything(text).then(([route, props]) => {
-            navigation.navigate(route, props);
-        });
+        handleAnything(text)
+            .then((response) => {
+                // nothing to open: handleAnything has already alerted, or
+                // the user declined
+                if (!response) return;
+                const [route, props] = response;
+                navigation.navigate(route, props);
+            })
+            .catch((err) => {
+                Alert.alert(
+                    localeString('general.error'),
+                    err?.message ?? String(err),
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
+                    { cancelable: false }
+                );
+            });
     };
 
     selectUTXOs = (

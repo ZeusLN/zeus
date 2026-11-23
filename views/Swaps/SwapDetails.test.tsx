@@ -77,6 +77,7 @@ import { crypto } from 'bitcoinjs-lib';
 import SwapDetails from './SwapDetails';
 import lndMobile from '../../lndmobile/LndMobileInjection';
 import Bolt11Utils from '../../utils/Bolt11Utils';
+import handleAnything from '../../utils/handleAnything';
 import {
     ReverseClaimTransaction,
     SubmarineClaimTransaction
@@ -1493,6 +1494,84 @@ describe('SwapDetails submarine pay button', () => {
         await sendStatus('invoice.set');
 
         expect(payButtons()).toHaveLength(1);
+    });
+
+    describe('when pressed', () => {
+        const BIP21 = 'bitcoin:bc1pswap?amount=0.00000424';
+        let alert: jest.SpyInstance;
+
+        beforeEach(() => {
+            alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            (handleAnything as jest.Mock).mockReset();
+        });
+
+        // presses Pay and waits for handleAnything's result to be used
+        const pay = async () => {
+            const navigation = { navigate: jest.fn() };
+            await renderView(
+                {
+                    type: SwapType.Submarine,
+                    imported: false,
+                    bip21: BIP21,
+                    lockupAddress: 'bc1pswap'
+                },
+                {},
+                { navigation }
+            );
+            await sendStatus('invoice.set');
+
+            const payButton = screen.root!.queryAll(
+                (node: any) =>
+                    node.type === 'Button' &&
+                    node.props.title === 'views.PaymentRequest.payInvoice'
+            )[0];
+            await act(async () => payButton.props.onPress());
+            await advance(0);
+
+            expect(handleAnything).toHaveBeenCalledWith(BIP21);
+            return navigation.navigate;
+        };
+
+        it('opens the route for the swap', async () => {
+            (handleAnything as jest.Mock).mockResolvedValue(['Send', {}]);
+
+            const navigate = await pay();
+
+            expect(navigate).toHaveBeenCalledWith('Send', {});
+            expect(alert).not.toHaveBeenCalled();
+        });
+
+        // handleAnything has alerted already, or the user declined
+        it.each([undefined, false])(
+            'does nothing more when the swap cannot be routed (%s)',
+            async (result) => {
+                (handleAnything as jest.Mock).mockResolvedValue(result);
+
+                const navigate = await pay();
+
+                expect(navigate).not.toHaveBeenCalled();
+                expect(alert).not.toHaveBeenCalled();
+            }
+        );
+
+        it('shows the error when the swap cannot be handled', async () => {
+            (handleAnything as jest.Mock).mockRejectedValue(
+                new Error('not valid')
+            );
+
+            const navigate = await pay();
+
+            expect(navigate).not.toHaveBeenCalled();
+            expect(alert).toHaveBeenCalledWith(
+                'general.error',
+                'not valid',
+                expect.any(Array),
+                { cancelable: false }
+            );
+        });
     });
 });
 

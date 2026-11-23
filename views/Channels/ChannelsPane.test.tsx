@@ -43,7 +43,6 @@ jest.mock('../../utils/BackendUtils', () => ({
     supportsPendingChannels: jest.fn(() => true),
     supportsClosedChannels: jest.fn(() => true)
 }));
-jest.mock('../../utils/handleAnything', () => jest.fn());
 jest.mock('react-native-safe-area-context', () => ({
     SafeAreaView: ({ children }: any) => children
 }));

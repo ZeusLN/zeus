@@ -64,6 +64,7 @@ jest.mock('../../stores/UnitsStore', () => ({}));
 
 import * as React from 'react';
 import { Alert } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {
     fireEvent,
     render,
@@ -632,6 +633,95 @@ describe('ReceiveEcash NFC lookups that were superseded', () => {
 
         expect(view.setState).toHaveBeenCalledWith({ nfcError: true });
         expect(view.subscribeInvoice).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('ReceiveEcash read token from clipboard', () => {
+    const CLIPBOARD = 'cashuBtoken';
+    let alert: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (Clipboard.getString as jest.Mock).mockResolvedValue(CLIPBOARD);
+        alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        alert.mockRestore();
+        (handleAnything as jest.Mock).mockReset();
+    });
+
+    // presses the button on the receive form (no invoice yet) and waits for
+    // handleAnything's result to be used
+    const readClipboard = async () => {
+        const navigate = jest.fn();
+        await render(
+            <ReceiveEcash
+                {...({
+                    navigation: { navigate },
+                    route: { params: {} },
+                    CashuStore: { clearInvoice: jest.fn() },
+                    LightningAddressStore: {},
+                    ModalStore: {},
+                    NodeInfoStore: {},
+                    PosStore: {},
+                    SettingsStore: {
+                        settings: {},
+                        getSettings: jest.fn(() => Promise.resolve({}))
+                    },
+                    UnitsStore: {}
+                } as any)}
+            />
+        );
+        const button = () =>
+            screen.root!.queryAll(
+                (node: any) =>
+                    node.props.title ===
+                    'views.Cashu.ReceiveEcash.readTokenFromClipboard'
+            )[0];
+        await waitFor(() => expect(button()).toBeTruthy());
+
+        await fireEvent.press(button());
+        await flush();
+
+        expect(handleAnything).toHaveBeenCalledWith(CLIPBOARD);
+        return navigate;
+    };
+
+    it('opens the route for the token', async () => {
+        (handleAnything as jest.Mock).mockResolvedValue(CASHU_RESPONSE);
+
+        const navigate = await readClipboard();
+
+        expect(navigate).toHaveBeenCalledWith(...CASHU_RESPONSE);
+        expect(alert).not.toHaveBeenCalled();
+    });
+
+    // handleAnything has alerted already, or the user declined
+    it.each([undefined, false])(
+        'does nothing more when the clipboard cannot be routed (%s)',
+        async (result) => {
+            (handleAnything as jest.Mock).mockResolvedValue(result);
+
+            const navigate = await readClipboard();
+
+            expect(navigate).not.toHaveBeenCalled();
+            expect(alert).not.toHaveBeenCalled();
+        }
+    );
+
+    it('shows the error when the clipboard cannot be handled', async () => {
+        (handleAnything as jest.Mock).mockRejectedValue(new Error('not valid'));
+
+        const navigate = await readClipboard();
+
+        expect(navigate).not.toHaveBeenCalled();
+        expect(alert).toHaveBeenCalledWith(
+            'general.error',
+            'not valid',
+            expect.any(Array),
+            { cancelable: false }
+        );
     });
 });
 
