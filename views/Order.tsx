@@ -28,9 +28,11 @@ import { getFormattedAmount } from '../utils/AmountUtils';
 
 import BackendUtils from '../utils/BackendUtils';
 import {
+    DEFAULT_CUSTOM_TIP_PERCENTAGE,
     calculateCustomTipSats,
     calculateTaxSats,
-    calculateTotalSats
+    calculateTotalSats,
+    formatDefaultCustomTipAmount
 } from '../utils/PosUtils';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
@@ -38,8 +40,6 @@ import UnitsStore from '../stores/UnitsStore';
 
 import RNPrint from 'react-native-print';
 import PosStore from '../stores/PosStore';
-
-const DEFAULT_CUSTOM_TIP_PERCENTAGE = '21';
 
 interface OrderProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -1008,12 +1008,11 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     />
                                     <TextInput
                                         keyboardType="numeric"
-                                        placeholder={new BigNumber(subTotalSats)
-                                            .multipliedBy(0.21)
-                                            .integerValue(
-                                                BigNumber.ROUND_HALF_UP
-                                            )
-                                            .toFixed(0)}
+                                        placeholder={formatDefaultCustomTipAmount(
+                                            subTotalSats,
+                                            units,
+                                            rate
+                                        )}
                                         value={customAmount}
                                         onChangeText={(text: string) => {
                                             if (text.includes('-')) return;

@@ -1,7 +1,10 @@
 import {
+    DEFAULT_CUSTOM_TIP_PERCENTAGE,
     calculateCustomTipSats,
+    calculateDefaultCustomTipSats,
     calculateTaxSats,
-    calculateTotalSats
+    calculateTotalSats,
+    formatDefaultCustomTipAmount
 } from './PosUtils';
 
 jest.mock('./UnitsUtils', () => ({
@@ -173,5 +176,74 @@ describe('calculateCustomTipSats', () => {
 
     it('converts a fiat amount to sats', () => {
         expect(calculateCustomTipSats('1', '10000', 'fiat', rate)).toBe('1000');
+    });
+
+    it('rounds a fiat amount to the nearest sat', () => {
+        expect(calculateCustomTipSats('1', '10000', 'fiat', 97000)).toBe(
+            '1031'
+        );
+    });
+
+    it('keeps a typed 0 as no tip', () => {
+        expect(calculateCustomTipSats('0', '10000', 'fiat', rate)).toBe('0');
+        expect(calculateCustomTipSats('0', '10000', 'BTC', rate)).toBe('0');
+        expect(calculateCustomTipSats('0', '10000', 'sats', rate)).toBe('0');
+    });
+
+    it('accepts the rate as a string, as Order passes it', () => {
+        expect(
+            calculateCustomTipSats('1.05', '5000', 'fiat', '100000.00')
+        ).toBe('1050');
+    });
+
+    it('converts the smallest BTC amount to 1 sat', () => {
+        expect(
+            calculateCustomTipSats('0.00000001', '10000', 'BTC', rate)
+        ).toBe('1');
+    });
+});
+
+describe('calculateDefaultCustomTipSats', () => {
+    it('uses DEFAULT_CUSTOM_TIP_PERCENTAGE of the subtotal', () => {
+        expect(DEFAULT_CUSTOM_TIP_PERCENTAGE).toBe('21');
+        expect(calculateDefaultCustomTipSats('5000')).toBe('1050');
+    });
+
+    it('rounds half up', () => {
+        expect(calculateDefaultCustomTipSats('50')).toBe('11');
+    });
+});
+
+describe('formatDefaultCustomTipAmount', () => {
+    const rate = 100000; // 1 BTC = $100,000
+
+    it('shows the default in sats', () => {
+        expect(formatDefaultCustomTipAmount('5000', 'sats', rate)).toBe(
+            '1050'
+        );
+    });
+
+    it('shows the default in fiat', () => {
+        expect(formatDefaultCustomTipAmount('5000', 'fiat', rate)).toBe(
+            '1.05'
+        );
+        expect(
+            formatDefaultCustomTipAmount('5000', 'fiat', '100000.00')
+        ).toBe('1.05');
+    });
+
+    it('shows the default in BTC', () => {
+        expect(formatDefaultCustomTipAmount('5000', 'BTC', rate)).toBe(
+            '0.00001050'
+        );
+    });
+
+    it('matches the tip applied for an empty amount', () => {
+        ['sats', 'fiat', 'BTC'].forEach((units) => {
+            const shown = formatDefaultCustomTipAmount('5000', units, rate);
+            expect(calculateCustomTipSats(shown, '5000', units, rate)).toBe(
+                calculateCustomTipSats('', '5000', units, rate)
+            );
+        });
     });
 });

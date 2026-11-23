@@ -86,12 +86,61 @@ export const calculateTaxSats = (
     }
 };
 
+export const DEFAULT_CUSTOM_TIP_PERCENTAGE = '21';
+
+/**
+ * Calculates the default custom tip in sats, used when the custom tip
+ * fields are left empty.
+ *
+ * @param subTotalSats - The subtotal of the order in sats
+ * @returns - DEFAULT_CUSTOM_TIP_PERCENTAGE of the subtotal in sats
+ */
+export const calculateDefaultCustomTipSats = (subTotalSats: string): string =>
+    new BigNumber(subTotalSats)
+        .multipliedBy(DEFAULT_CUSTOM_TIP_PERCENTAGE)
+        .dividedBy(100)
+        .integerValue(BigNumber.ROUND_HALF_UP)
+        .toFixed(0);
+
+/**
+ * Formats the default custom tip amount in the selected units, for the
+ * placeholder of the custom tip amount field.
+ *
+ * @param subTotalSats - The subtotal of the order in sats
+ * @param units - The selected units ('sats', 'BTC' or 'fiat')
+ * @param rate - The current fiat conversion rate
+ * @returns - The default tip in the selected units as a string
+ */
+export const formatDefaultCustomTipAmount = (
+    subTotalSats: string,
+    units: string,
+    rate: number | string
+): string => {
+    const defaultTipSats = calculateDefaultCustomTipSats(subTotalSats);
+
+    if (units === 'fiat') {
+        return new BigNumber(defaultTipSats)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
+    }
+
+    if (units === 'BTC') {
+        return new BigNumber(defaultTipSats)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(8);
+    }
+
+    return defaultTipSats;
+};
+
 /**
  * Calculates a custom tip amount in sats.
  *
- * When no custom amount has been entered, the default tip is 21% of the
- * subtotal, which is already denominated in sats and must not be converted
- * using the currently selected display units.
+ * When no custom amount has been entered, the default tip is
+ * DEFAULT_CUSTOM_TIP_PERCENTAGE of the subtotal, which is already
+ * denominated in sats and must not be converted using the currently
+ * selected display units.
  *
  * @param customAmount - The custom tip amount entered, in the selected units
  * @param subTotalSats - The subtotal of the order in sats
@@ -106,10 +155,7 @@ export const calculateCustomTipSats = (
     rate: number | string
 ): string => {
     if (customAmount === '') {
-        return new BigNumber(subTotalSats)
-            .multipliedBy(0.21)
-            .integerValue(BigNumber.ROUND_HALF_UP)
-            .toFixed(0);
+        return calculateDefaultCustomTipSats(subTotalSats);
     }
 
     if (units === 'fiat') {
