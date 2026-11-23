@@ -1881,6 +1881,7 @@
     "stores.NostrWalletConnectStore.error.payInvoiceNotPermitted": "この接続に請求を支払う権限がありません。",
     "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "他の決済が処理中のため、こちらのリクエストは待機時間を超過し、実行できていません。もう一度お試しください。",
     "stores.NostrWalletConnectStore.error.makeInvoiceRateLimited": "この接続での請求リクエスト上限に達しました。少し時間を置いてから、やり直してください。",
+    "stores.NostrWalletConnectStore.error.descriptionHashNotSupported": "make_invoice with a description_hash is not supported",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "{{relayUrl}} に接続できませんでした",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "接続の読み込みに失敗しました",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "接続の保存に失敗しました",
