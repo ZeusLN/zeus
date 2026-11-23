@@ -1881,6 +1881,7 @@
     "stores.NostrWalletConnectStore.error.payInvoiceNotPermitted": "This connection is not allowed to pay invoices.",
     "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Ήταν σε εξέλιξη μια άλλη πληρωμή και αυτό το αίτημα παρέμεινε σε αναμονή για πολύ ώρα· δεν εκτελέστηκε. Παρακαλώ δοκιμάστε ξανά.",
     "stores.NostrWalletConnectStore.error.makeInvoiceRateLimited": "Υπάρχουν πάρα πολλά αιτήματα έκδοσης τιμολογίων από αυτή τη σύνδεση. Παρακαλώ περιμένετε πριν ξαναδοκιμάσετε.",
+    "stores.NostrWalletConnectStore.error.descriptionHashNotSupported": "make_invoice with a description_hash is not supported",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "Αποτυχία σύνδεσης με {{relayUrl}}",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "Δεν ήταν δυνατή η φόρτωση των συνδέσεων",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "Αποτυχία αποθήκευσης των συνδέσεων",
