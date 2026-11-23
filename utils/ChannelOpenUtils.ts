@@ -69,6 +69,36 @@ const segwitOutputScript = (address: string): Buffer => {
     ]);
 };
 
+// a native SegWit output script: a version byte (OP_0 to OP_16) and one
+// push of a 2 to 40 byte witness program (BIP141)
+const isNativeWitnessProgram = (script: Buffer): boolean =>
+    script.length >= 4 &&
+    script.length <= 42 &&
+    (script[0] === bitcoin.opcodes.OP_0 ||
+        (script[0] >= bitcoin.opcodes.OP_1 &&
+            script[0] <= bitcoin.opcodes.OP_16)) &&
+    script[1] === script.length - 2;
+
+// Whether signing a funded PSBT keeps the txid of its unsigned
+// transaction. lnd keys a batch channel verified with skip_finalize by
+// that txid, and publishes the signed transaction. Only an input that
+// spends a native SegWit output has an empty scriptSig once signed; a
+// nested SegWit (P2SH) or legacy input gets one and changes the txid.
+// An input whose spent output the PSBT does not carry counts as one that
+// changes it.
+export const signingKeepsTxid = (psbt: string | Uint8Array): boolean => {
+    const packet = bitcoin.Psbt.fromBuffer(toPsbtBuffer(psbt));
+    return packet.data.inputs.every((input, i) => {
+        let script: Buffer | undefined = input.witnessUtxo?.script;
+        if (!script && input.nonWitnessUtxo) {
+            script = bitcoin.Transaction.fromBuffer(input.nonWitnessUtxo).outs[
+                packet.txInputs[i].index
+            ]?.script;
+        }
+        return !!script && isNativeWitnessProgram(script);
+    });
+};
+
 // The funding outpoints of the given channel addresses in a funded PSBT.
 // lnd keys a channel that passed psbt_verify by the txid of the PSBT's
 // unsigned transaction, which differs from the signed one for a nested
