@@ -2,6 +2,7 @@ jest.mock('./Stores', () => ({
     activityStore: { getSortedActivity: jest.fn() },
     nodeInfoStore: { nodeInfo: {} },
     connectivityStore: {
+        isOffline: false,
         start: jest.fn(),
         stop: jest.fn(),
         onReconnect: jest.fn()
@@ -28,7 +29,9 @@ jest.mock('@nostr-dev-kit/ndk', () => ({
     default: jest.fn()
 }));
 jest.mock('../utils/NostrUtils', () => ({}));
-jest.mock('../utils/NostrMintBackup', () => ({}));
+jest.mock('../utils/NostrMintBackup', () => ({
+    MintBackupRelaysUnreachableError: class extends Error {}
+}));
 jest.mock('../utils/MigrationUtils', () => ({
     migrateCashuSeedVersion: jest.fn().mockResolvedValue(undefined)
 }));
@@ -74,6 +77,7 @@ import CashuDevKit from '../cashu-cdk';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import * as SchedulingUtils from '../utils/SchedulingUtils';
+import { MintBackupRelaysUnreachableError } from '../utils/NostrMintBackup';
 
 // BIP-39 zero-entropy test vector, never a real wallet.
 const mnemonic = `${'abandon '.repeat(11)}about`;
@@ -3268,5 +3272,98 @@ describe('CashuStore reset on a wallet switch', () => {
         expect(store.cdkInitialized).toBe(true);
         expect(store.mintUrls).toEqual([SHARED_MINT]);
         expect(CashuDevKit.getBalances).toHaveBeenCalled();
+    });
+});
+
+describe('CashuStore restoreMintUrlsAtStartup', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
+    });
+
+    afterEach(() => {
+        (connectivityStore as any).isOffline = false;
+        jest.restoreAllMocks();
+    });
+
+    it('skips the relays while offline and keeps the restore owed', async () => {
+        (connectivityStore as any).isOffline = true;
+        const store = newStore();
+        const restore = jest.spyOn(store, 'nostrRestoreMints');
+
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toEqual({
+            mintUrls: null,
+            restoreOwed: true
+        });
+
+        expect(restore).not.toHaveBeenCalled();
+        expect(Storage.setItem).not.toHaveBeenCalled();
+    });
+
+    it('persists the restored mints while online', async () => {
+        const store = newStore();
+        jest.spyOn(store, 'nostrRestoreMints').mockResolvedValue([
+            'https://mint.example.com'
+        ]);
+
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toEqual({
+            mintUrls: ['https://mint.example.com'],
+            restoreOwed: false
+        });
+
+        expect(Storage.setItem).toHaveBeenCalledWith(
+            'dir-cashu-mintUrls',
+            JSON.stringify(['https://mint.example.com'])
+        );
+    });
+
+    it('still returns the restored mints when persisting them fails', async () => {
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        (Storage.setItem as jest.Mock).mockRejectedValue(new Error('full'));
+        const store = newStore();
+        jest.spyOn(store, 'nostrRestoreMints').mockResolvedValue([
+            'https://mint.example.com'
+        ]);
+
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toEqual({
+            mintUrls: ['https://mint.example.com'],
+            restoreOwed: false
+        });
+    });
+
+    it('persists nothing when the backup is empty or the fetch throws', async () => {
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const store = newStore();
+        const restore = jest
+            .spyOn(store, 'nostrRestoreMints')
+            .mockResolvedValueOnce(null)
+            .mockRejectedValueOnce(new Error('relay down'));
+
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toEqual({
+            mintUrls: null,
+            restoreOwed: false
+        });
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toEqual({
+            mintUrls: null,
+            restoreOwed: false
+        });
+
+        expect(restore).toHaveBeenCalledTimes(2);
+        expect(Storage.setItem).not.toHaveBeenCalled();
+    });
+
+    it('keeps the restore owed when no relay answered', async () => {
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const store = newStore();
+        jest.spyOn(store, 'nostrRestoreMints').mockRejectedValue(
+            new MintBackupRelaysUnreachableError()
+        );
+
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toEqual({
+            mintUrls: null,
+            restoreOwed: true
+        });
+        expect(Storage.setItem).not.toHaveBeenCalled();
     });
 });
