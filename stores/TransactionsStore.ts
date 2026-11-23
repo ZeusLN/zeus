@@ -1290,6 +1290,7 @@ export default class TransactionsStore {
         let neverDispatched = false;
         try {
             while (this.inFlightOwnerSeq === seq && Date.now() < deadline) {
+                const lookupStarted = Date.now();
                 let payment: any = null;
                 let lookupFailed = false;
                 let inconclusive = false;
@@ -1389,7 +1390,17 @@ export default class TransactionsStore {
                     // deduplicated by the node)
                     return;
                 }
-                await sleep(PAYMENT_TRACK_POLL_MS);
+                // Only the rest of the interval: a lookup that waited on the
+                // node for the outcome (LND REST holds TrackPayment open for
+                // 10 s) has used it up, and a delay that is already past
+                // runs at once. A pause after such a lookup leaves no lookup
+                // open, and lnd deletes a failed payment's HTLC attempts
+                // once it is final. An outcome that lands in that pause
+                // comes back without them, so a hold invoice the recipient
+                // canceled reads as a payment timeout (#2001).
+                await sleep(
+                    PAYMENT_TRACK_POLL_MS - (Date.now() - lookupStarted)
+                );
             }
         } finally {
             // a newer payment may have started its own tracking
