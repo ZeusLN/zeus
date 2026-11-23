@@ -433,8 +433,9 @@ describe('decode tag fields', () => {
     });
     // A single 5-bit word cannot hold a byte (excess padding), and two words
     // leave 2 bits that must be zero (non-zero padding). bech32 rejects both.
-    // A payment hash like that leaves the invoice without one, so decode()
-    // throws; other fields decode as undefined.
+    // A payment hash that short has the wrong length, so it is skipped and
+    // the invoice has none. A description is converted whatever its length,
+    // and like zpay32, decode() rejects the invoice when that fails.
     it.each([[[0]], [[31, 31]]])(
         'rejects an invoice whose only payment_hash has invalid padding (%#)',
         (data) => {
@@ -448,16 +449,11 @@ describe('decode tag fields', () => {
         ['description', 13, [0]],
         ['description', 13, [31, 31]]
     ])(
-        'leaves %s undefined when its data has invalid padding (%#)',
+        'rejects an invoice whose %s has invalid padding (%#)',
         (field, tagCode, data) => {
-            const decoded: any = Bolt11Utils.decode(
-                withTag(tagCode as number, data as number[])
-            );
-
-            expect(decoded[field as string]).toBeUndefined();
-            expect(decoded.sections).toContainEqual(
-                expect.objectContaining({ name: field, value: undefined })
-            );
+            expect(() =>
+                Bolt11Utils.decode(withTag(tagCode as number, data as number[]))
+            ).toThrow(`Invalid ${field} field`);
         }
     );
 });
@@ -622,6 +618,10 @@ describe('duplicate singleton tags', () => {
     // Attack shape from the `invoices` npm package bug (fixed there in
     // 6.0.0, 2026-08-07): an invoice that repeats a singleton tag makes a
     // last-wins reader track a different payment than the node.
+    beforeEach(() => {
+        (Bolt11Utils as any).cache.clear();
+    });
+
     const HASH_A = 'aa'.repeat(32);
     const HASH_B = 'bb'.repeat(32);
     const PAYEE_A = '02' + 'ab'.repeat(32);
@@ -743,17 +743,18 @@ describe('duplicate singleton tags', () => {
     });
 
     it('keeps the first expiry and derives timeExpireDate from it', () => {
-        // 3600 encoded big-endian in 5-bit words: 3*32^2 + 16*32 + 16
+        // 7200 encoded big-endian in 5-bit words: 7*32^2 + 1*32 + 0. Not
+        // 3600, which decode also applies when no expiry field is kept.
         const decoded = Bolt11Utils.decode(
             buildInvoice([
                 tag(1, hexToWords(HASH_A)),
-                tag(6, [3, 16, 16]),
+                tag(6, [7, 1, 0]),
                 tag(6, [1])
             ])
         );
 
-        expect(decoded.expiry).toBe(3600);
-        expect(decoded.timeExpireDate).toBe(decoded.timestamp + 3600);
+        expect(decoded.expiry).toBe(7200);
+        expect(decoded.timeExpireDate).toBe(decoded.timestamp + 7200);
     });
 
     it('keeps the first valid payee tag for destination', () => {
@@ -856,5 +857,154 @@ describe('duplicate singleton tags', () => {
         expect(hashSections).toHaveLength(2);
         expect(hashSections[0].value).toBe(HASH_A);
         expect(hashSections[1].value).toBe(HASH_B);
+    });
+
+    describe('truncated tagged fields', () => {
+        // A field header whose declared length differs from the words
+        // that follow it.
+        const tagWithLength = (
+            code: number,
+            length: number,
+            words: number[]
+        ): number[] => [code, length >> 5, length & 31, ...words];
+
+        it('throws when the final payment_hash declares more words than remain', () => {
+            // Declares 60 words, carries the 52 of a real hash. zpay32
+            // rejects this with ErrInvalidFieldLength.
+            const action = () =>
+                Bolt11Utils.decode(
+                    buildInvoice([tagWithLength(1, 60, hexToWords(HASH_A))])
+                );
+
+            expect(action).toThrowError('Invalid field length');
+        });
+
+        it('throws when a later field declares more words than remain', () => {
+            const action = () =>
+                Bolt11Utils.decode(
+                    buildInvoice([
+                        tag(1, hexToWords(HASH_A)),
+                        tagWithLength(24, 10, [2, 16])
+                    ])
+                );
+
+            expect(action).toThrowError('Invalid field length');
+        });
+
+        it('throws on one stray word after the last field', () => {
+            // Without the check this decoded as an empty `c` field,
+            // cltv_expiry 0. zpay32 rejects it with ErrBrokenTaggedField.
+            const action = () =>
+                Bolt11Utils.decode(
+                    buildInvoice([tag(1, hexToWords(HASH_A)), [24]])
+                );
+
+            expect(action).toThrowError('Broken tagged field');
+        });
+
+        it('throws on two stray words after the last field', () => {
+            const action = () =>
+                Bolt11Utils.decode(
+                    buildInvoice([tag(1, hexToWords(HASH_A)), [24, 0]])
+                );
+
+            expect(action).toThrowError('Broken tagged field');
+        });
+
+        it('accepts a zero-length field at the end', () => {
+            const decoded = Bolt11Utils.decode(
+                buildInvoice([tag(1, hexToWords(HASH_A)), tag(24, [])])
+            );
+
+            expect(decoded.payment_hash).toBe(HASH_A);
+            expect(decoded.cltv_expiry).toBe(0);
+        });
+    });
+
+    describe('fields that fail conversion', () => {
+        // Set the lowest bit of the last word. For a 52-word hash or a
+        // 53-word pubkey that bit is padding, which must be zero.
+        const withBadPadding = (words: number[]): number[] => {
+            const out = [...words];
+            out[out.length - 1] |= 1;
+            return out;
+        };
+
+        const decodeTags = (tags: number[][]) => () =>
+            Bolt11Utils.decode(buildInvoice(tags));
+
+        it('throws on a payment_hash with non-zero padding', () => {
+            expect(
+                decodeTags([tag(1, withBadPadding(hexToWords(HASH_A)))])
+            ).toThrowError('Invalid payment_hash field');
+        });
+
+        it('throws instead of falling through to a later payment_secret', () => {
+            expect(
+                decodeTags([
+                    tag(1, hexToWords(HASH_A)),
+                    tag(16, withBadPadding(hexToWords(HASH_B))),
+                    tag(16, hexToWords(HASH_A))
+                ])
+            ).toThrowError('Invalid payment_secret field');
+        });
+
+        it('throws on a description_hash with non-zero padding', () => {
+            expect(
+                decodeTags([
+                    tag(1, hexToWords(HASH_A)),
+                    tag(23, withBadPadding(hexToWords(HASH_B)))
+                ])
+            ).toThrowError('Invalid description_hash field');
+        });
+
+        it('throws on a payee with non-zero padding', () => {
+            expect(
+                decodeTags([
+                    tag(1, hexToWords(HASH_A)),
+                    tag(19, withBadPadding(hexToWords(PAYEE_A)))
+                ])
+            ).toThrowError('Invalid payee field');
+        });
+
+        it('throws instead of falling through to a later description', () => {
+            // One word is 5 bits, which cannot hold a byte: excess padding.
+            expect(
+                decodeTags([
+                    tag(1, hexToWords(HASH_A)),
+                    tag(13, [3]),
+                    tag(13, utf8ToWords('memo'))
+                ])
+            ).toThrowError('Invalid description field');
+        });
+
+        it('throws on a one-word metadata field', () => {
+            expect(
+                decodeTags([tag(1, hexToWords(HASH_A)), tag(27, [3])])
+            ).toThrowError('Invalid metadata field');
+        });
+
+        it('ignores a bad occurrence after the one it kept', () => {
+            // zpay32 skips later occurrences without converting them.
+            const decoded = decodeTags([
+                tag(1, hexToWords(HASH_A)),
+                tag(16, hexToWords(HASH_A)),
+                tag(16, withBadPadding(hexToWords(HASH_B)))
+            ])();
+
+            expect(decoded.payment_secret).toBe(HASH_A);
+        });
+
+        it('skips a wrong-length field with bad padding without converting it', () => {
+            // 21 bytes = 34 words with 2 padding bits. zpay32 skips it on
+            // length before converting, so the next payment_secret is kept.
+            const decoded = decodeTags([
+                tag(1, hexToWords(HASH_A)),
+                tag(16, withBadPadding(hexToWords('cc'.repeat(21)))),
+                tag(16, hexToWords(HASH_B))
+            ])();
+
+            expect(decoded.payment_secret).toBe(HASH_B);
+        });
     });
 });

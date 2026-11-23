@@ -190,6 +190,13 @@ class Bolt11Utils {
             tagWords: number[];
         let paymentHashSeen = false;
         while (words.length > 0) {
+            // Like zpay32, reject a field whose type and length header is
+            // cut short, or whose declared length runs past the remaining
+            // data, instead of parsing a truncated value.
+            if (words.length < 3) {
+                throw new Error('Broken tagged field');
+            }
+
             const tagCode = words[0].toString();
             tagName = this.TAGNAMES[tagCode] || 'unknown_tag';
             parser = this.TAGPARSERS[tagCode] || this.getUnknownParser(tagCode);
@@ -197,6 +204,10 @@ class Bolt11Utils {
 
             tagLength = this.wordsToIntBE(words.slice(0, 2));
             words = words.slice(2);
+
+            if (tagLength > words.length) {
+                throw new Error('Invalid field length');
+            }
 
             tagWords = words.slice(0, tagLength);
             words = words.slice(tagLength);
@@ -221,6 +232,11 @@ class Bolt11Utils {
             // Other tags: the first well-formed occurrence wins and
             // wrong-length fixed-size fields are skipped, matching zpay32.
             // `sections` still records every occurrence.
+            //
+            // zpay32 converts only the occurrence it keeps, and rejects the
+            // whole invoice if that conversion fails (non-zero or excess
+            // padding bits). requireParsed does the same, so a bad field
+            // cannot hand the slot to a later occurrence.
             switch (tagName) {
                 case 'payment_hash':
                     if (paymentHashSeen) {
@@ -230,7 +246,10 @@ class Bolt11Utils {
                     }
                     paymentHashSeen = true;
                     if (tagWords.length === this.HASH_TAG_WORDS) {
-                        result.payment_hash = value;
+                        result.payment_hash = this.requireParsed(
+                            tagName,
+                            value
+                        );
                     }
                     break;
                 case 'payment_secret':
@@ -238,12 +257,15 @@ class Bolt11Utils {
                         result.payment_secret === undefined &&
                         tagWords.length === this.HASH_TAG_WORDS
                     ) {
-                        result.payment_secret = value;
+                        result.payment_secret = this.requireParsed(
+                            tagName,
+                            value
+                        );
                     }
                     break;
                 case 'description':
                     if (result.description === undefined) {
-                        result.description = value;
+                        result.description = this.requireParsed(tagName, value);
                     }
                     break;
                 case 'description_hash':
@@ -251,7 +273,10 @@ class Bolt11Utils {
                         result.description_hash === undefined &&
                         tagWords.length === this.HASH_TAG_WORDS
                     ) {
-                        result.description_hash = value;
+                        result.description_hash = this.requireParsed(
+                            tagName,
+                            value
+                        );
                     }
                     break;
                 case 'payee':
@@ -259,7 +284,7 @@ class Bolt11Utils {
                         result.destination === undefined &&
                         tagWords.length === this.PAYEE_TAG_WORDS
                     ) {
-                        result.destination = value;
+                        result.destination = this.requireParsed(tagName, value);
                         result.payeeNodeKey = value;
                     }
                     break;
@@ -275,7 +300,7 @@ class Bolt11Utils {
                     break;
                 case 'metadata':
                     if (result.metadata === undefined) {
-                        result.metadata = value;
+                        result.metadata = this.requireParsed(tagName, value);
                     }
                     break;
             }
@@ -539,6 +564,15 @@ class Bolt11Utils {
             return base64Utils.bytesToUtf8(Uint8Array.from(bytes));
         }
         return undefined;
+    }
+
+    // The word-to-byte parsers return undefined when the field's padding
+    // bits are invalid; zpay32 fails the invoice on that.
+    private requireParsed<T>(tagName: string, value: T | undefined): T {
+        if (value === undefined) {
+            throw new Error(`Invalid ${tagName} field`);
+        }
+        return value;
     }
 
     private getUnknownParser(tagCode: string) {
