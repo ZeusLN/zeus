@@ -1881,6 +1881,7 @@
     "stores.NostrWalletConnectStore.error.payInvoiceNotPermitted": "Na tomto spojení není povoleno platit faktury.",
     "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Probíhala jiná platba, tento požadavek trval příliš dlouho a nebyl vykonán. Zkuste to prosím znovu.",
     "stores.NostrWalletConnectStore.error.makeInvoiceRateLimited": "Z tohoto připojení přichází příliš mnoho požadavků. Vydržte prosím chvíli, než to zkusíte znovu.",
+    "stores.NostrWalletConnectStore.error.descriptionHashNotSupported": "make_invoice with a description_hash is not supported",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "Nezdařilo se připojit {{relayUrl}}",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "Nezdařilo se načíst připojení",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "Nezdařilo se uložit připojení",
