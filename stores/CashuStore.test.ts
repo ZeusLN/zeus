@@ -8,7 +8,12 @@ jest.mock('./Stores', () => ({
     }
 }));
 jest.mock('./SettingsStore', () => ({
-    DEFAULT_NOSTR_RELAYS: ['wss://relay.one', 'wss://relay.two']
+    DEFAULT_NOSTR_RELAYS: [
+        'wss://relay.one',
+        'wss://relay.two',
+        'wss://relay.three',
+        'wss://relay.four'
+    ]
 }));
 jest.mock('react-native-blob-util', () => ({}));
 // a real InvoicesStore backs the sweep isolation tests
@@ -25,7 +30,9 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('@nostr-dev-kit/ndk', () => ({
     __esModule: true,
-    default: jest.fn()
+    default: jest.fn(),
+    normalizeRelayUrl:
+        jest.requireActual('@nostr-dev-kit/ndk').normalizeRelayUrl
 }));
 jest.mock('../utils/NostrUtils', () => ({}));
 jest.mock('../utils/NostrMintBackup', () => ({}));
@@ -995,21 +1002,72 @@ describe('CashuStore melting into our own invoice', () => {
 describe('CashuStore NDK instance', () => {
     const MockNDK = NDK as unknown as jest.Mock;
     let connect: jest.Mock;
+    let connectedRelays: jest.Mock;
+    let instances: any[];
 
     beforeEach(() => {
         connect = jest.fn().mockResolvedValue(undefined);
-        MockNDK.mockReset().mockImplementation(() => ({
-            connect,
-            // Emit EOSE right away so subscribeAndCollectEvents resolves
-            // without waiting out its 10s timeout.
-            subscribe: jest.fn(() => ({
-                on: (event: string, cb: () => void) => {
-                    if (event === 'eose') cb();
+        connectedRelays = jest.fn(() => [{}]);
+        instances = [];
+        MockNDK.mockReset().mockImplementation(() => {
+            const relays = new Map(
+                [
+                    'wss://relay.one',
+                    'wss://relay.two',
+                    'wss://relay.three',
+                    'wss://relay.four'
+                ].map((url) => [
+                    url,
+                    {
+                        url,
+                        updateValidationRatio: jest.fn(),
+                        on: jest.fn(),
+                        removeAllListeners: jest.fn(),
+                        connectivity: {
+                            resetReconnectionState: jest.fn(),
+                            disconnect: jest.fn(),
+                            connect: jest.fn()
+                        }
+                    }
+                ])
+            );
+            const listeners = new Map<string, Set<() => void>>();
+            const instance = {
+                connect,
+                pool: {
+                    connectedRelays,
+                    relays,
+                    urls: jest.fn(() => Array.from(relays.keys())),
+                    removeRelay: jest.fn((url: string) => relays.delete(url)),
+                    on: jest.fn((event: string, cb: () => void) => {
+                        if (!listeners.has(event)) {
+                            listeners.set(event, new Set());
+                        }
+                        listeners.get(event)!.add(cb);
+                    }),
+                    off: jest.fn((event: string, cb: () => void) => {
+                        listeners.get(event)?.delete(cb);
+                    }),
+                    emit: (event: string) =>
+                        Array.from(listeners.get(event) ?? []).forEach((cb) =>
+                            cb()
+                        ),
+                    listenerCount: (event: string) =>
+                        listeners.get(event)?.size ?? 0
                 },
-                stop: jest.fn()
-            })),
-            fetchEvents: jest.fn().mockResolvedValue(new Set())
-        }));
+                // Emit a single EOSE right away, as NDKSubscription does
+                // once per subscription.
+                subscribe: jest.fn(() => ({
+                    on: (event: string, cb: () => void) => {
+                        if (event === 'eose') cb();
+                    },
+                    stop: jest.fn()
+                })),
+                fetchEvents: jest.fn().mockResolvedValue(new Set())
+            };
+            instances.push(instance);
+            return instance;
+        });
         jest.useFakeTimers();
         jest.spyOn(console, 'log').mockImplementation(() => {});
         jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -1024,21 +1082,341 @@ describe('CashuStore NDK instance', () => {
         await newStore().fetchMints();
 
         expect(MockNDK).toHaveBeenCalledWith({
-            explicitRelayUrls: ['wss://relay.one', 'wss://relay.two'],
+            explicitRelayUrls: [
+                'wss://relay.one/',
+                'wss://relay.two/',
+                'wss://relay.three/',
+                'wss://relay.four/'
+            ],
             enableOutboxModel: false
         });
         expect(connect).toHaveBeenCalledWith(2000);
     });
 
-    it('reuses one instance across repeated Discover Mints loads', async () => {
-        const store = newStore();
+    it('disconnects the instance when discovery finishes', async () => {
+        const store = newStore() as any;
 
         await store.fetchMints();
+
+        expect(instances).toHaveLength(1);
+        expect(instances[0].pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(instances[0].pool.urls()).toEqual([]);
+        expect(store.ndk).toBeUndefined();
+        expect(store.error).toBe(false);
+
+        // The next discovery starts with a fresh instance.
         await store.fetchMints();
+        expect(MockNDK).toHaveBeenCalledTimes(2);
+        expect(connect).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the instance while another discovery still uses it', async () => {
+        let finishFetch!: (events: Set<any>) => void;
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+        const ndk = await store.getNdk();
+        ndk.fetchEvents.mockReturnValueOnce(
+            new Promise((resolve) => (finishFetch = resolve))
+        );
+
+        const trusted = store.fetchMintsFromFollows();
+        await store.fetchMints();
+
+        expect(ndk.pool.removeRelay).not.toHaveBeenCalled();
+        expect(store.ndk).toBe(ndk);
+
+        finishFetch(new Set());
+        await trusted;
+
+        expect(ndk.pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.ndk).toBeUndefined();
+        expect(MockNDK).toHaveBeenCalledTimes(1);
+    });
+
+    it('disconnects the instance on reset', async () => {
+        const store = newStore() as any;
+        store.stopConnectivityMonitoring = jest.fn();
+        const ndk = await store.getNdk();
+
+        store.reset();
+
+        expect(ndk.pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.ndk).toBeUndefined();
+        await expect(store.getNdk()).resolves.not.toBe(ndk);
+        expect(MockNDK).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not fetch when no relay connected', async () => {
+        connectedRelays.mockReturnValue([]);
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+
+        const trusted = store.fetchMintsFromFollows();
+        // still waiting for a first relay just before the 8 s bound
+        await jest.advanceTimersByTimeAsync(7999);
+        expect(store.loadingTrustedMints).toBe(true);
+        await jest.advanceTimersByTimeAsync(1);
+        await trusted;
+
+        expect(instances[0].fetchEvents).not.toHaveBeenCalled();
+        expect(instances[0].pool.listenerCount('relay:connect')).toBe(0);
+        expect(instances[0].pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.loadingTrustedMints).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.ndk).toBeUndefined();
+    });
+
+    it('waits for a relay that connects after connect() returns', async () => {
+        connectedRelays.mockReturnValue([]);
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+
+        const trusted = store.fetchMintsFromFollows();
+        await jest.advanceTimersByTimeAsync(3000);
+        expect(instances[0].fetchEvents).not.toHaveBeenCalled();
+
+        connectedRelays.mockReturnValue([{}]);
+        instances[0].pool.emit('relay:connect');
+        await trusted;
+
+        expect(instances[0].fetchEvents).toHaveBeenCalledTimes(1);
+        expect(instances[0].pool.listenerCount('relay:connect')).toBe(0);
+        expect(store.loadingTrustedMints).toBe(false);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('gives up on a fetch that never completes', async () => {
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+        const ndk = await store.getNdk();
+        ndk.fetchEvents.mockReturnValueOnce(new Promise(() => {}));
+
+        const trusted = store.fetchMintsFromFollows();
+        // still waiting for the fetch just before the 15 s bound
+        await jest.advanceTimersByTimeAsync(14999);
+        expect(store.loadingTrustedMints).toBe(true);
+        await jest.advanceTimersByTimeAsync(1);
+        await trusted;
+
+        expect(store.loadingTrustedMints).toBe(false);
+        expect(store.error).toBe(true);
+        expect(ndk.pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.ndk).toBeUndefined();
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('keeps counting per instance across a reset', async () => {
+        let finishFetch!: (events: Set<any>) => void;
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+        store.stopConnectivityMonitoring = jest.fn();
+        const first = await store.getNdk();
+        first.fetchEvents.mockReturnValueOnce(
+            new Promise((resolve) => (finishFetch = resolve))
+        );
+
+        // A discovery is still running on the first instance when the
+        // wallet is reset.
+        const trusted = store.fetchMintsFromFollows();
+        await Promise.resolve();
+        store.reset();
+        expect(first.pool.removeRelay).toHaveBeenCalledTimes(4);
+
+        // A discovery started after the reset gets its own instance and
+        // disconnects it when done.
+        await store.fetchMints();
+        const second = instances[1];
+        expect(second).not.toBe(first);
+        expect(second.pool.removeRelay).toHaveBeenCalledTimes(4);
+
+        // Start another discovery on a third instance, then let the
+        // first one finish: it must not touch the current instance.
+        const third = store.acquireNdk();
+        const thirdNdk = await third;
+        finishFetch(new Set());
+        await trusted;
+
+        expect(store.ndk).toBe(thirdNdk);
+        expect(thirdNdk.pool.removeRelay).not.toHaveBeenCalled();
+        store.releaseNdk(thirdNdk);
+        expect(thirdNdk.pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.ndk).toBeUndefined();
+    });
+
+    it('cancels pending reconnects before removing the relays', async () => {
+        const store = newStore() as any;
+        const ndk = await store.getNdk();
+        const relays = Array.from(ndk.pool.relays.values()) as any[];
+
+        store.releaseNdk(await store.acquireNdk());
+
+        expect(ndk.pool.removeRelay).toHaveBeenCalledTimes(4);
+        relays.forEach((relay) => {
+            const reset = relay.connectivity.resetReconnectionState;
+            expect(reset).toHaveBeenCalledTimes(1);
+            const removeOrder = ndk.pool.removeRelay.mock.calls.findIndex(
+                ([url]: [string]) => url === relay.url
+            );
+            expect(reset.mock.invocationCallOrder[0]).toBeLessThan(
+                ndk.pool.removeRelay.mock.invocationCallOrder[removeOrder]
+            );
+        });
+    });
+
+    it('stops the timers and reconnects of the removed relays', async () => {
+        const store = newStore() as any;
+        const ndk = await store.getNdk();
+        const relays = Array.from(ndk.pool.relays.values()) as any[];
+        const originals = relays.map((relay) => ({
+            updateValidationRatio: relay.updateValidationRatio,
+            connect: relay.connectivity.connect
+        }));
+
+        store.releaseNdk(await store.acquireNdk());
+
+        relays.forEach((relay, i) => {
+            // disconnect() clears the monitor intervals even when the relay
+            // is already DISCONNECTED, where removeRelay() would skip it
+            const disconnect = relay.connectivity.disconnect;
+            expect(disconnect).toHaveBeenCalledTimes(1);
+            const removeOrder = ndk.pool.removeRelay.mock.calls.findIndex(
+                ([url]: [string]) => url === relay.url
+            );
+            expect(disconnect.mock.invocationCallOrder[0]).toBeLessThan(
+                ndk.pool.removeRelay.mock.invocationCallOrder[removeOrder]
+            );
+
+            // the validation-ratio timer and any late reconnect end here
+            expect(relay.updateValidationRatio).not.toBe(
+                originals[i].updateValidationRatio
+            );
+            expect(relay.connectivity.connect).not.toBe(originals[i].connect);
+            relay.updateValidationRatio();
+            relay.connectivity.connect();
+            expect(originals[i].updateValidationRatio).not.toHaveBeenCalled();
+            expect(originals[i].connect).not.toHaveBeenCalled();
+        });
+    });
+
+    it('fetchReviewerProfiles releases its instance', async () => {
+        const store = newStore() as any;
+
+        await store.fetchReviewerProfiles(['ab'.repeat(32)]);
+
+        expect(instances).toHaveLength(1);
+        expect(instances[0].fetchEvents).toHaveBeenCalledTimes(1);
+        expect(instances[0].pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.ndk).toBeUndefined();
+        expect(store.ndkUsers.size).toBe(0);
+        expect(store.loadingReviews).toBe(false);
+    });
+
+    it('fetchReviewerProfiles keeps an instance another discovery still uses', async () => {
+        let finishFetch!: (events: Set<any>) => void;
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+        const ndk = await store.getNdk();
+        ndk.fetchEvents.mockReturnValueOnce(
+            new Promise((resolve) => (finishFetch = resolve))
+        );
+
+        const trusted = store.fetchMintsFromFollows();
+        await store.fetchReviewerProfiles(['cd'.repeat(32)]);
+
+        expect(ndk.pool.removeRelay).not.toHaveBeenCalled();
+        expect(store.ndk).toBe(ndk);
+
+        finishFetch(new Set());
+        await trusted;
+
+        expect(ndk.pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.ndkUsers.size).toBe(0);
+    });
+
+    it('fetchReviewerProfiles releases its instance when the fetch times out', async () => {
+        const store = newStore() as any;
+        const ndk = await store.getNdk();
+        ndk.fetchEvents.mockReturnValueOnce(new Promise(() => {}));
+
+        const profiles = store.fetchReviewerProfiles(['ab'.repeat(32)]);
+        await jest.advanceTimersByTimeAsync(15000);
+        await profiles;
+
+        expect(ndk.pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.ndk).toBeUndefined();
+        expect(store.ndkUsers.size).toBe(0);
+        expect(store.loadingReviews).toBe(false);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('fetchReviewerProfiles creates no instance when every profile is cached', async () => {
+        const store = newStore() as any;
+        const pubkey = 'ab'.repeat(32);
+        store.reviewerProfiles.set(pubkey, { pubkey, npub: pubkey });
+
+        await store.fetchReviewerProfiles([pubkey]);
+
+        expect(MockNDK).not.toHaveBeenCalled();
+        expect(store.loadingReviews).toBe(false);
+    });
+
+    it('fails both concurrent discoveries on one instance when no relay connects', async () => {
+        connectedRelays.mockReturnValue([]);
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+
+        const all = store.fetchMints();
+        const trusted = store.fetchMintsFromFollows();
+        await jest.advanceTimersByTimeAsync(8000);
+        await Promise.all([all, trusted]);
 
         expect(MockNDK).toHaveBeenCalledTimes(1);
-        expect(connect).toHaveBeenCalledTimes(1);
-        expect(store.error).toBe(false);
+        expect(instances[0].fetchEvents).not.toHaveBeenCalled();
+        expect(store.loading).toBe(false);
+        expect(store.loadingTrustedMints).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.ndkUsers.size).toBe(0);
+        expect(store.ndk).toBeUndefined();
+    });
+
+    it('fails a discovery whose connect is still pending on reset', async () => {
+        // Like NDK, connect() resolves when its timeout elapses, and only the
+        // relays still in the pool can be connected.
+        connect.mockImplementation(
+            () => new Promise<void>((resolve) => setTimeout(resolve, 2000))
+        );
+        connectedRelays.mockImplementation(() =>
+            Array.from(instances[0].pool.relays.values())
+        );
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+        store.stopConnectivityMonitoring = jest.fn();
+
+        const trusted = store.fetchMintsFromFollows();
+        await Promise.resolve();
+        store.reset();
+        expect(instances[0].pool.removeRelay).toHaveBeenCalledTimes(4);
+
+        await jest.advanceTimersByTimeAsync(10000);
+        await trusted;
+
+        expect(instances[0].fetchEvents).not.toHaveBeenCalled();
+        expect(store.error).toBe(true);
+        expect(store.loadingTrustedMints).toBe(false);
+        expect(store.ndk).toBeUndefined();
+        expect(store.ndkUsers.size).toBe(0);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('resolves the collector on the single subscription EOSE', async () => {
+        const store = newStore();
+
+        // Fake timers are installed and never advanced: waiting for the 10s
+        // timeout would leave this promise pending.
+        await store.fetchMints();
+
+        expect(store.loading).toBe(false);
+        expect(jest.getTimerCount()).toBe(0);
     });
 
     it('makes concurrent callers wait on a single connect', async () => {
@@ -3268,5 +3646,148 @@ describe('CashuStore reset on a wallet switch', () => {
         expect(store.cdkInitialized).toBe(true);
         expect(store.mintUrls).toEqual([SHARED_MINT]);
         expect(CashuDevKit.getBalances).toHaveBeenCalled();
+    });
+});
+
+describe('CashuStore NDK teardown with the real NDK', () => {
+    const RealNDK = jest.requireActual('@nostr-dev-kit/ndk').default;
+    const realWebSocket = (global as any).WebSocket;
+
+    // androidClose: close() on a CONNECTING socket does nothing and the
+    // socket still opens later, as with React Native's Android WebSocketModule
+    const stubWebSocket = (androidClose = false, down = 'relay.down') => {
+        const sockets: any[] = [];
+        (global as any).WebSocket = class {
+            static CONNECTING = 0;
+            static OPEN = 1;
+            static CLOSING = 2;
+            static CLOSED = 3;
+            readyState = 0;
+            onopen?: () => void;
+            onclose?: () => void;
+            onerror?: () => void;
+            onmessage?: (e: { data: string }) => void;
+            constructor(public url: string) {
+                sockets.push(this);
+                setTimeout(
+                    () => {
+                        if (url.includes(down)) {
+                            this.readyState = 3;
+                            this.onerror?.();
+                            this.onclose?.();
+                        } else if (
+                            this.readyState === 0 ||
+                            (androidClose && this.readyState === 2)
+                        ) {
+                            this.readyState = 1;
+                            this.onopen?.();
+                        }
+                    },
+                    url.includes('relay.slow') ? 3000 : 10
+                );
+            }
+            addEventListener() {}
+            removeEventListener() {}
+            // answers a REQ with EOSE, as a relay with no matching event does
+            send(data: string) {
+                const [type, id] = JSON.parse(data);
+                if (type !== 'REQ') return;
+                setTimeout(() => {
+                    if (this.readyState !== 1) return;
+                    this.onmessage?.({ data: JSON.stringify(['EOSE', id]) });
+                }, 10);
+            }
+            close() {
+                if (this.readyState >= 2) return;
+                const connecting = this.readyState === 0;
+                this.readyState = 2;
+                if (androidClose && connecting) return;
+                setTimeout(() => {
+                    this.readyState = 3;
+                    this.onclose?.();
+                }, 0);
+            }
+        };
+        return sockets;
+    };
+
+    const connected = async (urls: string[]) => {
+        const ndk = new RealNDK({
+            explicitRelayUrls: urls,
+            enableOutboxModel: false
+        });
+        const connecting = ndk.connect(2000);
+        await jest.advanceTimersByTimeAsync(2000);
+        await connecting;
+        return ndk;
+    };
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => {
+        (global as any).WebSocket = realWebSocket;
+        jest.useRealTimers();
+    });
+
+    it('leaves no timer running after teardown', async () => {
+        stubWebSocket();
+        const ndk = await connected(['wss://relay.up', 'wss://relay.down']);
+        (newStore() as any).disconnectNdk(ndk);
+        await jest.advanceTimersByTimeAsync(31000);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('does not reopen a relay whose wake probe is in flight at teardown', async () => {
+        const sockets = stubWebSocket();
+        const ndk = await connected(['wss://relay.up']);
+        // app suspended for 20 s: the next sleep detector tick probes
+        jest.setSystemTime(Date.now() + 20000);
+        await jest.advanceTimersByTimeAsync(10000);
+        (newStore() as any).disconnectNdk(ndk);
+        await jest.advanceTimersByTimeAsync(31000);
+        expect(sockets).toHaveLength(1);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('closes a relay that connects after teardown (Android)', async () => {
+        const sockets = stubWebSocket(true);
+        const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const ndk = await connected(['wss://relay.slow']);
+        const [relay] = Array.from(ndk.pool.relays.values()) as any[];
+        (newStore() as any).disconnectNdk(ndk);
+        await jest.advanceTimersByTimeAsync(31000);
+        expect(relay.status).not.toBe(5); // CONNECTED
+        expect(sockets).toHaveLength(1);
+        expect(sockets[0].readyState).toBe(3); // CLOSED
+        // the pool's handlers are gone, so it does not log "NDK BUG: relay
+        // not found in pool" for the removed relay
+        expect(error).not.toHaveBeenCalled();
+        expect(jest.getTimerCount()).toBe(0);
+        error.mockRestore();
+    });
+
+    it('ends fetchMints on the subscription EOSE while a relay is down', async () => {
+        // relay.four never connects. For a filter without authors, NDK uses
+        // the explicit relay URLs as given and compares them with its
+        // normalized relay URLs, so it only treats the EOSEs of the other
+        // three as enough when the URLs were normalized.
+        const sockets = stubWebSocket(false, 'relay.four');
+        const MockNDK = NDK as unknown as jest.Mock;
+        MockNDK.mockImplementation((opts: any) => new RealNDK(opts));
+        const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+        const store = newStore();
+
+        const discovery = store.fetchMints();
+        // the 2 s connect and the EOSEs, well short of the 10 s timeout
+        await jest.advanceTimersByTimeAsync(3000);
+
+        expect(store.loading).toBe(false);
+        expect(log).toHaveBeenCalledWith('Mint discovery: EOSE received');
+        await discovery;
+        await jest.advanceTimersByTimeAsync(31000);
+        expect(sockets).toHaveLength(4);
+        sockets.forEach((socket) => expect(socket.readyState).toBe(3));
+        expect(jest.getTimerCount()).toBe(0);
+        log.mockRestore();
+        MockNDK.mockReset();
     });
 });
