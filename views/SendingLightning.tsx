@@ -556,8 +556,8 @@ export default class SendingLightning extends React.Component<
                                 >
                                     <Clock
                                         color={themeColor('bitcoin')}
-                                        width={windowSize.height * 0.2}
-                                        height={windowSize.height * 0.2}
+                                        width={windowSize.height * 0.16}
+                                        height={windowSize.height * 0.16}
                                     />
                                     <Text
                                         style={{
