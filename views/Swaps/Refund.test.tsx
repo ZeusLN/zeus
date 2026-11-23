@@ -329,6 +329,28 @@ describe('RefundSwap refund button', () => {
         }
     );
 
+    // broadcastSwapTransaction throws when only the host took the refund
+    // and the mempool instance does not have it (#5501)
+    it.each([false, true])(
+        'does not record a refund that only the swap host accepted (uncooperative: %s)',
+        async (uncooperative) => {
+            const hostOnly =
+                'https://mempool.space/api/tx: 429 Too Many Requests; https://provider.test/v2: accepted the transaction, but https://mempool.space/api does not have it';
+            tipAt(TIMEOUT + 10);
+            broadcast.mockRejectedValue(new Error(hostOnly));
+
+            const store = await refund({ uncooperative });
+
+            expect(broadcast).toHaveBeenCalledTimes(1);
+            expect(store.updateSwapOnRefund).not.toHaveBeenCalled();
+            expect(errorShown()).toBe(hostOnly);
+            expect(successShown()).toBeUndefined();
+            // the same refund can be sent again
+            refundEnabled();
+            expect(hostOfType('AddressInput').props.value).toBe(DESTINATION);
+        }
+    );
+
     it('shows any other cooperative failure as is', async () => {
         tipAt(TIMEOUT + 10);
         nativeBuild.mockRejectedValue(new Error('fee too low'));
