@@ -21,7 +21,12 @@ import {
     WarningMessage
 } from '../../components/SuccessErrorMessage';
 
-import { LSPOrderState, LSPService, PaymentAwaitState } from '../../models/LSP';
+import {
+    isResponseForOrder,
+    LSPOrderState,
+    LSPService,
+    PaymentAwaitState
+} from '../../models/LSP';
 
 import ChannelsStore, { ChannelsType } from '../../stores/ChannelsStore';
 import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
@@ -205,7 +210,9 @@ export default class LSPPaymentAwait extends React.Component<
 
             if (this.isUnmounted) return;
 
-            if (response && Object.keys(response).length > 0) {
+            // another get_order caller can fill the slot while this request
+            // waits, so only this order's reply may finish it
+            if (isResponseForOrder(response, orderId)) {
                 const result = response?.result || response;
                 if (result?.order_state === LSPOrderState.COMPLETED) {
                     LSPStore.updateOrderInStorage(response);

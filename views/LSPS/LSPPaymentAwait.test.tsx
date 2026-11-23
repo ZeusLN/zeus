@@ -43,7 +43,8 @@ jest.mock('../../storage', () => ({
 jest.mock('../../utils/BackendUtils', () => ({
     supportsLSPS1rest: () => true,
     supportsLSPScustomMessage: () => true,
-    supportsLSPS7native: () => false
+    supportsLSPS7native: () => false,
+    supportsPendingChannels: () => false
 }));
 jest.mock('../../utils/handleAnything', () => jest.fn());
 jest.mock('../../utils/ThemeUtils', () => ({
@@ -232,5 +233,105 @@ describe('LSPPaymentAwait invoice check', () => {
 
         expect(screen.getByText(MISMATCH)).toBeTruthy();
         expect(screen.queryByTestId('order-qr')).toBeNull();
+    });
+});
+
+describe('LSPPaymentAwait order status poll', () => {
+    const payment = {
+        bolt11: { invoice: INVOICE_100K, order_total_sat: '100000' }
+    };
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        (Storage.getItem as jest.Mock)
+            .mockClear()
+            .mockResolvedValue(storedOrders);
+        lspStore = {
+            getOrderResponse: {},
+            getExtensionOrderResponse: {},
+            updateOrderInStorage: jest.fn(),
+            lsps1GetOrderREST: jest.fn(() => Promise.resolve()),
+            lsps7GetOrderCustomMessage: jest.fn(() => Promise.resolve())
+        };
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    // what a get_order for the given order leaves in the slot of each
+    // service: bare over REST, wrapped in `result` over custom messages
+    const SERVICES = [
+        [
+            LSPService.LSPS1,
+            'lsps1GetOrderREST',
+            'getOrderResponse',
+            (order: any) => order
+        ],
+        [
+            LSPService.LSPS7,
+            'lsps7GetOrderCustomMessage',
+            'getExtensionOrderResponse',
+            (order: any) => ({ result: order })
+        ]
+    ] as const;
+
+    describe.each(SERVICES)('%s', (service, request, slot, wrap) => {
+        const answerWith = (order: any) =>
+            lspStore[request].mockImplementation(async () => {
+                lspStore[slot] = wrap(order);
+            });
+
+        it('completes when this order is completed', async () => {
+            const order = { order_id: 'order-1', order_state: 'COMPLETED' };
+            answerWith(order);
+            await renderView(payment, service);
+
+            await advancePastFirstPoll();
+
+            expect(
+                screen.getByText('views.LSPS1.paymentReceived')
+            ).toBeTruthy();
+            expect(lspStore.updateOrderInStorage).toHaveBeenCalledWith(
+                wrap(order)
+            );
+        });
+
+        it('fails when this order has failed', async () => {
+            answerWith({ order_id: 'order-1', order_state: 'FAILED' });
+            await renderView(payment, service);
+
+            await advancePastFirstPoll();
+
+            expect(
+                screen.getByText('views.LSPS1.viewOrderDetails')
+            ).toBeTruthy();
+            expect(screen.queryByTestId('order-qr')).toBeNull();
+        });
+
+        it.each(['COMPLETED', 'FAILED'])(
+            'keeps waiting when the reply in the slot is for another order that is %s',
+            async (orderState) => {
+                // another get_order caller, such as the free-order poll,
+                // was answered while this request waited
+                answerWith({ order_id: 'order-2', order_state: orderState });
+                await renderView(payment, service);
+
+                await advancePastFirstPoll();
+
+                expect(screen.getByTestId('order-qr')).toBeTruthy();
+                expect(
+                    screen.queryByText('views.LSPS1.paymentReceived')
+                ).toBeNull();
+                expect(
+                    screen.queryByText('views.LSPS1.viewOrderDetails')
+                ).toBeNull();
+                expect(lspStore.updateOrderInStorage).not.toHaveBeenCalled();
+
+                // and it polls again
+                await advancePastFirstPoll();
+                expect(lspStore[request]).toHaveBeenCalledTimes(2);
+            }
+        );
     });
 });

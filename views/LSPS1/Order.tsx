@@ -21,7 +21,7 @@ import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import LSPS1OrderResponse from './OrderResponse';
 
-import { LSPOrderState } from '../../models/LSP';
+import { isResponseForOrder, LSPOrderState } from '../../models/LSP';
 
 interface OrderProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -81,6 +81,11 @@ export default class LSPS1Order extends React.Component<
                             order: temporaryOrder?.order
                         });
 
+                        // an error left by an earlier request is not this
+                        // order's, and hardware back skips onBack
+                        LSPStore.error = false;
+                        LSPStore.error_msg = '';
+
                         if (temporaryOrder?.native) {
                             // Native LSPS1 order
                             LSPStore.lsps1GetOrderNative(id);
@@ -104,8 +109,12 @@ export default class LSPS1Order extends React.Component<
                                 LSPStore.loadingLSPS1 = false;
                                 console.log('Old Order state fetched!');
                             } else if (
-                                Object.keys(LSPStore.getOrderResponse)
-                                    .length !== 0
+                                // every get_order caller writes to this slot,
+                                // so it can hold another order's reply
+                                isResponseForOrder(
+                                    LSPStore.getOrderResponse,
+                                    id
+                                )
                             ) {
                                 const getOrderData = LSPStore.getOrderResponse;
                                 this.setState({

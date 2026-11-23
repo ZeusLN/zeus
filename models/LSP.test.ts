@@ -1,4 +1,4 @@
-import { isValidOrderResponse } from './LSP';
+import { isResponseForOrder, isValidOrderResponse } from './LSP';
 
 const lsps1Order = {
     order_id: 'order-1',
@@ -363,5 +363,33 @@ describe('isValidOrderResponse', () => {
                 result: { ...lsps1Order, lsp_balance_sat: { toString: 0 } }
             })
         ).toBe(false);
+    });
+});
+
+describe('isResponseForOrder', () => {
+    it('accepts a reply for the order, with or without the result wrapper', () => {
+        expect(isResponseForOrder(lsps1Order, 'order-1')).toBe(true);
+        expect(isResponseForOrder({ result: lsps7Order }, 'ext-1')).toBe(true);
+    });
+
+    it('rejects a reply for another order', () => {
+        expect(isResponseForOrder(lsps1Order, 'order-2')).toBe(false);
+        expect(isResponseForOrder({ result: lsps7Order }, 'order-1')).toBe(
+            false
+        );
+    });
+
+    it('rejects an empty slot and an error reply', () => {
+        expect(isResponseForOrder({}, 'order-1')).toBe(false);
+        expect(isResponseForOrder(undefined, 'order-1')).toBe(false);
+        expect(
+            isResponseForOrder({ error: { message: 'not found' } }, 'order-1')
+        ).toBe(false);
+    });
+
+    it('rejects every reply when no order id is given', () => {
+        expect(isResponseForOrder({}, undefined)).toBe(false);
+        expect(isResponseForOrder({ result: {} }, undefined)).toBe(false);
+        expect(isResponseForOrder({ order_id: '' }, '')).toBe(false);
     });
 });
