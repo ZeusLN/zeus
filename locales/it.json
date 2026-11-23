@@ -1881,6 +1881,7 @@
     "stores.NostrWalletConnectStore.error.payInvoiceNotPermitted": "Questa connessione non è autorizzata al pagamento delle fatture.",
     "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Un altro pagamento era in corso e questa richiesta ha atteso troppo a lungo; non è stata eseguita. Si prega di riprovare.",
     "stores.NostrWalletConnectStore.error.makeInvoiceRateLimited": "Numero di richieste di pagamento elevato per questa connessione. Si prega di attendere prima di riprovare.",
+    "stores.NostrWalletConnectStore.error.descriptionHashNotSupported": "make_invoice with a description_hash is not supported",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "Impossibile connettersi a {{relayUrl}}",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "Impossibile caricare le connessioni",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "Impossibile salvare le connessioni",
