@@ -23,12 +23,11 @@
 //
 // Writes that request an access control (biometrics, passcode) or an access
 // group keep the original delete + add path: updating a protected item can
-// require authentication, and the internet-password delete ignores the access
-// group while the add sets it. Zeus uses neither (storage/index.ts).
+// require authentication, and the update query here does not carry the access
+// group the delete and add use. Zeus uses neither (storage/index.ts).
 //
-// Upstream: react-native-keychain 10.0.0 (latest at time of writing).
-// Composes with patch-keychain-cloudsync.mjs: that patch only edits
-// cloudSyncValue(), which this code calls.
+// Upstream: react-native-keychain 11.0.0 (latest at time of writing) still
+// deletes before adding. 11.0.0 moved the iOS module to RNKeychainManager.mm.
 //
 // Like the cloudSync patch this THROWS when the expected source is missing,
 // so a dependency bump cannot silently bring the data-loss window back.
@@ -38,7 +37,7 @@ import fs from 'fs';
 export const MARKER = '// ZEUS PATCH: keychain-atomic-update';
 
 const MANAGER_PATH =
-    './node_modules/react-native-keychain/ios/RNKeychainManager/RNKeychainManager.m';
+    './node_modules/react-native-keychain/ios/RNKeychainManager/RNKeychainManager.mm';
 
 const HELPER_ANCHOR = `- (void)hasCredentialsWithSecClass:(CFTypeRef)secClass`;
 
@@ -187,7 +186,7 @@ export function patchKeychainAtomicUpdate() {
 
     if (!fs.existsSync(MANAGER_PATH)) {
         throw new Error(
-            'patch-keychain-atomic-update: RNKeychainManager.m not found; ' +
+            'patch-keychain-atomic-update: RNKeychainManager.mm not found; ' +
                 'the atomic update fix cannot be applied'
         );
     }
@@ -202,6 +201,6 @@ export function patchKeychainAtomicUpdate() {
 
     fs.writeFileSync(MANAGER_PATH, patched);
     console.log(
-        '  - Patched RNKeychainManager.m setGenericPassword/setInternetCredentials'
+        '  - Patched RNKeychainManager.mm setGenericPassword/setInternetCredentials'
     );
 }
