@@ -27,6 +27,7 @@ import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
 
 import handleAnything from '../utils/handleAnything';
+import showHandleAnythingError from '../utils/showHandleAnythingError';
 import { scanNfcTag } from '../utils/NFCUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
 import BackendUtils from '../utils/BackendUtils';
@@ -257,9 +258,15 @@ export default class OpenChannel extends React.Component<
 
     validateNodeUri = (text: string) => {
         const { navigation } = this.props;
-        handleAnything(text).then(([route, props]) => {
-            navigation.navigate(route, props);
-        });
+        handleAnything(text)
+            .then((response) => {
+                // nothing to open: handleAnything has already alerted, or
+                // the user declined
+                if (!response) return;
+                const [route, props] = response;
+                navigation.navigate(route, props);
+            })
+            .catch(showHandleAnythingError);
     };
 
     selectUTXOs = (

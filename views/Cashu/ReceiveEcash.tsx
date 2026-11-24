@@ -18,6 +18,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import cloneDeep from 'lodash/cloneDeep';
 
 import handleAnything from '../../utils/handleAnything';
+import showHandleAnythingError from '../../utils/showHandleAnythingError';
 import { isUnsafeLnurlError } from '../../utils/LnurlFetchUtils';
 
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
@@ -305,6 +306,21 @@ export default class ReceiveEcash extends React.Component<
         }).then(() => {
             if (isCurrent()) this.subscribeInvoice();
         });
+    };
+
+    readTokenFromClipboard = async () => {
+        const { navigation } = this.props;
+        try {
+            const clipboard = await Clipboard.getString();
+            const response = await handleAnything(clipboard);
+            // nothing to open: handleAnything has already alerted, or the
+            // user declined
+            if (!response) return;
+            const [route, props] = response;
+            navigation.navigate(route, props);
+        } catch (err) {
+            showHandleAnythingError(err);
+        }
     };
 
     scanNfc = async () => {
@@ -997,20 +1013,9 @@ export default class ReceiveEcash extends React.Component<
                                                 title={localeString(
                                                     'views.Cashu.ReceiveEcash.readTokenFromClipboard'
                                                 )}
-                                                onPress={async () => {
-                                                    const clipboard =
-                                                        await Clipboard.getString();
-                                                    const response =
-                                                        await handleAnything(
-                                                            clipboard
-                                                        );
-                                                    const [route, props] =
-                                                        response;
-                                                    navigation.navigate(
-                                                        route,
-                                                        props
-                                                    );
-                                                }}
+                                                onPress={
+                                                    this.readTokenFromClipboard
+                                                }
                                                 secondary
                                             />
                                         </View>

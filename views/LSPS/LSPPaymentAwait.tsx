@@ -29,6 +29,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import handleAnything from '../../utils/handleAnything';
+import showHandleAnythingError from '../../utils/showHandleAnythingError';
 import { localeString } from '../../utils/LocaleUtils';
 import { OrderInvoiceCheck, verifyOrderInvoice } from '../../utils/LspUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -233,9 +234,15 @@ export default class LSPPaymentAwait extends React.Component<
     private payFromZeusWallet = () => {
         const { invoice } = this.props.route.params;
         const { navigation } = this.props;
-        handleAnything(invoice).then(([route, props]) => {
-            navigation.navigate(route, props);
-        });
+        handleAnything(invoice)
+            .then((response) => {
+                // nothing to open: handleAnything has already alerted, or
+                // the user declined
+                if (!response) return;
+                const [route, props] = response;
+                navigation.navigate(route, props);
+            })
+            .catch(showHandleAnythingError);
     };
 
     private goToWallet = () => {

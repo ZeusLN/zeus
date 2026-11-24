@@ -63,10 +63,19 @@ jest.mock('../assets/images/SVG/Scan.svg', () => 'Scan');
 jest.mock('../assets/images/SVG/NFC-alt.svg', () => 'NfcIcon');
 
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import NfcManager from 'react-native-nfc-manager';
+import {
+    fireEvent,
+    render,
+    screen,
+    waitFor
+} from '@testing-library/react-native';
 import type { TestInstance } from 'test-renderer';
 import OpenChannel from './OpenChannel';
 import BackendUtils from '../utils/BackendUtils';
+import handleAnything from '../utils/handleAnything';
+import { scanNfcTag } from '../utils/NFCUtils';
 import { getLspConfigForNetwork, isOlympusPeer } from '../stores/SettingsStore';
 
 const BALANCE = 500000;
@@ -543,5 +552,73 @@ describe('OpenChannel min confs field', () => {
         const request = await openRequest(props);
         expect(request.min_confs).toBe(0);
         expect(request.spend_unconfirmed).toBe(true);
+    });
+});
+
+describe('OpenChannel NFC scan', () => {
+    const TAG = `${PEER.node_pubkey_string}@${PEER.host}`;
+    let alert: jest.SpyInstance;
+
+    beforeEach(() => {
+        (NfcManager.isSupported as jest.Mock).mockResolvedValue(true);
+        (scanNfcTag as jest.Mock).mockResolvedValue(TAG);
+        alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        alert.mockRestore();
+        (NfcManager.isSupported as jest.Mock).mockReset();
+        (scanNfcTag as jest.Mock).mockReset();
+        (handleAnything as jest.Mock).mockReset();
+    });
+
+    // reads the tag and waits for handleAnything's result to be used
+    const scanTag = async () => {
+        const { props } = await renderView();
+        const nfcButton = () =>
+            hosts('Button').find((n) => n.props.title === 'general.enableNfc');
+        await waitFor(() => expect(nfcButton()).toBeTruthy());
+
+        await fireEvent.press(nfcButton()!);
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(handleAnything).toHaveBeenCalledWith(TAG);
+        return props.navigation.navigate;
+    };
+
+    it('opens the route for the tag', async () => {
+        (handleAnything as jest.Mock).mockResolvedValue(['OpenChannel', PEER]);
+
+        const navigate = await scanTag();
+
+        expect(navigate).toHaveBeenCalledWith('OpenChannel', PEER);
+        expect(alert).not.toHaveBeenCalled();
+    });
+
+    // handleAnything has alerted already, or the user declined
+    it.each([undefined, false])(
+        'does nothing more when the tag cannot be routed (%s)',
+        async (result) => {
+            (handleAnything as jest.Mock).mockResolvedValue(result);
+
+            const navigate = await scanTag();
+
+            expect(navigate).not.toHaveBeenCalled();
+            expect(alert).not.toHaveBeenCalled();
+        }
+    );
+
+    it('shows the error when the tag cannot be handled', async () => {
+        (handleAnything as jest.Mock).mockRejectedValue(new Error('not valid'));
+
+        const navigate = await scanTag();
+
+        expect(navigate).not.toHaveBeenCalled();
+        expect(alert).toHaveBeenCalledWith(
+            'general.error',
+            'not valid',
+            expect.any(Array),
+            { cancelable: false }
+        );
     });
 });

@@ -502,7 +502,6 @@
     "views.Wallet.Payments.noPayments": "No Payments",
     "views.Wallet.Transactions.awaitingConf": "Awaiting Confirmation",
     "views.Wallet.Transactions.noTransactions": "No Transactions",
-    "views.Wallet.Wallet.error": "An error occurred",
     "views.Wallet.Wallet.payments": "Payments",
     "views.Wallet.Wallet.invoices": "Invoices",
     "views.Wallet.Wallet.channels": "Channels",

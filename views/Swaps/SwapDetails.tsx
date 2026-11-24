@@ -33,6 +33,7 @@ import {
     reverseClaimMinerFee
 } from '../../utils/FeeUtils';
 import handleAnything from '../../utils/handleAnything';
+import showHandleAnythingError from '../../utils/showHandleAnythingError';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { sleep } from '../../utils/SleepUtils';
 import { font } from '../../utils/FontUtils';
@@ -1515,11 +1516,15 @@ export default class SwapDetails extends React.Component<
                         }}
                         onPress={() => {
                             if (swapData.qrCodeValue) {
-                                handleAnything(swapData.qrCodeValue).then(
-                                    ([route, props]) => {
+                                handleAnything(swapData.qrCodeValue)
+                                    .then((response) => {
+                                        // nothing to open: handleAnything has
+                                        // already alerted, or the user declined
+                                        if (!response) return;
+                                        const [route, props] = response;
                                         navigation.navigate(route, props);
-                                    }
-                                );
+                                    })
+                                    .catch(showHandleAnythingError);
                             }
                         }}
                         secondary
