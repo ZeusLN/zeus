@@ -3297,17 +3297,33 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
-        // None of the createInvoice wrappers pass a description hash yet, and
-        // a plain description would not bind the invoice to the caller's
-        // request. The request is not checked by the SDK, so it can be
-        // missing.
-        if (request?.description_hash) {
-            return NostrConnectUtils.createNip47Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.descriptionHashNotSupported'
-                ),
-                Nip47ErrorCode.NOT_IMPLEMENTED
-            );
+        // The request is not checked by the SDK, so it can be missing.
+        const descriptionHash = request?.description_hash;
+        if (descriptionHash) {
+            // A plain description would not bind the invoice to the caller's
+            // request, so refuse where the hash cannot be set: a Cashu mint
+            // quote takes none, and neither do the backends without
+            // supportsDescriptionHashInvoices
+            if (
+                this.isCashuConfigured ||
+                !BackendUtils.supportsDescriptionHashInvoices()
+            ) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.descriptionHashNotSupported'
+                    ),
+                    Nip47ErrorCode.NOT_IMPLEMENTED
+                );
+            }
+            // NIP-47: the hex SHA-256 of the description
+            if (!/^[0-9a-f]{64}$/i.test(descriptionHash)) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidDescriptionHash'
+                    ),
+                    Nip47ErrorCode.OTHER
+                );
+            }
         }
 
         const limitError = this.checkMakeInvoiceLimits(connection);
@@ -3354,6 +3370,7 @@ export default class NostrWalletConnectStore {
                 {
                     value: millisatsToSats(request.amount).toString(),
                     memo: request.description || '',
+                    descriptionHash: descriptionHash || undefined,
                     expirySeconds: String(
                         request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS
                     ),
