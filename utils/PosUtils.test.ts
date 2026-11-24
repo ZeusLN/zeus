@@ -197,9 +197,9 @@ describe('calculateCustomTipSats', () => {
     });
 
     it('converts the smallest BTC amount to 1 sat', () => {
-        expect(
-            calculateCustomTipSats('0.00000001', '10000', 'BTC', rate)
-        ).toBe('1');
+        expect(calculateCustomTipSats('0.00000001', '10000', 'BTC', rate)).toBe(
+            '1'
+        );
     });
 });
 
@@ -218,18 +218,14 @@ describe('formatDefaultCustomTipAmount', () => {
     const rate = 100000; // 1 BTC = $100,000
 
     it('shows the default in sats', () => {
-        expect(formatDefaultCustomTipAmount('5000', 'sats', rate)).toBe(
-            '1050'
-        );
+        expect(formatDefaultCustomTipAmount('5000', 'sats', rate)).toBe('1050');
     });
 
     it('shows the default in fiat', () => {
-        expect(formatDefaultCustomTipAmount('5000', 'fiat', rate)).toBe(
+        expect(formatDefaultCustomTipAmount('5000', 'fiat', rate)).toBe('1.05');
+        expect(formatDefaultCustomTipAmount('5000', 'fiat', '100000.00')).toBe(
             '1.05'
         );
-        expect(
-            formatDefaultCustomTipAmount('5000', 'fiat', '100000.00')
-        ).toBe('1.05');
     });
 
     it('shows the default in BTC', () => {

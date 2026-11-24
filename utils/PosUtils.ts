@@ -126,9 +126,7 @@ export const formatDefaultCustomTipAmount = (
     }
 
     if (units === 'BTC') {
-        return new BigNumber(defaultTipSats)
-            .dividedBy(SATS_PER_BTC)
-            .toFixed(8);
+        return new BigNumber(defaultTipSats).dividedBy(SATS_PER_BTC).toFixed(8);
     }
 
     return defaultTipSats;
