@@ -79,18 +79,21 @@ const releaseLeases = (lockedUtxos: Array<any>) =>
             )
     );
 
-// A channel that passed psbt_verify is no longer a funding intent, so
-// shim_cancel does not reach it: lnd keeps it pending, waiting for a
-// funding transaction ZEUS will not publish, and each one adds to the
-// anchor reserve while peers that allow one pending channel refuse new
-// ones. lnd rejects pending_funding_shim_only for these channels ("not
-// externally funded or not pending"), because it counts only channels
-// with a thaw height as shim funded and a PSBT shim sets none. So this
-// sends i_know_what_i_am_doing instead, which removes the channel from
-// this node only; the peer drops it on its own timeout. That is safe
-// only while no funding transaction can exist: callers run it before
-// psbt_finalize, and until then the signed PSBT never leaves ZEUS.
-// Best effort.
+// shim_cancel does not stop a channel that passed psbt_verify: lnd goes
+// on to send the peer funding_created, and once the peer signs (the
+// stream's chan_pending) lnd records the channel and keeps it pending,
+// waiting for a funding transaction ZEUS will not publish. lnd can
+// abandon it only from then on; before that abandonChannel fails and
+// records nothing, so callers wait for chan_pending first. Each such
+// channel adds to the anchor reserve while peers that allow one pending
+// channel refuse new ones. lnd rejects pending_funding_shim_only for
+// these channels ("not externally funded or not pending"), because it
+// counts only channels with a thaw height as shim funded and a PSBT
+// shim sets none. So this sends i_know_what_i_am_doing instead, which
+// removes the channel from this node only; the peer drops it on its own
+// timeout. That is safe only while no funding transaction can exist:
+// callers run it before psbt_finalize, and until then the signed PSBT
+// never leaves ZEUS. Best effort.
 const abandonVerifiedChannels = (
     psbt: string,
     fundingAddresses: Array<string>
@@ -1248,15 +1251,38 @@ export default class ChannelsStore {
                         return;
                     });
 
+                const onLatePending = (pending_chan_id: string) => {
+                    const address = fundingAddresses[pending_chan_id];
+                    if (address) {
+                        abandonVerifiedChannels(funded_psbt, [address]);
+                    }
+                };
+
                 for (let i = 0; i < pendingChanIds.length - 1; i++) {
                     const pending_chan_id = pendingChanIds[i];
-                    await BackendUtils.fundingStateStep({
-                        psbt_verify: {
-                            funded_psbt,
-                            pending_chan_id,
-                            skip_finalize: true
-                        }
-                    });
+                    try {
+                        await BackendUtils.fundingStateStep({
+                            psbt_verify: {
+                                funded_psbt,
+                                pending_chan_id,
+                                skip_finalize: true
+                            }
+                        });
+                    } catch (error: any) {
+                        // the channels verified so far may still be
+                        // waiting for their peers to sign, and abandon()
+                        // can only remove a channel lnd has recorded
+                        const verified: {
+                            [pendingChanId: string]: Promise<any> | undefined;
+                        } = {};
+                        pendingChanIds
+                            .slice(0, i)
+                            .forEach((id) => (verified[id] = chanPending[id]));
+                        await waitForChanPending(verified, onLatePending).catch(
+                            () => {}
+                        );
+                        throw error;
+                    }
                     markVerified(funded_psbt, pending_chan_id);
                 }
 
@@ -1264,12 +1290,7 @@ export default class ChannelsStore {
                 // channel's psbt_finalize lets lnd publish. A failure
                 // here ends in abandon(); a channel that turns pending
                 // after the timeout is abandoned then
-                await waitForChanPending(chanPending, (pending_chan_id) => {
-                    const address = fundingAddresses[pending_chan_id];
-                    if (address) {
-                        abandonVerifiedChannels(funded_psbt, [address]);
-                    }
-                });
+                await waitForChanPending(chanPending, onLatePending);
 
                 const lastPendingChanId =
                     pendingChanIds[pendingChanIds.length - 1];

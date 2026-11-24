@@ -1889,6 +1889,82 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             ]);
         });
 
+        describe('when a later earlier channel fails its psbt_verify', () => {
+            const failVerify = (pending_chan_id: string) =>
+                fundingStateStep.mockImplementation(async (step: any) => {
+                    if (step.psbt_verify?.pending_chan_id === pending_chan_id)
+                        throw new Error(`${pending_chan_id} psbt invalid`);
+                    return {};
+                });
+
+            it('waits for the channels verified before it to be pending before abandoning', async () => {
+                failVerify('chan-b');
+                const pendingA = held();
+                const store = startBatch(pendingA.promise, never());
+                await flush();
+
+                // A's peer may still sign, and lnd can only abandon a
+                // channel it has recorded
+                expect(abandonChannel).not.toHaveBeenCalled();
+                expect(releaseOutput).not.toHaveBeenCalled();
+                expect(cancels()).toEqual([]);
+                expect(store.errorOpenChannel).toBe(false);
+                expect(store.syncOpensInFlight).toBe(1);
+
+                pendingA.resolve({});
+                await flush();
+                expect(finalizes()).toEqual([]);
+                expect(released()).toEqual(LOCKED);
+                expect(new Set(cancels())).toEqual(
+                    new Set(['chan-a', 'chan-b', 'chan-c'])
+                );
+                expect(abandonedFor()).toEqual([['bc1qchan-a']]);
+                expect(store.errorOpenChannel).toBe(true);
+                expect(store.errorMsgChannel).toBe('chan-b psbt invalid');
+                expect(store.syncOpensInFlight).toBe(0);
+            });
+
+            it('abandons a verified channel that turns pending after the timeout', async () => {
+                failVerify('chan-b');
+                const pendingA = held();
+                const store = startBatch(pendingA.promise, never());
+                await flush();
+
+                await jest.advanceTimersByTimeAsync(PENDING_TIMEOUT_MS);
+                await flush();
+                expect(finalizes()).toEqual([]);
+                expect(released()).toEqual(LOCKED);
+                expect(abandonedFor()).toEqual([['bc1qchan-a']]);
+                // the failed verify says more than the timeout
+                expect(store.errorMsgChannel).toBe('chan-b psbt invalid');
+                expect(store.syncOpensInFlight).toBe(0);
+
+                pendingA.resolve({});
+                await flush();
+                expect(finalizes()).toEqual([]);
+                expect(abandonedFor()).toEqual([
+                    ['bc1qchan-a'],
+                    ['bc1qchan-a']
+                ]);
+            });
+
+            it('does not wait on the channel whose psbt_verify failed', async () => {
+                // A was never verified, so its stream settles only once
+                // abandon() cancels its shim
+                failVerify('chan-a');
+                const store = startBatch(never(), never());
+                await flush();
+
+                expect(abandonChannel).not.toHaveBeenCalled();
+                expect(released()).toEqual(LOCKED);
+                expect(new Set(cancels())).toEqual(
+                    new Set(['chan-a', 'chan-b', 'chan-c'])
+                );
+                expect(store.errorMsgChannel).toBe('chan-a psbt invalid');
+                expect(store.syncOpensInFlight).toBe(0);
+            });
+        });
+
         it('publishes nothing when the backend cannot report chan_pending', async () => {
             const store = startBatch(Promise.resolve({}), undefined);
             await flush();
