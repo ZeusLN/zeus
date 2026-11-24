@@ -110,6 +110,7 @@ describe('LSPPaymentAwait invoice check', () => {
             .mockClear()
             .mockResolvedValue(storedOrders);
         lspStore = {
+            cancelGetOrder: jest.fn(),
             lsps1GetOrderREST: jest.fn(() => Promise.resolve()),
             lsps7GetOrderCustomMessage: jest.fn(() => Promise.resolve())
         };
@@ -151,6 +152,30 @@ describe('LSPPaymentAwait invoice check', () => {
             PEER
         );
     });
+
+    it.each([LSPService.LSPS1, LSPService.LSPS7])(
+        'cancels the %s get_order in flight when it unmounts',
+        async (service) => {
+            jest.useFakeTimers();
+            const pending = jest.fn(() => new Promise<void>(() => {}));
+            lspStore.lsps1GetOrderREST = pending;
+            lspStore.lsps7GetOrderCustomMessage = pending;
+            const { unmount } = await renderView(
+                {
+                    bolt11: { invoice: INVOICE_100K, order_total_sat: '100000' }
+                },
+                service
+            );
+            await advancePastFirstPoll();
+            expect(pending).toHaveBeenCalledTimes(1);
+            expect(lspStore.cancelGetOrder).not.toHaveBeenCalled();
+
+            await unmount();
+
+            expect(lspStore.cancelGetOrder).toHaveBeenCalledTimes(1);
+            expect(lspStore.cancelGetOrder).toHaveBeenCalledWith(service);
+        }
+    );
 
     it('never polls a rejected order, including after the poll interval', async () => {
         jest.useFakeTimers();

@@ -278,20 +278,34 @@ export default class LSPStore {
         this.showLspSettings = false;
     };
 
+    // Cancels the current get_order of a service without touching its other
+    // data. The resolver clears the timeout and releases the caller, and the
+    // blanked id no longer matches, so a late reply or failure is dropped.
+    @action
+    public cancelGetOrder = (service: LSPService) => {
+        if (service === LSPService.LSPS7) {
+            this.getExtensionOrderResponseResolver?.();
+            delete this.customMessageRequestPeers[this.getExtensionOrderId];
+            this.getExtensionOrderId = '';
+        } else {
+            this.getOrderResponseResolver?.();
+            delete this.customMessageRequestPeers[this.getOrderId];
+            this.getOrderId = '';
+        }
+    };
+
     @action
     public resetLSPS1Data = () => {
         this.stopFreeOrderStatusPolling();
         this.getInfoResponseResolver?.();
         this.createOrderResponseResolver?.();
-        this.getOrderResponseResolver?.();
+        this.cancelGetOrder(LSPService.LSPS1);
         // Invalidate in-flight request ids so a late response or send failure
         // can't write into the next screen's state.
         delete this.customMessageRequestPeers[this.getInfoId];
         delete this.customMessageRequestPeers[this.createOrderId];
-        delete this.customMessageRequestPeers[this.getOrderId];
         this.getInfoId = '';
         this.createOrderId = '';
-        this.getOrderId = '';
         this.createOrderRequestTerms = {};
         this.createOrderResponse = {};
         this.getOrderResponse = {};
@@ -305,13 +319,9 @@ export default class LSPStore {
     public resetLSPS7Data = () => {
         this.stopFreeOrderStatusPolling();
         this.createExtensionOrderResponseResolver?.();
-        this.getExtensionOrderResponseResolver?.();
+        this.cancelGetOrder(LSPService.LSPS7);
         delete this.customMessageRequestPeers[this.createExtensionOrderId];
-        delete this.customMessageRequestPeers[this.getExtensionOrderId];
         this.createExtensionOrderId = '';
-        // same invalidation as resetLSPS1Data: a late get_order reply must
-        // not match the id of a request the reset left behind
-        this.getExtensionOrderId = '';
         this.createExtensionOrderResponse = {};
         this.getExtensionOrderResponse = {};
         this.loadingLSPS7 = false;
@@ -1491,6 +1501,9 @@ export default class LSPStore {
     };
 
     public lsps1GetOrderREST(id: string, RESTHost: string) {
+        this.cancelGetOrder(LSPService.LSPS1);
+        const requestId = uuidv4();
+        this.getOrderId = requestId;
         this.loadingLSPS1 = true;
         const endpoint = `${RESTHost}/api/v1/get_order?order_id=${id}`;
 
@@ -1500,6 +1513,7 @@ export default class LSPStore {
             'Content-Type': 'application/json'
         })
             .then((response) => {
+                if (this.getOrderId !== requestId) return;
                 const responseData = JSON.parse(response.data);
                 console.log('Response received:', responseData);
                 runInAction(() => {
@@ -1514,6 +1528,7 @@ export default class LSPStore {
             })
             .catch((error) => {
                 console.error('Error sending custom message:', error);
+                if (this.getOrderId !== requestId) return;
                 const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
                     this.error = true;
@@ -1717,12 +1732,16 @@ export default class LSPStore {
 
     @action
     public lsps1GetOrderNative = async (orderId: string) => {
+        this.cancelGetOrder(LSPService.LSPS1);
+        const requestId = uuidv4();
+        this.getOrderId = requestId;
         this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
 
         try {
             const response = await BackendUtils.checkLsps1OrderStatus(orderId);
+            if (this.getOrderId !== requestId) return;
 
             runInAction(() => {
                 // Transform response to match expected format
@@ -1755,6 +1774,7 @@ export default class LSPStore {
                 this.loadingLSPS1 = false;
             });
         } catch (err: any) {
+            if (this.getOrderId !== requestId) return;
             const errorMessage =
                 err?.message || err?.toString() || 'Unknown error';
             runInAction(() => {
@@ -1990,16 +2010,21 @@ export default class LSPStore {
 
         // Use native LSPS7 method if available (LDK Node backend)
         if (BackendUtils.supportsLSPS7native()) {
+            this.cancelGetOrder(LSPService.LSPS7);
+            const requestId = uuidv4();
+            this.getExtensionOrderId = requestId;
             try {
                 const response = await BackendUtils.lsps7CheckOrderStatus(
                     orderId
                 );
+                if (this.getExtensionOrderId !== requestId) return;
                 runInAction(() => {
                     this.getExtensionOrderResponse = { result: response };
                     this.loadingLSPS7 = false;
                 });
                 return;
             } catch (error: any) {
+                if (this.getExtensionOrderId !== requestId) return;
                 runInAction(() => {
                     this.error = true;
                     this.error_msg =
