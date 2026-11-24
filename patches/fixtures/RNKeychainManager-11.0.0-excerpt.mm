@@ -1,10 +1,12 @@
-// Excerpts of react-native-keychain 10.0.0 ios/RNKeychainManager/RNKeychainManager.m
-// (MIT, Joel Arvidsson), used by patches/patch-keychain-atomic-update.test.ts.
+// Excerpts of react-native-keychain 11.0.0 ios/RNKeychainManager/RNKeychainManager.mm
+// (MIT, Joel Arvidsson), used by patches/patch-keychain-atomic-update.test.ts
+// and patches/patch-keychain-cloudsync.test.ts.
 
 
 CFBooleanRef cloudSyncValue(NSDictionary *options)
 {
-  if (options && options[@"cloudSync"]) {
+  id cloudSync = options[@"cloudSync"];
+  if ([cloudSync isKindOfClass:[NSNumber class]] && [cloudSync boolValue]) {
     return kCFBooleanTrue;
   }
   return kCFBooleanFalse;
@@ -15,10 +17,10 @@ CFBooleanRef cloudSyncValue(NSDictionary *options)
 }
 
 RCT_EXPORT_METHOD(setGenericPasswordForOptions:(NSDictionary *)options
-                  withUsername:(NSString *)username
-                  withPassword:(NSString *)password
-                  resolver:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
+                  username:(NSString *)username
+                  password:(NSString *)password
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
 {
   NSString *service = serviceValue(options);
   CFBooleanRef cloudSync = cloudSyncValue(options);
@@ -36,11 +38,11 @@ RCT_EXPORT_METHOD(setGenericPasswordForOptions:(NSDictionary *)options
 }
 
 RCT_EXPORT_METHOD(setInternetCredentialsForServer:(NSString *)server
-                  withUsername:(NSString*)username
-                  withPassword:(NSString*)password
-                  withOptions:(NSDictionary *)options
-                  resolver:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
+                  username:(NSString*)username
+                  password:(NSString*)password
+                  options:(NSDictionary *)options
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
 {
   [self deleteCredentialsForServer:server withOptions: options];
   CFBooleanRef cloudSync = cloudSyncValue(options);

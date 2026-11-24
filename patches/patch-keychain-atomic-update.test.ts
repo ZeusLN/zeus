@@ -6,12 +6,12 @@ import { pathToFileURL } from 'url';
 
 // The patches are plain ESM run by node at postinstall, so drive them through
 // a node child process instead of Jest's transform. Each run works on a copy
-// of the 10.0.0 excerpt laid out where the patches expect node_modules.
+// of the 11.0.0 excerpt laid out where the patches expect node_modules.
 
 const FIXTURE = path.join(
     __dirname,
     'fixtures',
-    'RNKeychainManager-10.0.0-excerpt.m'
+    'RNKeychainManager-11.0.0-excerpt.mm'
 );
 const MANAGER = 'node_modules/react-native-keychain/ios/RNKeychainManager';
 const MARKER = '// ZEUS PATCH: keychain-atomic-update';
@@ -22,12 +22,12 @@ const patchUrl = (name: string) =>
 const makeTree = (source = fs.readFileSync(FIXTURE, 'utf8')) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'keychain-patch-'));
     fs.mkdirSync(path.join(root, MANAGER), { recursive: true });
-    fs.writeFileSync(path.join(root, MANAGER, 'RNKeychainManager.m'), source);
+    fs.writeFileSync(path.join(root, MANAGER, 'RNKeychainManager.mm'), source);
     return root;
 };
 
 const read = (root: string) =>
-    fs.readFileSync(path.join(root, MANAGER, 'RNKeychainManager.m'), 'utf8');
+    fs.readFileSync(path.join(root, MANAGER, 'RNKeychainManager.mm'), 'utf8');
 
 // Runs the named patch functions in order with cwd set to root
 const run = (root: string, calls: Array<[string, string]>) => {
@@ -50,9 +50,9 @@ const ATOMIC: [string, string] = [
     'patch-keychain-atomic-update.mjs',
     'patchKeychainAtomicUpdate'
 ];
-const CLOUDSYNC: [string, string] = [
-    'patch-keychain-cloudsync.mjs',
-    'patchKeychainCloudSync'
+const VERIFY_CLOUDSYNC: [string, string] = [
+    'verify-keychain-cloudsync.mjs',
+    'verifyKeychainCloudSync'
 ];
 
 // Body of an Objective-C method, from its signature line to the closing brace
@@ -192,16 +192,24 @@ describe('patch-keychain-atomic-update', () => {
         expect(once.split('- (void)upsertKeychainEntry:')).toHaveLength(2);
     });
 
-    it.each([
-        ['cloudSync first', [CLOUDSYNC, ATOMIC]],
-        ['atomic first', [ATOMIC, CLOUDSYNC]]
-    ])('composes with the cloudSync patch (%s)', (_, order) => {
+    it('leaves cloudSyncValue() intact for the cloudSync check', () => {
         const root = tree();
-        run(root, order as Array<[string, string]>);
-        const patched = read(root);
+        const output = run(root, [ATOMIC, VERIFY_CLOUDSYNC]);
 
-        expect(patched).toContain(MARKER);
-        expect(patched).toContain('[options[@"cloudSync"] boolValue]');
+        expect(read(root)).toContain(MARKER);
+        expect(output).toContain('cloudSyncValue() respects cloudSync: false');
+    });
+
+    it('fails postinstall when RNKeychainManager.mm is missing', () => {
+        const root = tree();
+        fs.renameSync(
+            path.join(root, MANAGER, 'RNKeychainManager.mm'),
+            path.join(root, MANAGER, 'RNKeychainManager.m')
+        );
+
+        expect(() => run(root, [ATOMIC])).toThrow(
+            /RNKeychainManager\.mm not found/
+        );
     });
 
     it.each([
@@ -236,8 +244,9 @@ describe('patch-keychain-atomic-update', () => {
 
 // Compiles the generated upsertKeychainEntry against fake Security calls and
 // runs each status through it, so the write-failure guarantee is executed,
-// not only matched as text. Needs clang and the macOS SDK, so it is skipped
-// on the Linux CI runners.
+// not only matched as text. Built as Objective-C++ because 11.0.0 ships the
+// module as a .mm file. Needs clang and the macOS SDK, so it is skipped on
+// the Linux CI runners.
 const hasClang = (() => {
     if (process.platform !== 'darwin') return false;
     try {
@@ -370,7 +379,7 @@ int main(int argc, const char *argv[]) {
             expect(end).toBeGreaterThan(start);
 
             dir = fs.mkdtempSync(path.join(os.tmpdir(), 'keychain-upsert-'));
-            const source = path.join(dir, 'harness.m');
+            const source = path.join(dir, 'harness.mm');
             binary = path.join(dir, 'harness');
             fs.writeFileSync(source, HARNESS(patched.slice(start, end)));
             execFileSync(
@@ -382,6 +391,8 @@ int main(int argc, const char *argv[]) {
                     'Foundation',
                     '-framework',
                     'Security',
+                    // Objective-C++ needs the C++ runtime at link time
+                    '-lc++',
                     source,
                     '-o',
                     binary

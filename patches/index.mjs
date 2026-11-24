@@ -6,7 +6,7 @@ import { patchNativeEventEmitter } from './patch-native-event-emitter.mjs';
 import { patchReactNativeNotifications } from './patch-react-native-notifications.mjs';
 import { patchNobleHashes } from './patch-noble-hashes.mjs';
 import { patchReanimatedSetFixes } from './patch-reanimated-set-fixes.mjs';
-import { patchKeychainCloudSync } from './patch-keychain-cloudsync.mjs';
+import { verifyKeychainCloudSync } from './verify-keychain-cloudsync.mjs';
 import { patchKeychainAtomicUpdate } from './patch-keychain-atomic-update.mjs';
 import { patchBlobUtilNoRetry } from './patch-blob-util-no-retry.mjs';
 
@@ -19,7 +19,7 @@ console.log('Running postinstall patches...\n');
         patchReactNativeNotifications();
         patchNobleHashes();
         patchReanimatedSetFixes();
-        patchKeychainCloudSync();
+        verifyKeychainCloudSync();
         patchKeychainAtomicUpdate();
         patchBlobUtilNoRetry();
     } catch (error) {
