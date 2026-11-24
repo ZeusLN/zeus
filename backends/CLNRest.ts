@@ -4,7 +4,11 @@ import TransactionRequest from '../models/TransactionRequest';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import VersionUtils from '../utils/VersionUtils';
 import Base64Utils from '../utils/Base64Utils';
-import { sha256Bytes, sha256Hex } from '../utils/HashingUtils';
+import {
+    sha256Bytes,
+    sha256Hex,
+    sha256StringToHex
+} from '../utils/HashingUtils';
 import BigNumber from 'bignumber.js';
 import {
     getBalance,
@@ -416,14 +420,31 @@ export default class CLNRest {
                 invoices: invoiceList
             };
         });
-    createInvoice = (data: any) =>
-        this.postRequest('/v1/invoice', {
+    createInvoice = async (data: any) => {
+        const descriptionHash: string | undefined = data.description_hash;
+        // CLN hashes the description it is given (deschashonly); it cannot
+        // take a hash alone. So only the text the hash was made from can
+        // carry it: with any other description the invoice would hold a
+        // hash the caller did not ask for
+        if (
+            descriptionHash &&
+            (!data.memo ||
+                sha256StringToHex(data.memo) !== descriptionHash.toLowerCase())
+        ) {
+            throw new Error(
+                localeString('backends.CLNRest.descriptionHashMismatch')
+            );
+        }
+
+        return await this.postRequest('/v1/invoice', {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
             amount_msat: data.value != 0 ? Number(data.value) * 1000 : 'any',
             expiry: Number(data.expiry_seconds),
-            exposeprivatechannels: true
+            exposeprivatechannels: true,
+            deschashonly: descriptionHash ? true : undefined
         });
+    };
 
     // A payment group can mix part statuses: an MPP retry leaves the failed
     // parts beside the pending ones. Rank complete over pending over failed
@@ -951,7 +972,7 @@ export default class CLNRest {
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
-    supportsDescriptionHashInvoices = () => false;
+    supportsDescriptionHashInvoices = () => true;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => true;
     supportsChannelMemo = () => false;
