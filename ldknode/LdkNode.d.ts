@@ -560,6 +560,16 @@ export interface ILdkNodeModule {
         description: string,
         expirySecs: number
     ): Promise<{ invoice: string }>;
+    // the invoice carries the hex SHA-256 of its description, not the text
+    receiveBolt11WithDescriptionHash(
+        amountMsat: number,
+        descriptionHash: string,
+        expirySecs: number
+    ): Promise<{ invoice: string }>;
+    receiveVariableAmountBolt11WithDescriptionHash(
+        descriptionHash: string,
+        expirySecs: number
+    ): Promise<{ invoice: string }>;
     sendBolt11(
         invoice: string,
         maxTotalRoutingFeeMsat: number,

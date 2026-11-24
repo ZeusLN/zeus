@@ -440,6 +440,38 @@ const receiveVariableAmountBolt11 = async ({
     return result.invoice;
 };
 
+const receiveBolt11WithDescriptionHash = async ({
+    amountMsat,
+    descriptionHash,
+    expirySecs
+}: {
+    amountMsat: number;
+    descriptionHash: string;
+    expirySecs: number;
+}): Promise<string> => {
+    const result = await LdkNodeModule.receiveBolt11WithDescriptionHash(
+        amountMsat,
+        descriptionHash,
+        expirySecs
+    );
+    return result.invoice;
+};
+
+const receiveVariableAmountBolt11WithDescriptionHash = async ({
+    descriptionHash,
+    expirySecs
+}: {
+    descriptionHash: string;
+    expirySecs: number;
+}): Promise<string> => {
+    const result =
+        await LdkNodeModule.receiveVariableAmountBolt11WithDescriptionHash(
+            descriptionHash,
+            expirySecs
+        );
+    return result.invoice;
+};
+
 const sendBolt11 = async ({
     invoice,
     maxTotalRoutingFeeMsat,
@@ -1165,6 +1197,15 @@ export interface ILdkNodeInjections {
             description: string;
             expirySecs: number;
         }) => Promise<string>;
+        receiveBolt11WithDescriptionHash: (params: {
+            amountMsat: number;
+            descriptionHash: string;
+            expirySecs: number;
+        }) => Promise<string>;
+        receiveVariableAmountBolt11WithDescriptionHash: (params: {
+            descriptionHash: string;
+            expirySecs: number;
+        }) => Promise<string>;
         sendBolt11: (params: {
             invoice: string;
             maxTotalRoutingFeeMsat?: number;
@@ -1375,6 +1416,8 @@ const LdkNodeInjection: ILdkNodeInjections = {
     bolt11: {
         receiveBolt11,
         receiveVariableAmountBolt11,
+        receiveBolt11WithDescriptionHash,
+        receiveVariableAmountBolt11WithDescriptionHash,
         sendBolt11,
         sendBolt11UsingAmount,
         sendBolt11Probes,

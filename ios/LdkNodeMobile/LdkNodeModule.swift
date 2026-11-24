@@ -1348,6 +1348,52 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    // The invoice carries the hash of its description, not the text. The hash
+    // is the hex SHA-256 that Bolt11InvoiceDescription.hash expects.
+    @objc(receiveBolt11WithDescriptionHash:descriptionHash:expirySecs:resolver:rejecter:)
+    func receiveBolt11WithDescriptionHash(_ amountMsat: Double, descriptionHash: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        guard let amount = toUInt64(amountMsat), let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid amount or expiry", nil)
+            return
+        }
+
+        do {
+            let bolt11 = node.bolt11Payment()
+            let descriptionObj = Bolt11InvoiceDescription.hash(hash: descriptionHash)
+            let invoice = try bolt11.receive(amountMsat: amount, description: descriptionObj, expirySecs: expiry)
+            resolve(["invoice": invoice.description])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
+    @objc(receiveVariableAmountBolt11WithDescriptionHash:expirySecs:resolver:rejecter:)
+    func receiveVariableAmountBolt11WithDescriptionHash(_ descriptionHash: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        guard let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid expiry", nil)
+            return
+        }
+
+        do {
+            let bolt11 = node.bolt11Payment()
+            let descriptionObj = Bolt11InvoiceDescription.hash(hash: descriptionHash)
+            let invoice = try bolt11.receiveVariableAmount(description: descriptionObj, expirySecs: expiry)
+            resolve(["invoice": invoice.description])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
     @objc(sendBolt11:maxTotalRoutingFeeMsat:maxPathCount:paymentTimeoutSecs:resolver:rejecter:)
     func sendBolt11(_ invoice: String, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
