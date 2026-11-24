@@ -2229,7 +2229,11 @@ export default class CashuStore {
         this.walletNodeDir = undefined;
         this.nostrMintRestorePending = false;
         this.stopConnectivityMonitoring();
-        this.disconnectNdk();
+        // Mint discovery reads public Nostr events, not wallet data, and each
+        // discovery call releases the NDK instance when it ends. Disconnecting
+        // it here would only cut off a discovery that is still running, which
+        // then times out and writes a partial result or an error into the
+        // next wallet's state.
     };
 
     @action
@@ -2385,8 +2389,10 @@ export default class CashuStore {
     /**
      * Ends one discovery call. Once no call uses an instance anymore, its
      * relays are disconnected so their sockets and monitoring timers do not
-     * stay alive for the rest of the session. Counting per instance keeps a
-     * call that started before reset() from affecting the next instance.
+     * stay alive for the rest of the session. Counting per instance is a
+     * safeguard in case the shared instance is ever dropped while a call
+     * still holds it: releasing that call then leaves the next instance
+     * alone.
      */
     private releaseNdk = (ndk: NDK) => {
         const users = (this.ndkUsers.get(ndk) ?? 1) - 1;
