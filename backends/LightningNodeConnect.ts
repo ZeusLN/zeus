@@ -1418,6 +1418,7 @@ export default class LightningNodeConnect {
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
+    supportsDescriptionHashInvoices = () => false;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsChannelMemo = () => this.supports('v0.17.0');

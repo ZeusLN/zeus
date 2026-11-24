@@ -139,6 +139,7 @@ export default class EmbeddedLND extends LND {
             is_blinded: data.is_blinded,
             is_private: data.private,
             preimage: data.preimage,
+            description_hash: data.description_hash,
             route_hints: data.route_hints
         });
     getPayments = async (params?: LndPaymentListParams) =>
@@ -692,6 +693,7 @@ export default class EmbeddedLND extends LND {
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
+    supportsDescriptionHashInvoices = () => true;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => this.supports('v0.18.3');
     // the native openChannelSync does not forward a memo

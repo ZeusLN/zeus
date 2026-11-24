@@ -1013,6 +1013,7 @@ describe('NostrWalletConnect capability flags', () => {
         supportsNetworkInfo: false,
         supportsSimpleTaprootChannels: false,
         supportsCustomPreimages: false,
+        supportsDescriptionHashInvoices: false,
         supportsSweep: false,
         supportsOnchainSendMax: false,
         supportsOnchainBatching: false,

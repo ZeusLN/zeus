@@ -228,6 +228,7 @@ const EXPECTED_FLAGS: { [flag: string]: boolean } = {
     supportsNetworkInfo: false,
     supportsSimpleTaprootChannels: false,
     supportsCustomPreimages: false,
+    supportsDescriptionHashInvoices: false,
     supportsSweep: false,
     supportsOnchainSendMax: false,
     supportsChannelMemo: false,

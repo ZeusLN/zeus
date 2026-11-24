@@ -177,6 +177,7 @@ export interface ILndMobileInjections {
             is_blinded,
             is_private,
             preimage,
+            description_hash,
             route_hints
         }: {
             amount?: number;
@@ -187,6 +188,7 @@ export interface ILndMobileInjections {
             is_blinded?: boolean;
             is_private?: boolean;
             preimage?: string;
+            description_hash?: string;
             route_hints?: lnrpc.IRouteHint[] | null;
         }) => Promise<lnrpc.AddInvoiceResponse>;
         cancelInvoice: (

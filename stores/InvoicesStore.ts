@@ -227,6 +227,7 @@ export default class InvoicesStore {
         addressType,
         account,
         customPreimage,
+        descriptionHash,
         noLsp,
         forceLsp,
         useLsp,
@@ -245,6 +246,10 @@ export default class InvoicesStore {
         addressType?: string;
         account?: string;
         customPreimage?: string;
+        // hex SHA-256 of the description, put in the invoice instead of the
+        // memo. Needs a backend with supportsDescriptionHashInvoices; pair
+        // it with noLsp, as an LSP wraps the invoice with its own
+        descriptionHash?: string;
         noLsp?: boolean;
         forceLsp?: boolean;
         useLsp?: boolean;
@@ -275,6 +280,7 @@ export default class InvoicesStore {
             routeHintChannels,
             unified: true,
             customPreimage,
+            descriptionHash,
             noLsp,
             forceLsp,
             useLsp,
@@ -362,6 +368,7 @@ export default class InvoicesStore {
         routeHintChannels,
         unified,
         customPreimage,
+        descriptionHash,
         noLsp,
         forceLsp,
         useLsp,
@@ -379,6 +386,7 @@ export default class InvoicesStore {
         routeHintChannels?: Channel[];
         unified?: boolean;
         customPreimage?: string;
+        descriptionHash?: string;
         noLsp?: boolean;
         forceLsp?: boolean;
         useLsp?: boolean;
@@ -518,6 +526,7 @@ export default class InvoicesStore {
         }
 
         if (customPreimage) req.preimage = customPreimage;
+        if (descriptionHash) req.description_hash = descriptionHash;
 
         // The quote this invoice is priced with: its fee and the fee_id the
         // proposal sends. lspStore.zeroConfFee/feeId are shared with the

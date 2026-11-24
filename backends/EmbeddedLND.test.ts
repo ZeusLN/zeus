@@ -22,6 +22,7 @@ const mockSendKeysendPaymentV2 = jest.fn();
 const mockListPayments = jest.fn();
 const mockGetTransactions = jest.fn();
 const mockGetInfo = jest.fn();
+const mockAddInvoice = jest.fn();
 const mockSendCoins = jest.fn();
 const mockOpenChannel = jest.fn();
 const mockAbandonChannel = jest.fn();
@@ -33,6 +34,7 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
         index: {
             listPeers: jest.fn(),
             getInfo: (...args: any[]) => mockGetInfo(...args),
+            addInvoice: (...args: any[]) => mockAddInvoice(...args),
             listPayments: (...args: any[]) => mockListPayments(...args),
             trackPaymentV2: (...args: any[]) => mockTrackPaymentV2(...args),
             sendPaymentV2Sync: (...args: any[]) =>
@@ -117,6 +119,40 @@ const decodedListPeers = (peer: lnrpc.IPeer) =>
             lnrpc.ListPeersResponse.create({ peers: [peer] })
         ).finish()
     );
+
+describe('EmbeddedLND.createInvoice', () => {
+    const HASH_HEX = 'ab'.repeat(32);
+
+    beforeEach(() => {
+        mockAddInvoice.mockReset().mockResolvedValue({});
+    });
+
+    it('passes the description hash to the node', async () => {
+        await new EmbeddedLND().createInvoice({
+            memo: 'zap',
+            value: '21',
+            expiry_seconds: 3600,
+            description_hash: HASH_HEX
+        });
+
+        expect(mockAddInvoice.mock.calls[0][0]).toMatchObject({
+            memo: 'zap',
+            description_hash: HASH_HEX
+        });
+    });
+
+    it('passes no description hash when there is none', async () => {
+        await new EmbeddedLND().createInvoice({ memo: 'plain', value: '21' });
+
+        expect(
+            mockAddInvoice.mock.calls[0][0].description_hash
+        ).toBeUndefined();
+    });
+
+    it('supports description hash invoices', () => {
+        expect(new EmbeddedLND().supportsDescriptionHashInvoices()).toBe(true);
+    });
+});
 
 describe('EmbeddedLND.listPeers', () => {
     const embeddedLnd = new EmbeddedLND();

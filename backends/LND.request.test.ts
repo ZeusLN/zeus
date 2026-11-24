@@ -801,6 +801,7 @@ describe('LND capability flags', () => {
         ['supportsFlowLSP', true],
         ['supportsNetworkInfo', true],
         ['supportsCustomPreimages', true],
+        ['supportsDescriptionHashInvoices', true],
         ['supportsSweep', true],
         ['supportsOnchainBatching', true],
         ['supportsChannelBatching', true],

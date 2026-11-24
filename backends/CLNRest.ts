@@ -951,6 +951,7 @@ export default class CLNRest {
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
+    supportsDescriptionHashInvoices = () => false;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => true;
     supportsChannelMemo = () => false;
