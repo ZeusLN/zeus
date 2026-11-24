@@ -6,7 +6,6 @@ import {
     Platform,
     StyleSheet,
     Text,
-    Modal,
     View,
     TouchableOpacity,
     TouchableWithoutFeedback
@@ -24,6 +23,7 @@ import NFCButton from './NFCButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
+import Modal from './Modal';
 import Conversion from './Conversion';
 import { QRAnimationSpeed } from '../utils/QRAnimationUtils';
 

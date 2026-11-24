@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-    Modal,
     ScrollView,
     StyleSheet,
     Text,
@@ -17,6 +16,7 @@ import Button from '../../components/Button';
 import CopyButton from '../../components/CopyButton';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
+import Modal from '../../components/Modal';
 
 import CashuStore from '../../stores/CashuStore';
 import SettingsStore from '../../stores/SettingsStore';

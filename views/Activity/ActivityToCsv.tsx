@@ -3,7 +3,6 @@ import {
     StyleSheet,
     View,
     Alert,
-    Modal,
     KeyboardAvoidingView,
     Platform
 } from 'react-native';
@@ -18,6 +17,7 @@ import Swap from '../../models/Swap';
 import { LSPActivity } from '../../models/LSP';
 
 import Button from '../../components/Button';
+import Modal from '../../components/Modal';
 import TextInput from '../../components/TextInput';
 import LoadingIndicator from '../../components/LoadingIndicator';
 

@@ -5,7 +5,6 @@ import {
     StyleSheet,
     Alert,
     ScrollView,
-    Modal,
     Platform,
     KeyboardAvoidingView
 } from 'react-native';
@@ -15,6 +14,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { CheckBox } from '@rneui/themed';
 
 import Header from '../../components/Header';
+import Modal from '../../components/Modal';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';

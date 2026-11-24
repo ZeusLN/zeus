@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from './Button';
 import CopyBox from './CopyBox';
 import KeyValue from './KeyValue';
+import Modal from './Modal';
 import Amount from './Amount';
 import { Row } from './layout/Row';
 

@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     Animated,
     Image,
-    Modal,
     PanResponder,
     PanResponderInstance,
     ScrollView,
@@ -14,6 +13,7 @@ import {
 
 import Amount from './Amount';
 import KeyValue from './KeyValue';
+import Modal from './Modal';
 import { Row } from './layout/Row';
 
 import { getFeePercentage } from '../utils/AmountUtils';
