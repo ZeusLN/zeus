@@ -830,8 +830,13 @@ export default class LND {
         if (data.tx_hex) data.tx_hex = Base64Utils.hexToBase64(data.tx_hex);
         return this.postRequest('/v2/wallet/tx', data);
     };
-    fundingStateStep = (data: any) =>
-        this.postRequest('/v1/funding/step', data);
+    fundingStateStep = (data: any) => {
+        if (data.psbt_finalize?.final_raw_tx)
+            data.psbt_finalize.final_raw_tx = Base64Utils.hexToBase64(
+                data.psbt_finalize.final_raw_tx
+            );
+        return this.postRequest('/v1/funding/step', data);
+    };
     getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
     bumpForceCloseFee = (data: any) =>

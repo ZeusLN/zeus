@@ -1312,6 +1312,62 @@ describe('LND.sendCoins', () => {
     });
 });
 
+describe('LND.fundingStateStep', () => {
+    const pending_chan_id = Base64Utils.hexToBase64('ab'.repeat(32));
+
+    const postedFor = (data: any) => {
+        const lnd = new LND();
+        const postRequest = jest
+            .spyOn(lnd, 'postRequest')
+            .mockResolvedValue({});
+
+        lnd.fundingStateStep(data);
+
+        expect(postRequest).toHaveBeenCalledTimes(1);
+        expect(postRequest.mock.calls[0][0]).toBe('/v1/funding/step');
+        return postRequest.mock.calls[0][1];
+    };
+
+    // lnd's REST API reads bytes fields as base64, and TransactionsStore
+    // passes the raw transaction as hex
+    it('posts a hex final_raw_tx as base64', () => {
+        expect(
+            postedFor({
+                psbt_finalize: {
+                    final_raw_tx: '02000000000101ff',
+                    pending_chan_id
+                }
+            })
+        ).toEqual({
+            psbt_finalize: {
+                final_raw_tx: 'AgAAAAABAf8=',
+                pending_chan_id
+            }
+        });
+    });
+
+    it.each([
+        [
+            'a base64 signed_psbt',
+            { psbt_finalize: { signed_psbt: 'cHNidP8BAHE=', pending_chan_id } }
+        ],
+        [
+            'a psbt_verify step',
+            {
+                psbt_verify: {
+                    funded_psbt: 'cHNidP8BAHE=',
+                    pending_chan_id,
+                    skip_finalize: true
+                }
+            }
+        ],
+        ['a shim_cancel step', { shim_cancel: { pending_chan_id } }]
+    ])('posts %s unchanged', (_, data) => {
+        const expected = JSON.parse(JSON.stringify(data));
+        expect(postedFor(data)).toEqual(expected);
+    });
+});
+
 describe('LND.abandonChannel', () => {
     // as ChannelsStore abandons a PSBT channel lnd verified but never
     // funded: lnd refuses pending_funding_shim_only for it
