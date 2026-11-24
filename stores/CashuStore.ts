@@ -439,6 +439,11 @@ export default class CashuStore {
             return false;
         }
 
+        // Read before the wait for receives below, which a wallet switch
+        // can outlast
+        const session = this.walletSession;
+        const sessionNodeDir = this.getNodeDir();
+
         try {
             // Get mnemonic from seed derivation
             let mnemonic = this.getCDKMnemonic();
@@ -503,6 +508,14 @@ export default class CashuStore {
             // already answered would fail to store the new proofs, and the
             // token would later show as spent by its sender
             await this.waitForReceivesInFlight();
+            // The user picked another wallet during the wait, or this
+            // wallet's connect started over. The newer connect opens its own
+            // wallet, and native initializeWallet builds both at once, so
+            // whichever build finishes last would stay open
+            if (this.walletChangedSince(session, sessionNodeDir)) {
+                console.log('CDK: wallet changed during the wait, not opening');
+                return false;
+            }
             await CashuDevKit.initializeWallet(mnemonic, 'sat');
 
             runInAction(() => {
@@ -516,6 +529,14 @@ export default class CashuStore {
             return false;
         }
     };
+
+    /**
+     * Whether the wallet changed since session and nodeDir were read.
+     * reset() bumps walletSession, and selecting another wallet points
+     * getNodeDir() at it before its connect runs reset()
+     */
+    private walletChangedSince = (session: number, nodeDir: string) =>
+        session !== this.walletSession || nodeDir !== this.getNodeDir();
 
     /**
      * Normalize mint URL for consistent comparison
@@ -4155,6 +4176,7 @@ export default class CashuStore {
 
         const lndDir = this.getNodeDir();
         this.walletNodeDir = lndDir;
+        const session = this.walletSession;
 
         // Load app-specific data from local storage (activity, preferences, seed)
         const [
@@ -4293,6 +4315,17 @@ export default class CashuStore {
         if (CashuDevKit.isAvailable()) {
             try {
                 const cdkInitialized = await this.initializeCDK();
+                // The wallet changed while initializeCDK waited for
+                // receives. The rest of this run, or the fallback below,
+                // would add this wallet's mints to the next wallet's CDK
+                // database and write under the next wallet's node dir
+                if (this.walletChangedSince(session, lndDir)) {
+                    runInAction(() => {
+                        this.loadingMsg = undefined;
+                        this.initializing = false;
+                    });
+                    return;
+                }
                 if (!cdkInitialized) {
                     throw new Error('CDK wallet initialization returned false');
                 }

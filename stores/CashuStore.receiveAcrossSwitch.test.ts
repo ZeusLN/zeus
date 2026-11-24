@@ -37,6 +37,8 @@ const mockCdk = {
     files: {} as Record<string, DatabaseFile>,
     open: undefined as Handle | undefined,
     openMnemonic: '',
+    // Mnemonics initializeWallet was called with, in order
+    inits: [] as string[],
     // Tokens whose inputs the mint has swapped
     swappedAtMint: [] as string[],
     // Each receive waits on the mint until the test answers it
@@ -52,6 +54,7 @@ const mockHandle = () => {
 jest.mock('../cashu-cdk', () => ({
     isAvailable: () => true,
     initializeWallet: async (mnemonic: string) => {
+        mockCdk.inits.push(mnemonic);
         mockCdk.files[mnemonic] ??= { mints: [], received: [] };
         const previous = mockCdk.open;
         mockCdk.open = { file: mockCdk.files[mnemonic], destroyed: false };
@@ -116,7 +119,11 @@ import CashuStore from './CashuStore';
 const SEED_A = `${'abandon '.repeat(11)}about`;
 const SEED_B =
     'legal winner thank year wave sausage worth useful legal winner thank yellow';
+const SEED_C =
+    'letter advice cage absurd amount doctor acoustic avoid letter advice cage above';
 const MINT = 'https://mint.example';
+const MINT_B = 'https://mint-b.example';
+const MINT_C = 'https://mint-c.example';
 const NEW_MINT = 'https://new-mint.example';
 
 const flush = async () => {
@@ -125,16 +132,21 @@ const flush = async () => {
 
 // A wallet as initializeWallets() finds it in the keychain, with tokens
 // claimTokenOffline() queued while the phone had no network
-const storeWallet = (lndDir: string, seed: string, queuedTokens: string[]) => {
+const storeWallet = (
+    lndDir: string,
+    seed: string,
+    queuedTokens: string[],
+    mint: string = MINT
+) => {
     mockKeychain[`${lndDir}-cashu-seed-phrase`] = JSON.stringify(
         seed.split(' ')
     );
     mockKeychain[`${lndDir}-cashu-seed-version`] = 'v2-bip39';
-    mockKeychain[`${lndDir}-cashu-mintUrls`] = JSON.stringify([MINT]);
-    mockKeychain[`${lndDir}-cashu-selectedMintUrl`] = MINT;
+    mockKeychain[`${lndDir}-cashu-mintUrls`] = JSON.stringify([mint]);
+    mockKeychain[`${lndDir}-cashu-selectedMintUrl`] = mint;
     mockKeychain[`${lndDir}-cashu-offline-pending-tokens`] = JSON.stringify(
         queuedTokens.map((encodedToken) => ({
-            mint: MINT,
+            mint,
             unit: 'sat',
             proofs: [
                 { amount: 100, id: '00ad', secret: encodedToken, C: '02' }
@@ -157,6 +169,7 @@ beforeEach(() => {
     mockCdk.files = {};
     mockCdk.open = undefined;
     mockCdk.openMnemonic = '';
+    mockCdk.inits = [];
     mockCdk.swappedAtMint = [];
     mockCdk.heldClaims = [];
     mockCdk.holdMint = '';
@@ -321,5 +334,90 @@ describe('CashuStore receive in flight at a wallet switch', () => {
 
         await expect(startSwitchToWalletB()).resolves.toBe(true);
         expect(mockCdk.openMnemonic).toBe(SEED_B);
+    });
+    describe('a second switch while the wait runs', () => {
+        // Wallet A's receive is held at the mint while wallet B's connect
+        // waits for it in initializeWallets
+        const startReceiveThenSwitchToB = async () => {
+            storeWallet('walletA', SEED_A, []);
+            storeWallet('walletB', SEED_B, [], MINT_B);
+            storeWallet('walletC', SEED_C, [], MINT_C);
+            await store.initializeWallets();
+            const claim = store.receiveTokenCDK('token-A', undefined, MINT);
+            await flush();
+            expect(mockCdk.heldClaims).toHaveLength(1);
+
+            settingsStore.lndDir = 'walletB';
+            store.reset();
+            const openingB = store.initializeWallets();
+            await flush();
+            expect(mockCdk.openMnemonic).toBe(SEED_A);
+            return { claim, openingB };
+        };
+        const walletCKeys = () =>
+            Object.keys(mockKeychain).filter((key) =>
+                key.startsWith('walletC')
+            );
+
+        it("does not open B when C's connect starts during the wait", async () => {
+            const { claim, openingB } = await startReceiveThenSwitchToB();
+
+            settingsStore.lndDir = 'walletC';
+            store.reset();
+            const openingC = store.initializeWallets();
+            await flush();
+
+            mockCdk.heldClaims[0]();
+            await expect(claim).resolves.toBe(100);
+            await Promise.all([openingB, openingC]);
+
+            expect(mockCdk.inits).toEqual([SEED_A, SEED_C]);
+            expect(mockCdk.openMnemonic).toBe(SEED_C);
+            expect(mockCdk.files[SEED_C].mints).toEqual([MINT_C]);
+            expect(store.mintUrls).toEqual([MINT_C]);
+            expect(mockCdk.files[SEED_A].received).toEqual(['token-A']);
+        });
+
+        it("stops B's run when C is selected before C's connect starts", async () => {
+            const { claim, openingB } = await startReceiveThenSwitchToB();
+            const keysBefore = walletCKeys();
+
+            // Selecting C on the Wallets screen moves the node dir at
+            // once. The Wallet screen starts C's connect only after B's
+            // has returned
+            settingsStore.lndDir = 'walletC';
+            mockCdk.heldClaims[0]();
+            await expect(claim).resolves.toBe(100);
+            await openingB;
+
+            expect(mockCdk.inits).toEqual([SEED_A]);
+            expect(mockCdk.openMnemonic).toBe(SEED_A);
+            // B's derived pubkey was not stored as C's for B's mint
+            expect(walletCKeys()).toEqual(keysBefore);
+            expect(store.initializing).toBe(false);
+
+            store.reset();
+            await store.initializeWallets();
+            expect(mockCdk.inits).toEqual([SEED_A, SEED_C]);
+            expect(mockCdk.openMnemonic).toBe(SEED_C);
+            expect(store.mintUrls).toEqual([MINT_C]);
+        });
+
+        it('opens B once when its connect starts over during the wait', async () => {
+            const { claim, openingB } = await startReceiveThenSwitchToB();
+
+            store.reset();
+            const reopeningB = store.initializeWallets();
+            await flush();
+
+            mockCdk.heldClaims[0]();
+            await expect(claim).resolves.toBe(100);
+            await Promise.all([openingB, reopeningB]);
+
+            expect(mockCdk.inits).toEqual([SEED_A, SEED_B]);
+            expect(mockCdk.openMnemonic).toBe(SEED_B);
+            expect(store.cdkInitialized).toBe(true);
+            expect(store.mintUrls).toEqual([MINT_B]);
+        });
     });
 });
