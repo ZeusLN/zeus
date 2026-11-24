@@ -183,6 +183,21 @@ describe('LinkingUtils.handleDeepLink', () => {
         expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
     });
 
+    it('hands a nostr: link to the system without handleAnything', async () => {
+        const openURL = jest
+            .spyOn(Linking, 'openURL')
+            .mockResolvedValue(undefined);
+        const navigation = makeNavigation(['Wallet']);
+
+        LinkingUtils.handleDeepLink('nostr:npub1example', navigation as any);
+        await flushPromises();
+
+        expect(openURL).toHaveBeenCalledWith('nostr:npub1example');
+        expect(handleAnything).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        openURL.mockRestore();
+    });
+
     describe('a link that cannot be opened', () => {
         let alert: jest.SpyInstance;
 

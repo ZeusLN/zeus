@@ -17,7 +17,9 @@ describe('showHandleAnythingError', () => {
 
     it.each([
         ['an Error', new Error('not valid'), 'not valid'],
-        ['a plain string', 'boom', 'boom']
+        ['a plain string', 'boom', 'boom'],
+        ['null', null, 'null'],
+        ['undefined', undefined, 'undefined']
     ])('shows the message of %s', (_label, err, message) => {
         showHandleAnythingError(err);
 
