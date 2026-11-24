@@ -109,6 +109,13 @@ const NDK_CONNECT_TIMEOUT_MS = 2000;
 // reconcile until restart. Same bound as the mint info fetch.
 const MELT_QUOTE_CHECK_TIMEOUT_MS = 10000;
 
+// How long an offline-token sweep waits for the sweep reset() stopped on the
+// same wallet. CDK sets no request timeout, and a swap only gets one when the
+// mint lists it under NUT-19, so a claim the mint never answers would hold the
+// wallet's sweeps until restart. Past this the sweep claims the stored queue,
+// the stopped sweep's token included, as before #5579.
+const OFFLINE_SWEEP_WAIT_MS = 30000;
+
 // Saga recovery runs per mint once each time the wallet loads; a mint where
 // it throws or leaves failed or skipped sagas is tried this many times in all,
 // at least this far apart (Activity checks pending items more than once on
@@ -6412,12 +6419,9 @@ export default class CashuStore {
         // go on from the queue it leaves
         const previous = this.offlineSweeps.get(nodeDir);
         const run = (async () => {
-            if (previous) {
-                await previous.catch(() => {});
-                await this.loadOfflineQueues(session, nodeDir);
-            }
+            if (previous) await this.waitForStoppedSweep(previous);
             // Ends at once, with nothing written, if reset() came meanwhile
-            await this.runOfflineSweep(session, nodeDir);
+            await this.runOfflineSweep(session, nodeDir, !!previous);
         })();
         this.offlineSweeps.set(nodeDir, run);
         try {
@@ -6426,6 +6430,23 @@ export default class CashuStore {
             if (this.offlineSweeps.get(nodeDir) === run) {
                 this.offlineSweeps.delete(nodeDir);
             }
+        }
+    };
+
+    /**
+     * Wait for a sweep reset() stopped, at most OFFLINE_SWEEP_WAIT_MS
+     */
+    private waitForStoppedSweep = async (sweep: Promise<void>) => {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+            await Promise.race([
+                sweep.catch(() => {}),
+                new Promise<void>((resolve) => {
+                    timer = setTimeout(resolve, OFFLINE_SWEEP_WAIT_MS);
+                })
+            ]);
+        } finally {
+            clearTimeout(timer);
         }
     };
 
@@ -6456,10 +6477,17 @@ export default class CashuStore {
         });
     };
 
-    private runOfflineSweep = async (session: number, nodeDir: string) => {
+    private runOfflineSweep = async (
+        session: number,
+        nodeDir: string,
+        reloadQueues: boolean
+    ) => {
         let stoppedAt = -1;
 
         try {
+            // Inside the try, so a failed read still clears isSweeping
+            if (reloadQueues) await this.loadOfflineQueues(session, nodeDir);
+
             const results = { claimed: 0, alreadySpent: 0, failed: 0 };
             const remaining: CashuToken[] = [];
             const spent: CashuToken[] = [];

@@ -769,4 +769,81 @@ describe('CashuStore offline-token sweep across a reconnect of the same wallet',
         expect(store.offlinePendingTokens).toEqual([]);
         expect((store as any).isSweeping).toBe(false);
     });
+
+    describe('when the mint does not answer the stopped claim', () => {
+        beforeEach(() => {
+            jest.useFakeTimers({
+                doNotFake: ['setImmediate', 'nextTick', 'queueMicrotask']
+            });
+            jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        });
+        afterEach(() => jest.useRealTimers());
+
+        it('claims the stored queue after 30 s', async () => {
+            await reconnectWalletA();
+            await jest.advanceTimersByTimeAsync(29999);
+            expect(mockCdk.submitted).toEqual(['token-1-for-wallet-A']);
+            expect((store as any).isSweeping).toBe(true);
+
+            // The first claim is still at the mint, so its token is sent
+            // again, as before #5579
+            await jest.advanceTimersByTimeAsync(1);
+            await sweeps.mock.results[1].value;
+
+            expect(mockCdk.submitted).toEqual([
+                'token-1-for-wallet-A',
+                'token-1-for-wallet-A',
+                'token-2-for-wallet-A'
+            ]);
+            expect(storedTokens(PENDING)).toEqual([]);
+            expect(store.offlinePendingTokens).toEqual([]);
+            expect((store as any).isSweeping).toBe(false);
+        });
+
+        it('clears its timer when the claim is answered in time', async () => {
+            const setTimer = jest.spyOn(global, 'setTimeout');
+            const clearTimer = jest.spyOn(global, 'clearTimeout');
+            await reconnectWalletA();
+            const waits = setTimer.mock.calls
+                .map((call, i) => ({ call, i }))
+                .filter(({ call }) => call[1] === 30000);
+            expect(waits).toHaveLength(1);
+            const waitTimer = setTimer.mock.results[waits[0].i].value;
+
+            mockCdk.answerFirstClaim!();
+            await sweeps.mock.results[0].value;
+            await sweeps.mock.results[1].value;
+
+            expect(mockCdk.submitted).toEqual([
+                'token-1-for-wallet-A',
+                'token-2-for-wallet-A'
+            ]);
+            expect(clearTimer).toHaveBeenCalledWith(waitTimer);
+        });
+    });
+
+    it('clears isSweeping when reading the stored queue fails', async () => {
+        await reconnectWalletA();
+        const getItem = Storage.getItem as jest.Mock;
+        const read = getItem.getMockImplementation()!;
+        let pendingReads = 0;
+        getItem.mockImplementation(async (key: string) => {
+            // The first read is the stopped sweep recording its claim, the
+            // second the new sweep reloading the queue
+            if (key === PENDING && ++pendingReads === 2) {
+                throw new Error('keychain read failed');
+            }
+            return read(key);
+        });
+
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+        await expect(sweeps.mock.results[1].value).rejects.toThrow(
+            'keychain read failed'
+        );
+
+        expect(mockCdk.submitted).toEqual(['token-1-for-wallet-A']);
+        expect((store as any).isSweeping).toBe(false);
+        expect((store as any).offlineSweeps.size).toBe(0);
+    });
 });
