@@ -1874,10 +1874,15 @@ export default class SwapStore {
 
         if (apiUrl) {
             // a transaction the host relayed takes a moment to reach
-            // the mempool instance
+            // the mempool instance. Only a 404 is worth asking again: an
+            // instance that failed or answered anything else will not
+            // change in a second, and a request to it may wait for the
+            // native timeout.
             const lookups = hostAccepted ? HOST_BROADCAST_LOOKUPS : 1;
             for (let lookup = 1; lookup <= lookups; lookup++) {
-                if (await this.isTransactionKnown(apiUrl, txid)) return txid;
+                const found = await this.lookUpTransaction(apiUrl, txid);
+                if (found === 'known') return txid;
+                if (found !== 'not-found') break;
                 if (lookup < lookups) {
                     await sleep(HOST_BROADCAST_LOOKUP_DELAY_MS);
                 }
@@ -1927,20 +1932,25 @@ export default class SwapStore {
     };
 
     // Whether the mempool instance has the transaction in its mempool or
-    // a block. Lookup errors count as unknown.
-    private isTransactionKnown = async (
+    // a block: 'known', 'not-found' (a 404), or 'unavailable' for a failed
+    // request or any other answer.
+    private lookUpTransaction = async (
         apiUrl: string,
         txid: string
-    ): Promise<boolean> => {
+    ): Promise<'known' | 'not-found' | 'unavailable'> => {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
                 `${apiUrl}/tx/${txid}`
             );
-            if (response.info().status !== 200) return false;
-            return JSON.parse(String(await response.text()))?.txid === txid;
+            const httpStatus = response.info().status;
+            if (httpStatus === 404) return 'not-found';
+            if (httpStatus !== 200) return 'unavailable';
+            return JSON.parse(String(await response.text()))?.txid === txid
+                ? 'known'
+                : 'unavailable';
         } catch (e) {
-            return false;
+            return 'unavailable';
         }
     };
 
