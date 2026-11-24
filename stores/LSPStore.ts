@@ -1490,9 +1490,13 @@ export default class LSPStore {
         });
     };
 
-    public lsps1GetOrderREST(id: string, RESTHost: string) {
+    // Resolves with this request's reply, or undefined if it failed. Only
+    // the latest get_order request writes getOrderResponse, error and
+    // loadingLSPS1, so a caller that awaits its own order reads the reply
+    // from here.
+    public lsps1GetOrderREST(id: string, RESTHost: string): Promise<any> {
         this.loadingLSPS1 = true;
-        // Only the latest get_order request reports back
+        // Only the latest get_order request writes the shared fields
         const requestId = uuidv4();
         this.getOrderId = requestId;
         const endpoint = `${RESTHost}/api/v1/get_order?order_id=${id}`;
@@ -1503,9 +1507,10 @@ export default class LSPStore {
             'Content-Type': 'application/json'
         })
             .then((response) => {
-                if (this.getOrderId !== requestId) return;
                 const responseData = JSON.parse(response.data);
                 console.log('Response received:', responseData);
+                const reply = responseData.error ? undefined : responseData;
+                if (this.getOrderId !== requestId) return reply;
                 runInAction(() => {
                     if (responseData.error) {
                         this.error = true;
@@ -1515,6 +1520,7 @@ export default class LSPStore {
                     }
                     this.loadingLSPS1 = false;
                 });
+                return reply;
             })
             .catch((error) => {
                 console.error('Error sending custom message:', error);
@@ -1721,48 +1727,53 @@ export default class LSPStore {
     };
 
     @action
-    public lsps1GetOrderNative = async (orderId: string) => {
+    // Resolves with this request's reply, or undefined if it failed. Only
+    // the latest get_order request writes the shared fields, as in
+    // lsps1GetOrderREST.
+    public lsps1GetOrderNative = async (orderId: string): Promise<any> => {
         this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
-        // Only the latest get_order request reports back
+        // Only the latest get_order request writes the shared fields
         const requestId = uuidv4();
         this.getOrderId = requestId;
 
         try {
             const response = await BackendUtils.checkLsps1OrderStatus(orderId);
-            if (this.getOrderId !== requestId) return;
+
+            // Transform response to match expected format
+            const reply = {
+                result: {
+                    order_id: response.order_id,
+                    lsp_balance_sat: response.lsp_balance_sat?.toString(),
+                    client_balance_sat: response.client_balance_sat?.toString(),
+                    payment: {
+                        state: response.payment?.state,
+                        fee_total_sat:
+                            response.payment?.fee_total_sat?.toString(),
+                        order_total_sat:
+                            response.payment?.order_total_sat?.toString(),
+                        bolt11_invoice: response.payment?.bolt11_invoice,
+                        bolt11_state: response.payment?.bolt11_state,
+                        onchain_address: response.payment?.onchain_address,
+                        onchain_state: response.payment?.onchain_state,
+                        onchain_payment: response.payment?.onchain_address
+                            ? {
+                                  address: response.payment.onchain_address,
+                                  state: response.payment.onchain_state
+                              }
+                            : undefined
+                    },
+                    channel: response.channel
+                }
+            };
+            if (this.getOrderId !== requestId) return reply;
 
             runInAction(() => {
-                // Transform response to match expected format
-                this.getOrderResponse = {
-                    result: {
-                        order_id: response.order_id,
-                        lsp_balance_sat: response.lsp_balance_sat?.toString(),
-                        client_balance_sat:
-                            response.client_balance_sat?.toString(),
-                        payment: {
-                            state: response.payment?.state,
-                            fee_total_sat:
-                                response.payment?.fee_total_sat?.toString(),
-                            order_total_sat:
-                                response.payment?.order_total_sat?.toString(),
-                            bolt11_invoice: response.payment?.bolt11_invoice,
-                            bolt11_state: response.payment?.bolt11_state,
-                            onchain_address: response.payment?.onchain_address,
-                            onchain_state: response.payment?.onchain_state,
-                            onchain_payment: response.payment?.onchain_address
-                                ? {
-                                      address: response.payment.onchain_address,
-                                      state: response.payment.onchain_state
-                                  }
-                                : undefined
-                        },
-                        channel: response.channel
-                    }
-                };
+                this.getOrderResponse = reply;
                 this.loadingLSPS1 = false;
             });
+            return reply;
         } catch (err: any) {
             if (this.getOrderId !== requestId) return;
             const errorMessage =
@@ -1991,28 +2002,33 @@ export default class LSPStore {
         });
     };
 
+    // On LDK Node, resolves with this request's reply, or undefined if it
+    // failed, and only the latest get_order request writes the shared
+    // fields, as in lsps1GetOrderREST. Over custom messages it resolves
+    // with nothing and the reply is read from getExtensionOrderResponse.
     @action
     public lsps7GetOrderCustomMessage = async (
         orderId: string,
         peer: string
-    ) => {
+    ): Promise<any> => {
         this.loadingLSPS7 = true;
 
         // Use native LSPS7 method if available (LDK Node backend)
         if (BackendUtils.supportsLSPS7native()) {
-            // Only the latest get_order request reports back
+            // Only the latest get_order request writes the shared fields
             const requestId = uuidv4();
             this.getExtensionOrderId = requestId;
             try {
                 const response = await BackendUtils.lsps7CheckOrderStatus(
                     orderId
                 );
-                if (this.getExtensionOrderId !== requestId) return;
+                const reply = { result: response };
+                if (this.getExtensionOrderId !== requestId) return reply;
                 runInAction(() => {
-                    this.getExtensionOrderResponse = { result: response };
+                    this.getExtensionOrderResponse = reply;
                     this.loadingLSPS7 = false;
                 });
-                return;
+                return reply;
             } catch (error: any) {
                 if (this.getExtensionOrderId !== requestId) return;
                 runInAction(() => {
@@ -2132,28 +2148,35 @@ export default class LSPStore {
         if (this.freeOrderPollSessionId !== sessionId) return;
 
         try {
+            // The REST and LDK Node requests return their own reply, which
+            // a get_order sent after them leaves out of the shared slot.
+            // Over custom messages the reply is read from the slot.
+            let response: any;
             if (service === LSPService.LSPS7) {
-                await this.lsps7GetOrderCustomMessage(
+                const reply = await this.lsps7GetOrderCustomMessage(
                     orderId,
                     this.getLSPSPubkey()
                 );
+                response = BackendUtils.supportsLSPS7native()
+                    ? reply
+                    : this.getExtensionOrderResponse;
             } else if (BackendUtils.supportsLSPS1rest()) {
-                await this.lsps1GetOrderREST(orderId, this.getLSPS1Rest());
+                response = await this.lsps1GetOrderREST(
+                    orderId,
+                    this.getLSPS1Rest()
+                );
             } else if (BackendUtils.supportsLSPScustomMessage()) {
                 await this.lsps1GetOrderCustomMessage(
                     orderId,
                     this.getLSPSPubkey()
                 );
+                response = this.getOrderResponse;
             } else {
                 return;
             }
 
             if (this.freeOrderPollSessionId !== sessionId) return;
 
-            const response =
-                service === LSPService.LSPS7
-                    ? this.getExtensionOrderResponse
-                    : this.getOrderResponse;
             if (response && Object.keys(response).length > 0) {
                 const result = response?.result || response;
                 // a timeout or error reply leaves an earlier order's

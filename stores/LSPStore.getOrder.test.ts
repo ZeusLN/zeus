@@ -10,6 +10,7 @@ jest.mock('../storage', () => ({
 jest.mock('../utils/LndMobileUtils', () => ({ LndMobileEventEmitter: {} }));
 jest.mock('../utils/ClientInfoUtils', () => ({ getClientInfo: jest.fn() }));
 jest.mock('../utils/BackendUtils', () => ({
+    supportsLSPS1rest: () => true,
     supportsLSPScustomMessage: () => true,
     supportsLSPS7native: jest.fn(() => false),
     checkLsps1OrderStatus: jest.fn(),
@@ -26,6 +27,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
+import { LSPService } from '../models/LSP';
 
 const makeStore = () =>
     new LSPStore(
@@ -91,6 +93,7 @@ describe.each(PATHS)(
     ({ name, backendCall, request, answer, slot, loading, reset }) => {
         const storedOrderId = (store: LSPStore) =>
             (store[slot]?.result || store[slot])?.order_id;
+        const replyOrderId = (reply: any) => (reply?.result || reply)?.order_id;
 
         // holds the next backend calls open, in the order they are made
         const holdRequests = (count: number) => {
@@ -121,8 +124,9 @@ describe.each(PATHS)(
             const done = request(store, 'order-a');
             expect(store[loading]).toBe(true);
             held.resolve(answer('order-a'));
-            await done;
+            const reply = await done;
 
+            expect(replyOrderId(reply)).toBe('order-a');
             expect(storedOrderId(store)).toBe('order-a');
             expect(store[loading]).toBe(false);
             expect(store.error).toBe(false);
@@ -134,8 +138,9 @@ describe.each(PATHS)(
 
             const done = request(store, 'order-a');
             held.reject(new Error('lsp unreachable'));
-            await done;
+            const reply = await done;
 
+            expect(reply).toBeUndefined();
             expect(store.error).toBe(true);
             expect(store.error_msg).toBe('lsp unreachable');
             expect(store[loading]).toBe(false);
@@ -172,15 +177,18 @@ describe.each(PATHS)(
             expect(store[loading]).toBe(true);
         });
 
-        it('drops the reply to an older request while a newer one waits', async () => {
+        it('keeps the reply to an older request out of the slot while a newer one waits, and returns it to its caller', async () => {
             const [first, second] = holdRequests(2);
             const store = makeStore();
 
             const firstDone = request(store, 'order-a');
             const secondDone = request(store, 'order-b');
             first.resolve(answer('order-a'));
-            await firstDone;
+            const firstReply = await firstDone;
 
+            // the caller that waits on order-a, such as the payment-await
+            // or free-order poll, still gets its answer
+            expect(replyOrderId(firstReply)).toBe('order-a');
             expect(store[slot]).toEqual({});
             expect(store[loading]).toBe(true);
 
@@ -198,8 +206,9 @@ describe.each(PATHS)(
             const firstDone = request(store, 'order-a');
             const secondDone = request(store, 'order-b');
             first.reject(new Error('lsp unreachable'));
-            await firstDone;
+            const firstReply = await firstDone;
 
+            expect(firstReply).toBeUndefined();
             expect(store.error).toBe(false);
             expect(store.error_msg).toBe('');
             expect(store[loading]).toBe(true);
@@ -220,9 +229,104 @@ describe.each(PATHS)(
             second.resolve(answer('order-b'));
             await secondDone;
             first.resolve(answer('order-a'));
-            await firstDone;
+            const firstReply = await firstDone;
 
+            expect(replyOrderId(firstReply)).toBe('order-a');
             expect(storedOrderId(store)).toBe('order-b');
+        });
+    }
+);
+
+it('LSPS1 REST: returns nothing for an error reply', async () => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.mocked(ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValueOnce({
+        data: JSON.stringify({ error: true, message: 'unknown order' })
+    });
+    const store = makeStore();
+
+    const reply = await store.lsps1GetOrderREST(
+        'order-a',
+        'https://lsp.example.com'
+    );
+
+    expect(reply).toBeUndefined();
+    expect(store.error).toBe(true);
+    expect(store.error_msg).toBe('unknown order');
+    jest.restoreAllMocks();
+});
+
+// The free-order poll runs while the user opens and pays other orders, so
+// another get_order can start while its own request waits.
+const FREE_POLL_PATHS = [
+    {
+        name: 'LSPS1 REST',
+        service: LSPService.LSPS1,
+        backendCall: () => jest.mocked(ReactNativeBlobUtil.fetch) as jest.Mock,
+        request: (store: LSPStore, orderId: string) =>
+            store.lsps1GetOrderREST(orderId, 'https://lsp.example.com'),
+        answer: (orderId: string, orderState: string) => ({
+            data: JSON.stringify({ order_id: orderId, order_state: orderState })
+        }),
+        created: 'createOrderResponse'
+    },
+    {
+        name: 'LSPS7 on LDK Node',
+        service: LSPService.LSPS7,
+        backendCall: () =>
+            jest.mocked(BackendUtils.lsps7CheckOrderStatus) as jest.Mock,
+        request: (store: LSPStore, orderId: string) =>
+            store.lsps7GetOrderCustomMessage(orderId, 'aa'),
+        answer: (orderId: string, orderState: string) => ({
+            order_id: orderId,
+            order_state: orderState
+        }),
+        created: 'createExtensionOrderResponse'
+    }
+] as const;
+
+describe.each(FREE_POLL_PATHS)(
+    'LSPStore free-order poll: $name',
+    ({ name, service, backendCall, request, answer, created }) => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+            jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(
+                name === 'LSPS7 on LDK Node'
+            );
+            jest.spyOn(console, 'log').mockImplementation(() => {});
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('finishes its order when another get_order starts while its request waits', async () => {
+            const held = [deferred(), deferred()];
+            held.forEach(({ promise }) =>
+                backendCall().mockReturnValueOnce(promise)
+            );
+            const store = makeStore();
+            jest.spyOn(store as any, 'getLSPS1Rest').mockReturnValue(
+                'https://lsp.example.com'
+            );
+            const updateOrderInStorage = jest
+                .spyOn(store, 'updateOrderInStorage')
+                .mockImplementation(() => {});
+
+            store.startFreeOrderStatusPolling('order-free', service);
+            // the payment-await screen polls another order
+            const otherDone = request(store, 'order-paid');
+            held[0].resolve(answer('order-free', 'COMPLETED'));
+            await new Promise((resolve) => setImmediate(resolve));
+
+            const result = store[created]?.result || store[created];
+            expect(result?.order_id).toBe('order-free');
+            expect(result?.order_state).toBe('COMPLETED');
+            expect(updateOrderInStorage).toHaveBeenCalledTimes(1);
+
+            held[1].resolve(answer('order-paid', 'CREATED'));
+            await otherDone;
+            store.stopFreeOrderStatusPolling();
         });
     }
 );

@@ -183,6 +183,10 @@ export default class LSPPaymentAwait extends React.Component<
             LSPStore.error = false;
             LSPStore.error_msg = '';
 
+            // The REST and LDK Node requests return their own reply. A
+            // get_order sent after this one, such as the free-order poll's,
+            // keeps that reply out of the shared slot. Over custom messages
+            // the reply is read from the slot.
             let response: any;
 
             if (service === LSPService.LSPS7) {
@@ -191,21 +195,29 @@ export default class LSPPaymentAwait extends React.Component<
                     this.scheduleNextPoll();
                     return;
                 }
-                await LSPStore.lsps7GetOrderCustomMessage(orderId, peer!);
-                response = LSPStore.getExtensionOrderResponse;
+                const reply = await LSPStore.lsps7GetOrderCustomMessage(
+                    orderId,
+                    peer!
+                );
+                response = BackendUtils.supportsLSPS7native()
+                    ? reply
+                    : LSPStore.getExtensionOrderResponse;
             } else {
                 if (native) {
-                    await LSPStore.lsps1GetOrderNative(orderId);
+                    response = await LSPStore.lsps1GetOrderNative(orderId);
                 } else if (endpoint && BackendUtils.supportsLSPS1rest()) {
-                    await LSPStore.lsps1GetOrderREST(orderId, endpoint);
+                    response = await LSPStore.lsps1GetOrderREST(
+                        orderId,
+                        endpoint
+                    );
                 } else if (peer && BackendUtils.supportsLSPScustomMessage()) {
                     await LSPStore.lsps1GetOrderCustomMessage(orderId, peer);
+                    response = LSPStore.getOrderResponse;
                 } else {
                     this.isPolling = false;
                     this.scheduleNextPoll();
                     return;
                 }
-                response = LSPStore.getOrderResponse;
             }
 
             if (this.isUnmounted) return;
