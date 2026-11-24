@@ -11966,6 +11966,65 @@ describe('NostrWalletConnectStore scheduled save', () => {
             expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
         });
 
+        // a connection created after the failed load, as it is in storage
+        const storeNewConnection = async (store: NostrWalletConnectStore) => {
+            addConnection(store, { id: 'conn-new', pubkey: hex64('c') });
+            await store.saveConnections();
+            expect(persistedConnections().map((c) => c.id)).toEqual([
+                'conn-1',
+                'conn-new'
+            ]);
+        };
+
+        it('removes a connection deleted after the failed load from storage', async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+            await storeNewConnection(store);
+
+            await store.deleteConnection('conn-new');
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it("removes a deleted connection on the next save when the delete's write fails", async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+            await storeNewConnection(store);
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+
+            await expect(store.deleteConnection('conn-new')).rejects.toThrow(
+                'storage write failed'
+            );
+            expect(persistedConnections().map((c) => c.id)).toEqual([
+                'conn-1',
+                'conn-new'
+            ]);
+            await store.saveConnections();
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it('keeps a connection created again with the id of a deleted one', async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+            await storeNewConnection(store);
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+            await expect(store.deleteConnection('conn-new')).rejects.toThrow(
+                'storage write failed'
+            );
+
+            // regenerate deletes the connection and creates it with its id
+            addConnection(store, { id: 'conn-new', pubkey: hex64('d') });
+            await store.saveConnections();
+
+            expect(persistedConnections().map((c) => [c.id, c.pubkey])).toEqual(
+                [
+                    ['conn-1', hex64('a')],
+                    ['conn-new', hex64('d')]
+                ]
+            );
+        });
+
         it('removes the last connection from storage once a load has succeeded', async () => {
             const { store } = await buildStore();
             await failLoad(store);

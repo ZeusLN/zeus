@@ -273,6 +273,10 @@ export default class NostrWalletConnectStore {
     // The last loadConnections could not read storage, so memory is not the
     // current wallet's full set of connections
     private connectionsLoadFailed = false;
+    // Connections removed by deleteConnection whose stored record no
+    // write has removed yet. A save that keeps stored records it has no
+    // connection in memory for (see saveConnections) removes these.
+    private deletedConnectionIds = new Set<string>();
     private initializeInFlight: Promise<void> | null = null;
     private lastPendingPaymentStatusFetchByConnection = new Map<
         string,
@@ -948,6 +952,7 @@ export default class NostrWalletConnectStore {
                 const { index: liveIndex } = this.getConnection({
                     connectionId
                 });
+                this.deletedConnectionIds.add(connectionId);
                 runInAction(() => {
                     if (liveIndex !== -1) {
                         this.connections.splice(liveIndex, 1);
@@ -1513,18 +1518,23 @@ export default class NostrWalletConnectStore {
                 // remove its connections, so only update their own records.
                 // The same applies after a load that could not read storage:
                 // memory is empty then, and replacing would remove every
-                // stored connection of the current wallet.
+                // stored connection of the current wallet. A deleted
+                // connection's record is removed either way: kept, it
+                // would be subscribed again on the next load.
                 const replacesCurrentWallet =
                     !this.connectionsLoadFailed &&
                     this.connections.every((c) =>
                         this.connectionBelongsToCurrentWallet(c)
                     );
-                const filteredExisting = replacesCurrentWallet
-                    ? allConnections.filter(
-                          (c: NWCConnectionData) =>
-                              !this.connectionBelongsToCurrentWallet(c)
-                      )
-                    : allConnections;
+                const deletedIds = new Set(this.deletedConnectionIds);
+                const filteredExisting = allConnections.filter(
+                    (c: NWCConnectionData) =>
+                        !deletedIds.has(c.id) &&
+                        !(
+                            replacesCurrentWallet &&
+                            this.connectionBelongsToCurrentWallet(c)
+                        )
+                );
                 const mergedConnections = [
                     ...filteredExisting,
                     ...this.connections
@@ -1539,6 +1549,9 @@ export default class NostrWalletConnectStore {
                     NWC_CONNECTIONS_KEY,
                     JSON.stringify(Array.from(dedupedById.values()))
                 );
+                for (const id of deletedIds) {
+                    this.deletedConnectionIds.delete(id);
+                }
             });
         } catch (error: any) {
             console.error('Failed to save NWC connections:', error);
