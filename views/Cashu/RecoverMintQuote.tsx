@@ -29,6 +29,7 @@ interface RecoverMintQuoteState {
     recoveredAmount: number;
     quoteState: string | null;
     notOnDevice: boolean;
+    restoreDeferred: boolean;
 }
 
 @inject('CashuStore')
@@ -45,7 +46,8 @@ export default class RecoverMintQuote extends React.Component<
         statusMessage: '',
         recoveredAmount: 0,
         quoteState: null,
-        notOnDevice: false
+        notOnDevice: false,
+        restoreDeferred: false
     };
 
     recover = async () => {
@@ -78,7 +80,8 @@ export default class RecoverMintQuote extends React.Component<
             ),
             recoveredAmount: 0,
             quoteState: null,
-            notOnDevice: false
+            notOnDevice: false,
+            restoreDeferred: false
         });
 
         try {
@@ -91,6 +94,13 @@ export default class RecoverMintQuote extends React.Component<
                     checking: false,
                     checked: true,
                     recoveredAmount: Number(result?.amtSat) || 0,
+                    statusMessage: ''
+                });
+            } else if (result?.restoreDeferred) {
+                this.setState({
+                    checking: false,
+                    checked: true,
+                    restoreDeferred: true,
                     statusMessage: ''
                 });
             } else if (result?.isLegacy) {
@@ -128,7 +138,8 @@ export default class RecoverMintQuote extends React.Component<
             statusMessage,
             recoveredAmount,
             quoteState,
-            notOnDevice
+            notOnDevice,
+            restoreDeferred
         } = this.state;
 
         return (
@@ -198,7 +209,8 @@ export default class RecoverMintQuote extends React.Component<
                                 checked: false,
                                 recoveredAmount: 0,
                                 quoteState: null,
-                                notOnDevice: false
+                                notOnDevice: false,
+                                restoreDeferred: false
                             })
                         }
                         editable={!checking}
@@ -287,6 +299,23 @@ export default class RecoverMintQuote extends React.Component<
                                 </Text>
                             </View>
                         )}
+
+                    {checked && !error && restoreDeferred && (
+                        <View style={styles.resultContainer}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Roboto-Regular',
+                                    fontSize: 16,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Cashu.RecoverMintQuote.restoreDeferred'
+                                )}
+                            </Text>
+                        </View>
+                    )}
 
                     {checked && notOnDevice && (
                         <View
