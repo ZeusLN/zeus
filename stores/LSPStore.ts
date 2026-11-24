@@ -1486,9 +1486,13 @@ export default class LSPStore {
         });
     };
 
-    public lsps1GetOrderREST(id: string, RESTHost: string) {
+    // Resolves with this request's reply, or undefined if it failed. Only
+    // the latest get_order request writes getOrderResponse, error and
+    // loadingLSPS1, so a caller that awaits its own order reads the reply
+    // from here.
+    public lsps1GetOrderREST(id: string, RESTHost: string): Promise<any> {
         this.loadingLSPS1 = true;
-        // Only the latest get_order request reports back
+        // Only the latest get_order request writes the shared fields
         const requestId = uuidv4();
         this.getOrderId = requestId;
         const endpoint = `${RESTHost}/api/v1/get_order?order_id=${id}`;
@@ -1499,9 +1503,10 @@ export default class LSPStore {
             'Content-Type': 'application/json'
         })
             .then((response) => {
-                if (this.getOrderId !== requestId) return;
                 const responseData = JSON.parse(response.data);
                 console.log('Response received:', responseData);
+                const reply = responseData.error ? undefined : responseData;
+                if (this.getOrderId !== requestId) return reply;
                 runInAction(() => {
                     if (responseData.error) {
                         this.error = true;
@@ -1511,6 +1516,7 @@ export default class LSPStore {
                     }
                     this.loadingLSPS1 = false;
                 });
+                return reply;
             })
             .catch((error) => {
                 console.error('Error sending custom message:', error);
