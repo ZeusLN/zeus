@@ -11,6 +11,7 @@ import CopyButton from '../components/CopyButton';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import handleAnything from '../utils/handleAnything';
+import showHandleAnythingError from '../utils/showHandleAnythingError';
 
 import InvoicesStore from '../stores/InvoicesStore';
 
@@ -48,22 +49,13 @@ export default class DonateToZEUS extends React.Component<
                             onPress={() => {
                                 handleAnything('tips@pay.zeusln.app')
                                     .then((response) => {
-                                        try {
-                                            if (response) {
-                                                const [route, props] = response;
-                                                navigation.navigate(
-                                                    route,
-                                                    props
-                                                );
-                                            }
-                                        } catch (e) {}
+                                        // nothing to open: handleAnything has
+                                        // already alerted, or the user declined
+                                        if (!response) return;
+                                        const [route, props] = response;
+                                        navigation.navigate(route, props);
                                     })
-                                    .catch((err) => {
-                                        console.log(
-                                            localeString('general.error'),
-                                            err
-                                        );
-                                    });
+                                    .catch(showHandleAnythingError);
                             }}
                             icon={{
                                 name: 'zap',
