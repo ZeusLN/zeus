@@ -55,7 +55,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
             error_msg
         } = ChannelBackupStore;
 
-        const noneSelected = Object.keys(selected).length === 0;
+        const noneSelected = !selected.backup;
 
         return (
             <Screen>
