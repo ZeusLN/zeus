@@ -460,15 +460,6 @@ export default class EmbeddedLND extends LND {
         return await publishTransaction(data);
     };
     fundingStateStep = async (data: any) => {
-        // Verify
-        if (
-            data.psbt_finalize?.funded_psbt &&
-            Base64Utils.isHex(data.psbt_finalize?.funded_psbt)
-        )
-            data.psbt_finalize.funded_psbt = Base64Utils.hexToBase64(
-                data.psbt_finalize.funded_psbt
-            );
-        // Finalize
         if (
             data.psbt_finalize?.final_raw_tx &&
             Base64Utils.isHex(data.psbt_finalize?.final_raw_tx)
