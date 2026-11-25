@@ -25,6 +25,7 @@ const mockGetInfo = jest.fn();
 const mockSendCoins = jest.fn();
 const mockOpenChannel = jest.fn();
 const mockAbandonChannel = jest.fn();
+const mockFundingStateStep = jest.fn();
 const mockSignMessageNodePubkey = jest.fn();
 const mockVerifyMessageNodePubkey = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
@@ -32,6 +33,7 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
     default: {
         index: {
             listPeers: jest.fn(),
+            fundingStateStep: (...args: any[]) => mockFundingStateStep(...args),
             getInfo: (...args: any[]) => mockGetInfo(...args),
             listPayments: (...args: any[]) => mockListPayments(...args),
             trackPaymentV2: (...args: any[]) => mockTrackPaymentV2(...args),
@@ -98,6 +100,7 @@ import Long from 'long';
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { lnrpc } from '../proto/lightning';
 import EmbeddedLND from './EmbeddedLND';
+import Base64Utils from '../utils/Base64Utils';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import Peer from '../models/Peer';
 import {
@@ -656,6 +659,75 @@ describe('EmbeddedLND on-chain sends', () => {
             undefined,
             'ZEUS send 0123456789abcdef'
         );
+    });
+});
+
+describe('EmbeddedLND.fundingStateStep', () => {
+    const pending_chan_id = Base64Utils.hexToBase64('ab'.repeat(32));
+
+    const sentFor = async (data: any) => {
+        mockFundingStateStep.mockReset();
+        mockFundingStateStep.mockResolvedValue({});
+
+        await new EmbeddedLND().fundingStateStep(data);
+
+        expect(mockFundingStateStep).toHaveBeenCalledTimes(1);
+        return mockFundingStateStep.mock.calls[0][0];
+    };
+
+    // TransactionsStore passes the raw transaction as hex
+    it('sends a hex final_raw_tx as base64', async () => {
+        expect(
+            await sentFor({
+                psbt_finalize: {
+                    final_raw_tx: '02000000000101ff',
+                    pending_chan_id
+                }
+            })
+        ).toEqual({
+            psbt_finalize: {
+                final_raw_tx: 'AgAAAAABAf8=',
+                pending_chan_id
+            }
+        });
+    });
+
+    it('sends a hex signed_psbt as base64', async () => {
+        expect(
+            await sentFor({
+                psbt_finalize: {
+                    signed_psbt: '70736274ff010071',
+                    pending_chan_id
+                }
+            })
+        ).toEqual({
+            psbt_finalize: { signed_psbt: 'cHNidP8BAHE=', pending_chan_id }
+        });
+    });
+
+    it.each([
+        [
+            'a base64 final_raw_tx',
+            { psbt_finalize: { final_raw_tx: 'AgAAAAABAf8=', pending_chan_id } }
+        ],
+        [
+            'a base64 signed_psbt',
+            { psbt_finalize: { signed_psbt: 'cHNidP8BAHE=', pending_chan_id } }
+        ],
+        [
+            'a psbt_verify step',
+            {
+                psbt_verify: {
+                    funded_psbt: 'cHNidP8BAHE=',
+                    pending_chan_id,
+                    skip_finalize: true
+                }
+            }
+        ],
+        ['a shim_cancel step', { shim_cancel: { pending_chan_id } }]
+    ])('sends %s unchanged', async (_, data) => {
+        const expected = JSON.parse(JSON.stringify(data));
+        expect(await sentFor(data)).toEqual(expected);
     });
 });
 
