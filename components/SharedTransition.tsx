@@ -11,7 +11,7 @@ import Animated, {
     SharedTransition,
     SharedTransitionBoundary
 } from 'react-native-reanimated';
-import { useNavigationState, useRoute } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 
 export const sharedTransition = SharedTransition.springify(400).dampingRatio(1);
 export const sharedTransitionEntering = FadeIn.delay(350)
@@ -33,15 +33,15 @@ interface SharedScreenProps {
 }
 
 export const SharedScreen: React.FC<SharedScreenProps> = ({ children }) => {
-    const route = useRoute();
-    // Derive focus from navigation state rather than useIsFocused: on pop,
-    // the focus event lands a React commit after the one that removes the
-    // screen above, so the boundary would still be inactive in the mutation
-    // batch reanimated inspects and the return transition would never start
-    // (Android relies on this path; iOS pops use progress transitions).
-    const isFocused = useNavigationState(
-        (state) => state.routes[state.index]?.key === route.key
-    );
+    // useIsFocused reads focus from context that the navigator provides in
+    // the same render as its state change (@react-navigation/core >= 7.16), so
+    // on pop the revealed boundary turns active in the same commit that
+    // removes the screen above. reanimated finds the destination boundary in
+    // that commit's mutations; useNavigationState notifies from a layout
+    // effect and re-renders in a later commit, which skipped return
+    // transitions intermittently on Android (ZeusLN/zeus#4222,
+    // software-mansion/react-native-reanimated#9944).
+    const isFocused = useIsFocused();
     return (
         <SharedTransitionBoundary isActive={isFocused}>
             {children}
