@@ -95,7 +95,10 @@ const viewFor = (payment: any, service = LSPService.LSPS1) => (
                 params: buildPaymentAwaitParams(payment, 'order-1', service)
             } as any
         }
-        LSPStore={lspStore}
+        // every mounted screen cancels its get_order when it unmounts
+        LSPStore={Object.assign(lspStore, {
+            cancelGetOrder: lspStore.cancelGetOrder ?? jest.fn()
+        })}
         ChannelsStore={{} as any}
         NodeInfoStore={{} as any}
     />
@@ -110,7 +113,6 @@ describe('LSPPaymentAwait invoice check', () => {
             .mockClear()
             .mockResolvedValue(storedOrders);
         lspStore = {
-            cancelGetOrder: jest.fn(),
             lsps1GetOrderREST: jest.fn(() => Promise.resolve()),
             lsps7GetOrderCustomMessage: jest.fn(() => Promise.resolve())
         };
