@@ -10,6 +10,9 @@ export const LSPS2_RECEIVE_MARGIN_MSAT = 2_000_000;
 // it is, so a JIT invoice expires within the hour LSP offers commonly last.
 export const LSPS2_JIT_INVOICE_MAX_EXPIRY_SECS = 3600;
 
+export const LSPS2_SPEC_URL =
+    'https://github.com/lightning/blips/blob/master/blip-0052.md';
+
 // What the node can receive without a new channel, assuming the payer can
 // split it across channels. inboundHtlcMaximumMsat also covers LDK's 10%
 // max-in-flight default on channels not opened by us or the LSPS2 LSP.

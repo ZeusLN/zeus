@@ -31,6 +31,7 @@ import {
 import { localeString } from '../../utils/LocaleUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { LSPS2_SPEC_URL } from '../../utils/Lsps2Utils';
 import UrlUtils from '../../utils/UrlUtils';
 
 interface LSPProps {
@@ -88,7 +89,7 @@ const flowLinks = (canWrap: boolean) => [
 const lsps2Links = () => [
     {
         label: localeString('views.Settings.LSP.lsps2Spec'),
-        url: 'https://github.com/lightning/blips/blob/master/blip-0052.md'
+        url: LSPS2_SPEC_URL
     }
 ];
 

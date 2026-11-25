@@ -1658,6 +1658,135 @@ describe('Receive LSP fee shown with the invoice', () => {
                 expect.objectContaining({ needInbound: false })
             );
         });
+
+        describe('the LSP switch', () => {
+            beforeEach(() => {
+                backend.supportsFlowLSP = () => true;
+            });
+
+            afterEach(() => {
+                delete backend.supportsFlowLSP;
+            });
+
+            // the form with the LSP on and an amount above the inbound
+            const formWithLspOn = () => {
+                const clearUnified = jest.fn();
+                const view = makeShownView({
+                    invoicesStore: { payment_request: null, clearUnified },
+                    lspStore: {},
+                    satAmount: '45000'
+                });
+                Object.assign((view.props as any).ChannelsStore, {
+                    channels: [],
+                    inboundForReceive: 43650
+                });
+                (view.props as any).SettingsStore.updateSettings = jest.fn(() =>
+                    Promise.resolve()
+                );
+                view.state = {
+                    ...view.state,
+                    enableLSP: true,
+                    lspIsActive: true,
+                    flowLspNotConfigured: false,
+                    needInbound: true
+                };
+                return { view, clearUnified };
+            };
+
+            const lspSwitch = (view: any) =>
+                collect(view.render()).find((e) => e.type === 'Switch');
+
+            const memoInput = (view: any) =>
+                collect(view.render()).find(
+                    (e) =>
+                        e.type === 'TextInput' &&
+                        e.props.placeholder === 'views.Receive.memoPlaceholder'
+                );
+
+            const switchInfo = (view: any) =>
+                collect(view.render()).find(
+                    (e) =>
+                        e.type === 'Text' &&
+                        e.props.children === 'views.Settings.LSP.enableLSP'
+                ).props;
+
+            it("drops the JIT explainer and the LSP's error when switched off", async () => {
+                const { view, clearUnified } = formWithLspOn();
+                view.setState = jest.fn();
+
+                await lspSwitch(view).props.onValueChange();
+
+                expect(view.setState).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        enableLSP: false,
+                        lspIsActive: false,
+                        needInbound: false
+                    })
+                );
+                expect(clearUnified).toHaveBeenCalled();
+            });
+
+            it('asks for a channel again when switched back on', async () => {
+                const { view } = formWithLspOn();
+                view.state = {
+                    ...view.state,
+                    enableLSP: false,
+                    lspIsActive: false,
+                    needInbound: false
+                };
+                view.setState = jest.fn();
+
+                await lspSwitch(view).props.onValueChange();
+
+                expect(view.setState).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        lspIsActive: true,
+                        needInbound: true
+                    })
+                );
+            });
+
+            it('shows the memo, which an LSPS2 invoice keeps', () => {
+                const { view } = formWithLspOn();
+
+                expect(memoInput(view)).toBeDefined();
+            });
+
+            it('hides the memo when Flow wraps the invoice', () => {
+                lsps2 = false;
+                const { view } = formWithLspOn();
+
+                expect(memoInput(view)).toBeUndefined();
+            });
+
+            it('explains LSPS2 channels, not wrapped invoices', () => {
+                const { view } = formWithLspOn();
+                const info = switchInfo(view);
+
+                expect(info.infoModalText).toEqual([
+                    'views.Receive.lspSwitchExplainer1',
+                    'views.Receive.lsps2SwitchExplainer'
+                ]);
+                expect(
+                    info.infoModalAdditionalButtons.map((b: any) => b.title)
+                ).toEqual(['views.Settings.LSP.lsps2Spec']);
+            });
+
+            it("keeps Flow's explanation when Flow wraps the invoice", () => {
+                lsps2 = false;
+                const { view } = formWithLspOn();
+                const info = switchInfo(view);
+
+                expect(info.infoModalText).toEqual([
+                    'views.Receive.lspSwitchExplainer1',
+                    'views.Receive.lspSwitchExplainer2'
+                ]);
+                info.infoModalAdditionalButtons[0].callback();
+                expect(view.props.navigation.navigate).toHaveBeenCalledWith(
+                    'LspExplanationOverview'
+                );
+            });
+        });
     });
 });
 

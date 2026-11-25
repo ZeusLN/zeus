@@ -81,6 +81,8 @@ import { themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas, roundUpToWholeSats } from '../utils/UnitsUtils';
 import { buildOnChainUri, buildUnifiedUri } from '../utils/Bip21Utils';
 import { getAmountFromSats } from '../utils/AmountUtils';
+import { LSPS2_SPEC_URL } from '../utils/Lsps2Utils';
+import UrlUtils from '../utils/UrlUtils';
 import {
     ExpirationPreset,
     TimePeriod,
@@ -658,6 +660,13 @@ export default class Receive extends React.Component<
         lspIsActive &&
         (!!this.props.route.params?.forceLsp || !BackendUtils.isLsps2Active());
 
+    // More than the node can receive without a new channel, which only the
+    // LSP can open
+    needsInbound = (lspIsActive: boolean, satAmount: string | number) =>
+        lspIsActive &&
+        satAmount != '0' &&
+        new BigNumber(satAmount).gt(this.props.ChannelsStore.inboundForReceive);
+
     // A JIT invoice keeps the hour too: the LSP drops a channel request
     // nobody paid once its fee offer expires, and the app can't see when
     expiryLocked = (lspIsActive: boolean, needInbound: boolean) =>
@@ -1194,6 +1203,9 @@ export default class Receive extends React.Component<
         // apply to LSPS2, whose LSP sets its own limits
         const lsps2Explainer = needInbound && BackendUtils.isLsps2Active();
         const flowWraps = this.flowWrapsInvoice(lspIsActive);
+        // whether switching the LSP on has Flow wrap the invoice, or has the
+        // LSPS2 LSP open a channel for an invoice the node makes itself
+        const lspSwitchWraps = this.flowWrapsInvoice(true);
         const lockExpiry = this.expiryLocked(lspIsActive, needInbound);
         // the fee the shown invoice was priced with, not LSPStore.zeroConfFee,
         // which a later fee request can replace while this invoice is shown
@@ -2310,20 +2322,33 @@ export default class Receive extends React.Component<
                                                                         'views.Receive.lspSwitchExplainer1'
                                                                     ),
                                                                     localeString(
-                                                                        'views.Receive.lspSwitchExplainer2'
+                                                                        lspSwitchWraps
+                                                                            ? 'views.Receive.lspSwitchExplainer2'
+                                                                            : 'views.Receive.lsps2SwitchExplainer'
                                                                     )
                                                                 ]}
                                                                 infoModalAdditionalButtons={[
-                                                                    {
-                                                                        title: localeString(
-                                                                            'general.learnMore'
-                                                                        ),
-                                                                        callback:
-                                                                            () =>
-                                                                                navigation.navigate(
-                                                                                    'LspExplanationOverview'
-                                                                                )
-                                                                    }
+                                                                    lspSwitchWraps
+                                                                        ? {
+                                                                              title: localeString(
+                                                                                  'general.learnMore'
+                                                                              ),
+                                                                              callback:
+                                                                                  () =>
+                                                                                      navigation.navigate(
+                                                                                          'LspExplanationOverview'
+                                                                                      )
+                                                                          }
+                                                                        : {
+                                                                              title: localeString(
+                                                                                  'views.Settings.LSP.lsps2Spec'
+                                                                              ),
+                                                                              callback:
+                                                                                  () =>
+                                                                                      UrlUtils.goToUrl(
+                                                                                          LSPS2_SPEC_URL
+                                                                                      )
+                                                                          }
                                                                 ]}
                                                             >
                                                                 {localeString(
@@ -2355,16 +2380,26 @@ export default class Receive extends React.Component<
                                                                             ?.forceLsp
                                                                     )
                                                                         return;
+                                                                    const nextLspIsActive =
+                                                                        !enableLSP &&
+                                                                        BackendUtils.supportsFlowLSP() &&
+                                                                        !flowLspNotConfigured;
                                                                     this.setState(
                                                                         {
                                                                             enableLSP:
                                                                                 !enableLSP,
                                                                             lspIsActive:
-                                                                                !enableLSP &&
-                                                                                BackendUtils.supportsFlowLSP() &&
-                                                                                !flowLspNotConfigured
+                                                                                nextLspIsActive,
+                                                                            needInbound:
+                                                                                this.needsInbound(
+                                                                                    nextLspIsActive,
+                                                                                    satAmount
+                                                                                )
                                                                         }
                                                                     );
+                                                                    // an error creating the invoice the other
+                                                                    // way, e.g. the LSP's, no longer applies
+                                                                    clearUnified();
                                                                     await updateSettings(
                                                                         {
                                                                             enableLSP:
@@ -2378,7 +2413,9 @@ export default class Receive extends React.Component<
                                                 )}
 
                                             {(!enableLSP ||
-                                                flowLspNotConfigured) && (
+                                                flowLspNotConfigured ||
+                                                (lspIsActive &&
+                                                    !flowWraps)) && (
                                                 <>
                                                     <Text
                                                         style={{
@@ -2437,24 +2474,14 @@ export default class Receive extends React.Component<
                                                     amount: string,
                                                     satAmount: string | number
                                                 ) => {
-                                                    let needInbound = false;
-                                                    if (
-                                                        lspIsActive &&
-                                                        satAmount != '0' &&
-                                                        new BigNumber(
-                                                            satAmount
-                                                        ).gt(
-                                                            this.props
-                                                                .ChannelsStore
-                                                                .inboundForReceive
-                                                        )
-                                                    ) {
-                                                        needInbound = true;
-                                                    }
                                                     this.setState({
                                                         value: amount,
                                                         satAmount,
-                                                        needInbound
+                                                        needInbound:
+                                                            this.needsInbound(
+                                                                lspIsActive,
+                                                                satAmount
+                                                            )
                                                     });
                                                 }}
                                             />

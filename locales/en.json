@@ -920,6 +920,7 @@
     "views.Receive.goToLspSettings": "Go to LSP Settings",
     "views.Receive.lspSwitchExplainer1": "The LSP will provide you with 0-conf channels that will allow you to send and receive payments on the Lightning network.",
     "views.Receive.lspSwitchExplainer2": "The LSP will also wrap your invoices, making it easier to receive payments while protecting your privacy.",
+    "views.Receive.lsps2SwitchExplainer": "When a payment needs more inbound liquidity than you have, the LSP opens a channel to receive it and takes a fee from that payment. Your invoices aren't wrapped: your node creates them itself, so payers can see its node ID.",
     "views.Receive.routeHintSwitchExplainer1": "Route hints provide information to find non-advertised, or unannounced, channels. This allows routing of payments to nodes that are not publicly visible on the network.",
     "views.Receive.routeHintSwitchExplainer2": "It's helpful to toggle route hints on if you're using only unannounced channels, or if someone trying to pay you cannot reach you via your announced channels.",
     "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
