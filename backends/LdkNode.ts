@@ -1389,12 +1389,19 @@ export default class LdkNode {
             console.error('[LDK] Error decoding invoice for payment hash:', e);
         }
 
-        const lspFeeMsat = jit
-            ? getJitQuoteMsat(
-                  await LdkNodeInjection.payments.listPayments(),
-                  paymentHash
-              )
-            : undefined;
+        // The invoice is already registered with the LSP, so a failed lookup
+        // only leaves its fee unknown, as a missing payment does
+        let lspFeeMsat: number | undefined;
+        if (jit) {
+            try {
+                lspFeeMsat = getJitQuoteMsat(
+                    await LdkNodeInjection.payments.listPayments(),
+                    paymentHash
+                );
+            } catch (e) {
+                console.error('[LDK] Error looking up the JIT fee:', e);
+            }
+        }
 
         return {
             payment_request: invoice,

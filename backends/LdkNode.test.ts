@@ -1581,6 +1581,10 @@ describe('LdkNode.createInvoice', () => {
             () => mockListPayments.mockResolvedValue([])
         ],
         [
+            'the payment lookup fails',
+            () => mockListPayments.mockRejectedValue(new Error('node busy'))
+        ],
+        [
             'the invoice cannot be decoded',
             () =>
                 jest.spyOn(Bolt11Utils, 'decode').mockImplementation(() => {
