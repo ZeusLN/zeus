@@ -327,9 +327,12 @@ export default class TransactionsStore {
         const { implementation } = this.settingsStore;
         this.loading = true;
 
-        const tx_hex = raw_final_tx.includes('=')
-            ? Base64Utils.base64ToHex(raw_final_tx)
-            : raw_final_tx;
+        // lnd's finalizePsbt returns base64, which has no '=' padding when
+        // the tx length is a multiple of 3. A raw tx in base64 is never all
+        // hex digits, as its version bytes encode as Ag, AQ or Aw
+        const tx_hex = Base64Utils.isHex(raw_final_tx)
+            ? raw_final_tx
+            : Base64Utils.base64ToHex(raw_final_tx);
 
         // Decode the raw transaction hex string
         let txid: string;
