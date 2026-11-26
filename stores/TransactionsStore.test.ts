@@ -434,6 +434,67 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(store.error).toBe(false);
     });
 
+    // LND REST holds TrackPayment open for 10 s. A pause after such a
+    // lookup leaves no lookup open, and lnd deletes a failed payment's HTLC
+    // attempts once it is final, so the outcome would come back without
+    // the reason (#2001)
+    describe('pause between lookups', () => {
+        const inFlight = { status: 'IN_FLIGHT', payment_hash: HASH };
+        // each lookup answers IN_FLIGHT after waiting `ms` on the node
+        const lookupsTaking = (ms: number) =>
+            (BackendUtils.lookupPayment as jest.Mock).mockImplementation(
+                () =>
+                    new Promise((resolve) =>
+                        setTimeout(() => resolve(inFlight), ms)
+                    )
+            );
+        const startTracking = async () => {
+            (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue(
+                inFlight
+            );
+            const store = newStore('lnd');
+            store.sendPayment({ payment_request: 'lnbc1fake' });
+            await flush();
+            expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(1);
+            return store;
+        };
+
+        it('starts the next lookup at once after one that took the whole interval', async () => {
+            lookupsTaking(PAYMENT_TRACK_POLL_MS * 2);
+            await startTracking();
+
+            await jest.advanceTimersByTimeAsync(PAYMENT_TRACK_POLL_MS * 2);
+            // the pause is a zero-length timer
+            await jest.advanceTimersByTimeAsync(1);
+
+            expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(2);
+        });
+
+        it('waits out the rest of the interval after a shorter lookup', async () => {
+            lookupsTaking(1000);
+            await startTracking();
+
+            await jest.advanceTimersByTimeAsync(PAYMENT_TRACK_POLL_MS - 1);
+            expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(1);
+
+            await jest.advanceTimersByTimeAsync(1);
+            expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(2);
+        });
+
+        it('waits the whole interval after a lookup that answered at once', async () => {
+            (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+                inFlight
+            );
+            await startTracking();
+
+            await jest.advanceTimersByTimeAsync(PAYMENT_TRACK_POLL_MS - 1);
+            expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(1);
+
+            await jest.advanceTimersByTimeAsync(1);
+            expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(2);
+        });
+    });
+
     it('treats a client-side timeout as unknown and surfaces the tracked FAILED outcome', async () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue({
             payment_error: 'views.SendingLightning.paymentTimedOut',
