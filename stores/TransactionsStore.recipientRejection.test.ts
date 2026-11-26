@@ -66,6 +66,20 @@ describe('TransactionsStore recipient rejection', () => {
         expect(store.paymentRejectedByRecipient).toBe(true);
     });
 
+    it('flags a rejection reported only in payment_error', () => {
+        const store = newStore();
+        store.handlePayment({
+            payment_error:
+                'Payment details incorrect (unknown hash, invalid amt or invalid final cltv delta)'
+        });
+
+        expect(store.error).toBe(true);
+        expect(store.paymentRejectedByRecipient).toBe(true);
+        expect(store.payment_error).toBe(
+            'error.failureReasonIncorrectPaymentDetails'
+        );
+    });
+
     it('does not flag other failure reasons', () => {
         const store = newStore();
         store.handlePayment({

@@ -21,8 +21,7 @@ jest.mock('./Bolt11Utils', () => ({
 
 import {
     formatHeldDuration,
-    getRecipientRejection,
-    MIN_REPORTED_HOLD_SECONDS
+    getRecipientRejection
 } from './RecipientRejectionUtils';
 
 const ATTEMPT_NS = '1790000000000000000';
@@ -76,7 +75,7 @@ describe('getRecipientRejection', () => {
             getRecipientRejection({
                 htlcs: [
                     restHtlc({
-                        resolve_time_ns: nsAfter(MIN_REPORTED_HOLD_SECONDS - 1)
+                        resolve_time_ns: nsAfter(14)
                     })
                 ]
             })
@@ -85,12 +84,12 @@ describe('getRecipientRejection', () => {
             getRecipientRejection({
                 htlcs: [
                     restHtlc({
-                        resolve_time_ns: nsAfter(MIN_REPORTED_HOLD_SECONDS)
+                        resolve_time_ns: nsAfter(15)
                     })
                 ]
             })
         ).toEqual({
-            heldSeconds: MIN_REPORTED_HOLD_SECONDS,
+            heldSeconds: 15,
             senderBehindChain: false
         });
     });
