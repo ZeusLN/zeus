@@ -92,7 +92,10 @@ export default class LSPS7Order extends React.Component<
                             temporaryOrder?.peer
                         );
 
-                        request.then(() => this.handleRequestSettled());
+                        request.then(
+                            () => this.handleRequestSettled(),
+                            () => this.handleRequestSettled(true)
+                        );
                     } else {
                         console.log('Order not found in encrypted storage.');
                     }
@@ -139,11 +142,11 @@ export default class LSPS7Order extends React.Component<
         );
     };
 
-    // The stored order stays on screen when the request failed
-    private handleRequestSettled = () => {
+    // The stored order stays on screen when the request failed or rejected
+    private handleRequestSettled = (rejected = false) => {
         const { LSPStore } = this.props;
         if (this.isUnmounted || this.replyReceived) return;
-        if (LSPStore.error && LSPStore.error_msg !== '') {
+        if (rejected || (LSPStore.error && LSPStore.error_msg !== '')) {
             this.setState({ fetchOldOrder: true });
             console.log('Old Order state fetched!');
         }

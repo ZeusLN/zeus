@@ -92,6 +92,7 @@ describe.each([
 ])('$name order screen', ({ View, slot, loading, request, rest, native }) => {
     let store: any;
     let settle: () => void;
+    let rejectRequest: (error: Error) => void;
 
     beforeEach(() => {
         jest.useFakeTimers();
@@ -110,7 +111,11 @@ describe.each([
         });
         store.updateOrderInStorage = jest.fn();
         store[request] = jest.fn(
-            () => new Promise<void>((resolve) => (settle = resolve))
+            () =>
+                new Promise<void>((resolve, reject) => {
+                    settle = resolve;
+                    rejectRequest = reject;
+                })
         );
     });
 
@@ -192,6 +197,17 @@ describe.each([
 
         expect(screen.getByText('COMPLETED')).toBeTruthy();
         expect(screen.queryByText(WARNING)).toBeNull();
+    });
+
+    it('keeps the stored order with a warning when the request rejects', async () => {
+        await renderView();
+        await act(async () => {
+            runInAction(() => (store.error_msg = 'timed out'));
+            rejectRequest(new Error('send failed'));
+        });
+
+        expect(screen.getByText('CREATED')).toBeTruthy();
+        expect(screen.getByText(WARNING)).toBeTruthy();
     });
 
     it('shows no warning over a reply when an older error is left', async () => {
