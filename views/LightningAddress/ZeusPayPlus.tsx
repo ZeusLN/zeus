@@ -17,6 +17,7 @@ import LightningAddressStore from '../../stores/LightningAddressStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import handleAnything from '../../utils/handleAnything';
+import showHandleAnythingError from '../../utils/showHandleAnythingError';
 import DateTimeUtils from '../../utils/DateTimeUtils';
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -188,15 +189,23 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                             onPress={() => {
                                 createZeusPayPlusOrder()
                                     .then((response: any) => {
-                                        if (response.bolt11) {
+                                        if (response?.bolt11) {
                                             return handleAnything(
                                                 response.bolt11
-                                            ).then(([route, props]) => {
-                                                navigation.navigate(
-                                                    route,
-                                                    props
-                                                );
-                                            });
+                                            )
+                                                .then((result) => {
+                                                    // handleAnything returns a route for
+                                                    // every valid invoice today; checked
+                                                    // like the other callers
+                                                    if (!result) return;
+                                                    const [route, props] =
+                                                        result;
+                                                    navigation.navigate(
+                                                        route,
+                                                        props
+                                                    );
+                                                })
+                                                .catch(showHandleAnythingError);
                                         }
                                     })
                                     .catch((e) =>
