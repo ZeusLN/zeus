@@ -4640,6 +4640,10 @@ export default class NostrWalletConnectStore {
         if (changed) {
             this.scheduleMaxBudgetRefresh();
             this.findAndUpdateConnection(stored);
+            // write a debit now, like finalizePayment does. A reconcile that
+            // finishes after the app went to background on Android would
+            // otherwise wait for a timer that does not fire there.
+            await this.flushScheduledSave();
         }
         return changed;
     }

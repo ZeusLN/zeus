@@ -11825,6 +11825,56 @@ describe('NostrWalletConnectStore scheduled save', () => {
         expect(storedConnection().totalSpendSats).toBe(10_000);
     });
 
+    // The timer does not fire on Android in the background, and the
+    // background flush finds nothing scheduled while the lookup is pending
+    it('stores a debit found by the reconcile on active when the app goes to background during it', async () => {
+        const addEventListener = jest
+            .spyOn(AppState, 'addEventListener')
+            .mockReturnValue({ remove: jest.fn() } as any);
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockReturnValue(true);
+        let settleLookup: (payment: any) => void = () => undefined;
+        (BackendUtils.lookupPayment as jest.Mock).mockReturnValue(
+            new Promise((resolve) => {
+                settleLookup = resolve;
+            })
+        );
+        const { store } = createStore();
+        addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 10_000,
+            activity: [
+                {
+                    id: 'lnbc1scheduledsave',
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 10_000,
+                    paymentHash: hex64('d'),
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+        await store.saveConnections();
+        store.persistentNWCServiceEnabled = false;
+        (store as any).setupAppStateMonitoring();
+        const onAppState = addEventListener.mock.calls[0][1] as any;
+
+        await onAppState('active');
+        await onAppState('background');
+        settleLookup({
+            payment_hash: hex64('d'),
+            status: 'SUCCEEDED',
+            value_sat: 10_000,
+            fee_sat: '0',
+            payment_preimage: hex64('9')
+        });
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(store.connections[0].totalSpendSats).toBe(10_000);
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+        expect(storedConnection().activity[0].status).toBe('success');
+    });
+
     // A second wallet's connection, stored next to conn-1. A write that
     // saved the first wallet's connections as the second wallet's would
     // drop it from storage.
