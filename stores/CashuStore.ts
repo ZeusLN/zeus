@@ -5840,7 +5840,10 @@ export default class CashuStore {
                     // Report the payment in flight, as when the quote check
                     // below times out. The quote and the payment hash stay
                     // held until the melt call returns: settleAbandonedMelt
-                    // records the outcome then and releases them.
+                    // records the outcome then and releases them. It starts
+                    // before the record is written, so the hold is released
+                    // even if writing fails, and still finds the record:
+                    // recordInFlightPayment adds it before its first await.
                     this.settleAbandonedMelt(melting, pendingMelt, paymentHash);
                     heldQuote = undefined;
                     paymentHash = undefined;

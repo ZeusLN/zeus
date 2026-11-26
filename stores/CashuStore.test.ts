@@ -2490,6 +2490,36 @@ describe('CashuStore single-mint melt state', () => {
             });
         });
 
+        // The melt returns while the pay path is recording the payment as
+        // in flight: the late result must settle that record, not leave it
+        it('settles the record when the melt returns while it is being recorded', async () => {
+            const store = timedOutStore();
+            const recordInFlight = store.recordInFlightPayment;
+            store.recordInFlightPayment = (...args: any[]) => {
+                finishMelt({
+                    state: 'Paid',
+                    amount: 1000,
+                    fee_paid: 3,
+                    preimage: 'b'.repeat(64)
+                });
+                return recordInFlight(...args);
+            };
+
+            await payUntilTimeout(store);
+            await settle();
+
+            expect(store.payments).toHaveLength(1);
+            expect(store.payments[0].status).toBe('SUCCEEDED');
+            const writes = (Storage.setItem as jest.Mock).mock.calls.filter(
+                ([key]) => key === 'lnd-cashu-payments'
+            );
+            expect(writes[writes.length - 1][1]).toEqual([
+                expect.objectContaining({ status: 'SUCCEEDED' })
+            ]);
+            expect(store.pendingMelts).toEqual([]);
+            expectReleased(store);
+        });
+
         // The melt is still tracked in its own wallet's storage, and
         // reconcile settles it when that wallet loads again
         it('records nothing in the wallet loaded by the time the melt returns', async () => {
