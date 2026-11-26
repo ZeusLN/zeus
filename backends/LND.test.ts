@@ -627,6 +627,12 @@ describe('LND WebSocket calls whose socket closes', () => {
             const update = {
                 result: { chan_pending: { txid: 'dHhpZA==', output_index: 1 } }
             };
+            // an update without chan_pending does not settle it
+            listeners.message({
+                data: JSON.stringify({
+                    result: { pending_chan_id: 'cGVuZGluZw==' }
+                })
+            });
             listeners.message({ data: JSON.stringify(update) });
             listeners.close();
             await expect(chanPending).resolves.toEqual(update);

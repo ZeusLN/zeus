@@ -822,6 +822,11 @@ describe('EmbeddedLND.openChannelStream', () => {
 
             emit(chanPending(0), 'other-request');
             emit(chanPending(0), null);
+            // an update of this open without chan_pending
+            emit(
+                { data: JSON.stringify({ pending_chan_id: 'cGVuZGluZw==' }) },
+                requestId
+            );
             await flush();
             expect(pending.settled).toBe(false);
 

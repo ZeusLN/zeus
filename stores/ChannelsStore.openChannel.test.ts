@@ -1838,12 +1838,53 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             expect(store.syncOpensInFlight).toBe(0);
         });
 
+        it('shows the error of the earlier peer that failed first', async () => {
+            const pendingA = held();
+            const pendingB = held();
+            const store = startBatch(pendingA.promise, pendingB.promise);
+            await flush();
+
+            // B fails before A, so the batch order does not decide it
+            pendingB.reject(new Error('peer b went away'));
+            await flush();
+            expect(abandonChannel).not.toHaveBeenCalled();
+
+            pendingA.reject(new Error('peer a went away'));
+            await flush();
+            expect(finalizes()).toEqual([]);
+            expect(abandonedFor()).toEqual([['bc1qchan-a', 'bc1qchan-b']]);
+            expect(store.errorMsgChannel).toBe('peer b went away');
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+
+        it('shows batchNotPending for an earlier peer that fails without an error', async () => {
+            const store = startBatch(
+                Promise.reject(undefined),
+                Promise.resolve({})
+            );
+            await flush();
+
+            expect(finalizes()).toEqual([]);
+            expect(abandonedFor()).toEqual([['bc1qchan-a', 'bc1qchan-b']]);
+            expect(store.errorOpenChannel).toBe(true);
+            expect(store.errorMsgChannel).toBe(
+                'stores.ChannelsStore.batchNotPending'
+            );
+        });
+
         it('gives up after the timeout and abandons a channel that turns pending later', async () => {
             const pendingB = held();
             const store = startBatch(Promise.resolve({}), pendingB.promise);
             await flush();
 
-            await jest.advanceTimersByTimeAsync(PENDING_TIMEOUT_MS);
+            await jest.advanceTimersByTimeAsync(PENDING_TIMEOUT_MS - 1);
+            await flush();
+            expect(releaseOutput).not.toHaveBeenCalled();
+            expect(abandonChannel).not.toHaveBeenCalled();
+            expect(store.errorOpenChannel).toBe(false);
+            expect(store.syncOpensInFlight).toBe(1);
+
+            await jest.advanceTimersByTimeAsync(1);
             await flush();
             expect(finalizes()).toEqual([]);
             expect(released()).toEqual(LOCKED);
