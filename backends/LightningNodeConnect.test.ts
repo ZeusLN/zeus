@@ -89,6 +89,7 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-rn', () => {
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 import LightningNodeConnect from './LightningNodeConnect';
+import Base64Utils from '../utils/Base64Utils';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import { isRequestNotSent } from '../utils/PaymentLookupUtils';
 import { nodeInfoStore, settingsStore } from '../stores/Stores';
@@ -1724,6 +1725,62 @@ describe('LightningNodeConnect.abandonChannel', () => {
             },
             pendingFundingShimOnly: true
         });
+    });
+});
+
+describe('LightningNodeConnect.fundingStateStep', () => {
+    const pending_chan_id = Base64Utils.hexToBase64('ab'.repeat(32));
+
+    const sentFor = async (data: any) => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        const fundingStateStep = jest.fn(async () => ({}));
+        (lnc.lnd.lightning as any).fundingStateStep = fundingStateStep;
+
+        await backend.fundingStateStep(data);
+
+        expect(fundingStateStep).toHaveBeenCalledTimes(1);
+        return (fundingStateStep.mock.calls as any)[0][0];
+    };
+
+    // TransactionsStore passes the raw transaction as hex
+    it('sends a hex final_raw_tx as base64', async () => {
+        expect(
+            await sentFor({
+                psbt_finalize: {
+                    final_raw_tx: '02000000000101ff',
+                    pending_chan_id
+                }
+            })
+        ).toEqual({
+            psbt_finalize: {
+                final_raw_tx: 'AgAAAAABAf8=',
+                pending_chan_id
+            }
+        });
+    });
+
+    it.each([
+        [
+            'a base64 signed_psbt',
+            { psbt_finalize: { signed_psbt: 'cHNidP8BAHE=', pending_chan_id } }
+        ],
+        [
+            'a psbt_verify step',
+            {
+                psbt_verify: {
+                    funded_psbt: 'cHNidP8BAHE=',
+                    pending_chan_id,
+                    skip_finalize: true
+                }
+            }
+        ],
+        ['a shim_cancel step', { shim_cancel: { pending_chan_id } }]
+    ])('sends %s unchanged', async (_, data) => {
+        const expected = JSON.parse(JSON.stringify(data));
+        expect(await sentFor(data)).toEqual(expected);
     });
 });
 
