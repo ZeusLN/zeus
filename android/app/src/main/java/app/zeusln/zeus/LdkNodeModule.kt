@@ -15,6 +15,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     init {
         // Every LDK Node call goes through this module
+        // TODO(#5916): remove with JnaStructWarmup
         JnaStructWarmup.await("LdkNodeModule")
     }
 

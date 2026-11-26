@@ -36,6 +36,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     init {
         // Every CDK and zeus_cashu_restore call goes through this module
+        // TODO(#5916): remove with JnaStructWarmup
         JnaStructWarmup.await("CashuDevKitModule")
     }
 

@@ -23,7 +23,8 @@ import java.lang.reflect.Modifier
  * its background thread while it creates the ReactInstance, not on the
  * main thread.
  *
- * Remove this once the app uses a JNA release with a fix for jna#1752.
+ * TODO(#5916): remove this once the app uses a JNA release with a fix for
+ * jna#1752.
  */
 object JnaStructWarmup {
     private const val TAG = "JnaStructWarmup"

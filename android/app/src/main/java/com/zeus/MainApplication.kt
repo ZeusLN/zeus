@@ -51,6 +51,7 @@ class MainApplication : Application(), ReactApplication {
         }
         // Before React Native, so it is done by the time JS reaches a
         // module that calls into the uniffi bindings
+        // TODO(#5916): remove with JnaStructWarmup
         JnaStructWarmup.start()
         loadReactNative(this)
         ReactNativeBlobUtilUtils.sharedTrustManager = object : X509TrustManager {

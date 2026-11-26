@@ -210,6 +210,8 @@ dependencies {
     // Zeus Cashu Restore - standalone NUT-13 restore for v1 legacy seeds
     implementation files("../zeus-restore/zeus-cashu-restore.aar")
     // CDK / LDK Node dependencies
+    // TODO(#5916): when bumping to a JNA release that fixes jna#1752, remove
+    // JnaStructWarmup in the same change
     implementation "net.java.dev.jna:jna:5.18.1@aar"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
