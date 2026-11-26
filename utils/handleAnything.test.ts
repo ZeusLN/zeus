@@ -12,6 +12,7 @@ import { Alert } from 'react-native';
 import { nip05 } from 'nostr-tools';
 
 import { invoicesStore, settingsStore } from '../stores/Stores';
+import ContactUtils from './ContactUtils';
 import { isUnsafeLnurlError } from './LnurlFetchUtils';
 import { localeString } from './LocaleUtils';
 import handleAnything, {
@@ -1708,10 +1709,44 @@ describe('handleAnything', () => {
             expect(result[1].nostrContact).toEqual(fields);
         });
 
-        it('falls through when the card has no contactId', async () => {
+        it('opens a card with no contactId', async () => {
             const result = await openCard({ name: 'Coffee shop' });
 
-            expect(result).toBeUndefined();
+            expect(result).toEqual([
+                'ContactDetails',
+                {
+                    nostrContact: {
+                        ...CARD_DEFAULTS,
+                        contactId: '',
+                        name: 'Coffee shop'
+                    },
+                    isNostrContact: true
+                }
+            ]);
+        });
+
+        // contacts saved before v0.8.1 only have an id
+        it('opens the card ZEUS writes for a contact with only an id', async () => {
+            const result = await openCard(
+                ContactUtils.toCardContact({
+                    id: 'legacy-uuid',
+                    name: 'Alice',
+                    lnAddress: ['alice@example.com']
+                })
+            );
+
+            expect(result).toEqual([
+                'ContactDetails',
+                {
+                    nostrContact: {
+                        ...CARD_DEFAULTS,
+                        contactId: '',
+                        name: 'Alice',
+                        lnAddress: ['alice@example.com']
+                    },
+                    isNostrContact: true
+                }
+            ]);
         });
 
         it('drops fields of the wrong type', async () => {
@@ -1733,11 +1768,64 @@ describe('handleAnything', () => {
             });
         });
 
-        it('falls through when the contactId is not a string', async () => {
+        it('opens a card whose contactId is not a string', async () => {
             const result = await openCard({ contactId: 5, name: 'Mallory' });
 
-            expect(result).toBeUndefined();
+            expect(result[0]).toBe('ContactDetails');
+            expect(result[1].nostrContact).toEqual({
+                ...CARD_DEFAULTS,
+                contactId: '',
+                name: 'Mallory'
+            });
         });
+
+        it.each([
+            ['an array', 'zeuscontact:[]'],
+            ['a number', 'zeuscontact:5'],
+            ['a string', 'zeuscontact:"Coffee shop"'],
+            ['null', 'zeuscontact:null']
+        ])('rejects JSON that is %s', async (_label, data) => {
+            mockProcessBIP21Uri.mockReturnValue({ value: data });
+
+            await expect(handleAnything(data)).rejects.toThrow(
+                localeString('utils.handleAnything.notValid')
+            );
+        });
+
+        it('rejects text after zeuscontact: that is not JSON', async () => {
+            const data = 'zeuscontact:not json';
+            mockProcessBIP21Uri.mockReturnValue({ value: data });
+
+            await expect(handleAnything(data)).rejects.toThrow(
+                localeString('utils.handleAnything.notValid')
+            );
+        });
+
+        it.each([
+            ['a card', 'zeuscontact:{"contactId":"1","name":"Coffee shop"}'],
+            ['a card with no contactId', 'zeuscontact:{"name":"Coffee shop"}']
+        ])('accepts %s in the clipboard check', async (_label, data) => {
+            mockProcessBIP21Uri.mockReturnValue({ value: data });
+
+            const result = await handleAnything(data, undefined, true);
+
+            expect(result).toBeTruthy();
+        });
+
+        // the clipboard checks (WalletHeader, Send) do not catch a rejection
+        it.each([
+            ['JSON that is not an object', 'zeuscontact:[]'],
+            ['text that is not JSON', 'zeuscontact:not json']
+        ])(
+            'answers false for %s in the clipboard check',
+            async (_label, data) => {
+                mockProcessBIP21Uri.mockReturnValue({ value: data });
+
+                const result = await handleAnything(data, undefined, true);
+
+                expect(result).toBe(false);
+            }
+        );
     });
 
     describe('npub', () => {
