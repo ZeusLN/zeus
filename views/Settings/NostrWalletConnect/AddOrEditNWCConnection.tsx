@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-    BackHandler,
-    View,
-    StyleSheet,
-    ScrollView,
-    Text,
-    TouchableOpacity
-} from 'react-native';
+import { BackHandler, View, StyleSheet, ScrollView, Text } from 'react-native';
 import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -1127,39 +1120,38 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     />
                                     {maxBudgetLimit === 0 &&
                                         NostrWalletConnectStore.canOfferCashuSwitch && (
-                                            <View
+                                            <Text
                                                 style={{
-                                                    padding: 12,
-                                                    marginTop: 8,
-                                                    alignItems: 'center',
-                                                    backgroundColor:
-                                                        themeColor('secondary'),
-                                                    borderRadius: 8
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontFamily:
+                                                        'Roboto-Regular',
+                                                    fontSize: 14,
+                                                    marginTop: 8
                                                 }}
                                             >
-                                                <TouchableOpacity
+                                                {localeString(
+                                                    'views.Settings.NostrWalletConnect.noBalanceAvailable'
+                                                )}
+                                                . Pay from Cashu instead?{' '}
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'highlight'
+                                                        )
+                                                    }}
                                                     onPress={() =>
                                                         navigation.navigate(
                                                             'NWCSettings'
                                                         )
                                                     }
                                                 >
-                                                    <Text
-                                                        style={{
-                                                            color: themeColor(
-                                                                'highlight'
-                                                            ),
-                                                            fontFamily:
-                                                                'Roboto-Regular',
-                                                            fontSize: 16
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.Settings.NostrWalletConnect.enableCashuInSettings'
-                                                        )}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            </View>
+                                                    {localeString(
+                                                        'views.Settings.NostrWalletConnect.enableCashuInSettings'
+                                                    )}
+                                                </Text>
+                                            </Text>
                                         )}
                                 </View>
                             </View>
