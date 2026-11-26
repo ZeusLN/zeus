@@ -66,6 +66,12 @@ export const PAYMENT_TRACK_MAX_FAILURES = 3;
 // When the node itself rejected the send request, the request isn't in
 // transit and one such answer is enough
 export const PAYMENT_TRACK_MAX_NOT_FOUND = 3;
+// ceiling on how long an on-chain send may hold onchainSendInFlight. The
+// embedded LND and LDK Node calls have no timeout of their own. The slowest
+// send that does settle, a coin control send over REST (funding,
+// finalizing and publishing at up to 60 s each, then the timeout lookup),
+// takes about 6 minutes
+export const ONCHAIN_SEND_BACKSTOP_MS = 10 * 60 * 1000;
 
 // Whether a failed payment record says why it failed. Core Lightning's
 // listpays and NIP-47 lookup_invoice carry no reason, and LDK Node maps
@@ -182,7 +188,8 @@ export default class TransactionsStore {
     // funding, finalizing, broadcasting and a timeout lookup included.
     // `loading` is shared with other operations (getTransactions), so it
     // can't serve as the double-submission guard. reset() keeps it: the
-    // send's request can still go out after a reconnect
+    // send's request can still go out after a reconnect. Held for at most
+    // ONCHAIN_SEND_BACKSTOP_MS
     @observable public onchainSendInFlight = false;
     // sendCoinsSeq of the send holding onchainSendInFlight (null when none)
     private onchainSendOwnerSeq: number | null = null;
@@ -780,12 +787,14 @@ export default class TransactionsStore {
 
         this.onchainSendInFlight = true;
         this.onchainSendOwnerSeq = seq;
-        const releaseGuard = () =>
-            runInAction(() => {
-                if (this.onchainSendOwnerSeq !== seq) return;
-                this.onchainSendInFlight = false;
-                this.onchainSendOwnerSeq = null;
-            });
+        const backstop = setTimeout(
+            () => this.backstopOnchainSend(seq),
+            ONCHAIN_SEND_BACKSTOP_MS
+        );
+        const releaseGuard = () => {
+            clearTimeout(backstop);
+            this.releaseOnchainSendGuard(seq);
+        };
 
         // A synchronous throw sends nothing, so it must not keep the guard.
         // A backend without the method makes the dispatcher return false,
@@ -802,6 +811,35 @@ export default class TransactionsStore {
             this.loading = false;
             releaseGuard();
         }
+    };
+
+    @action
+    private releaseOnchainSendGuard = (seq: number) => {
+        if (this.onchainSendOwnerSeq !== seq) return;
+        this.onchainSendInFlight = false;
+        this.onchainSendOwnerSeq = null;
+    };
+
+    // Ends a send that has held the guard for ONCHAIN_SEND_BACKSTOP_MS, e.g.
+    // a native call that never returned, so it can't block on-chain sends
+    // until the app restarts. The send may still go out, so the send screen
+    // shows its outcome as unknown, as after a timed out REST send, and its
+    // late answer is dropped. After a reset() the screen belongs to another
+    // wallet and is left alone. Only runs while the send holds the guard:
+    // settling clears its timer.
+    @action
+    private backstopOnchainSend = (seq: number) => {
+        if (seq === this.sendCoinsSeq) {
+            this.sendCoinsSeq++;
+            this.error_msg = localeString(
+                'stores.TransactionsStore.sendNoAnswer'
+            );
+            this.error = true;
+            this.sendOutcomeUnknown = true;
+            this.crafting = false;
+            this.loading = false;
+        }
+        this.releaseOnchainSendGuard(seq);
     };
 
     @action

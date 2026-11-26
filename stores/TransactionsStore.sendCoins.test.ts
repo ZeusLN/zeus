@@ -39,7 +39,9 @@ jest.mock('../utils/UrlUtils', () => ({
     default: {}
 }));
 
-import TransactionsStore from './TransactionsStore';
+import TransactionsStore, {
+    ONCHAIN_SEND_BACKSTOP_MS
+} from './TransactionsStore';
 import BackendUtils from '../utils/BackendUtils';
 import { SEND_LABEL_PREFIX } from '../utils/OnchainSendUtils';
 import {
@@ -1125,5 +1127,109 @@ describe('TransactionsStore.sendCoins double-submission guard', () => {
         store.sendCoins(request());
         expect(sendCoins).toHaveBeenCalledTimes(2);
         expect(store.onchainSendInFlight).toBe(true);
+    });
+
+    describe('backstop', () => {
+        it('ends a send the node never answers as an unknown outcome', async () => {
+            sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+            const store = newStore();
+            store.sendCoins(request());
+
+            await jest.advanceTimersByTimeAsync(ONCHAIN_SEND_BACKSTOP_MS - 1);
+            expect(store.onchainSendInFlight).toBe(true);
+            expect(store.loading).toBe(true);
+
+            await jest.advanceTimersByTimeAsync(1);
+            expect(store.onchainSendInFlight).toBe(false);
+            expect(store.loading).toBe(false);
+            expect(store.error).toBe(true);
+            expect(store.sendOutcomeUnknown).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.TransactionsStore.sendNoAnswer'
+            );
+
+            sendCoins.mockResolvedValueOnce({ txid: 'next' });
+            store.sendCoins(request());
+            await settle();
+            expect(sendCoins).toHaveBeenCalledTimes(2);
+            expect(store.txid).toBe('next');
+        });
+
+        it('ends a batched send stuck in funding', async () => {
+            fundPsbt.mockReturnValueOnce(new Promise(() => undefined));
+            const store = newStore();
+            store.sendCoins(batchedRequest());
+            expect(store.crafting).toBe(true);
+
+            await jest.advanceTimersByTimeAsync(ONCHAIN_SEND_BACKSTOP_MS);
+            expect(store.crafting).toBe(false);
+            expect(store.sendOutcomeUnknown).toBe(true);
+            expect(store.onchainSendInFlight).toBe(false);
+        });
+
+        it('drops the late answer of a send it ended', async () => {
+            let answer: (data: any) => void = () => undefined;
+            sendCoins.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    answer = resolve;
+                })
+            );
+            const store = newStore();
+            store.sendCoins(request());
+            await jest.advanceTimersByTimeAsync(ONCHAIN_SEND_BACKSTOP_MS);
+
+            answer({ txid: 'late' });
+            await settle();
+            expect(store.txid).toBe(null);
+            expect(store.publishSuccess).toBe(false);
+            expect(store.sendOutcomeUnknown).toBe(true);
+        });
+
+        it("keeps the next send's guard when the ended send answers", async () => {
+            let answer: (data: any) => void = () => undefined;
+            sendCoins.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    answer = resolve;
+                })
+            );
+            const store = newStore();
+            store.sendCoins(request());
+            await jest.advanceTimersByTimeAsync(ONCHAIN_SEND_BACKSTOP_MS);
+
+            sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+            store.sendCoins(request());
+            expect(sendCoins).toHaveBeenCalledTimes(2);
+
+            answer({ txid: 'late' });
+            await settle();
+            expect(store.onchainSendInFlight).toBe(true);
+            store.sendCoins(request());
+            expect(sendCoins).toHaveBeenCalledTimes(2);
+        });
+
+        it('leaves a send that answered in time alone', async () => {
+            sendCoins.mockResolvedValueOnce({ txid: 'abc' });
+            const store = newStore();
+            store.sendCoins(request());
+            await jest.advanceTimersByTimeAsync(ONCHAIN_SEND_BACKSTOP_MS);
+
+            expect(store.publishSuccess).toBe(true);
+            expect(store.txid).toBe('abc');
+            expect(store.error).toBe(false);
+            expect(store.sendOutcomeUnknown).toBe(false);
+        });
+
+        it("only releases the guard after a reset, leaving the next wallet's screen alone", async () => {
+            sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+            const store = newStore();
+            store.sendCoins(request());
+            store.reset();
+
+            await jest.advanceTimersByTimeAsync(ONCHAIN_SEND_BACKSTOP_MS);
+            expect(store.onchainSendInFlight).toBe(false);
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe(null);
+            expect(store.sendOutcomeUnknown).toBe(false);
+        });
     });
 });
