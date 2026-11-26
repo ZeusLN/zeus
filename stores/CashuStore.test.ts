@@ -2614,8 +2614,8 @@ describe('CashuStore reconcilePendingMelts', () => {
         });
 
         // pins the lower bound of MELT_QUOTE_CHECK_TIMEOUT_MS: a slow mint
-        // that answers within 10 s is still read
-        it("resolves with the mint's answer when it comes after 5 s", async () => {
+        // that answers 1 ms before the 10 s timeout is still read
+        it("resolves with the mint's answer when it comes after 9999 ms", async () => {
             const store = reconcilingStore(pendingMelt());
             const answer = {
                 id: 'quote-1',
@@ -2625,7 +2625,7 @@ describe('CashuStore reconcilePendingMelts', () => {
             (CashuDevKit.checkMeltQuote as jest.Mock).mockImplementation(
                 () =>
                     new Promise((resolve) =>
-                        setTimeout(() => resolve(answer), 5000)
+                        setTimeout(() => resolve(answer), 9999)
                     )
             );
 
@@ -2634,7 +2634,7 @@ describe('CashuStore reconcilePendingMelts', () => {
                 (quote: any) => ({ quote }),
                 (error: any) => ({ error })
             );
-            await jest.advanceTimersByTimeAsync(5000);
+            await jest.advanceTimersByTimeAsync(9999);
 
             expect(await outcome).toEqual({ quote: answer });
             expect(jest.getTimerCount()).toBe(0);
