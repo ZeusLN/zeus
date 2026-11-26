@@ -149,15 +149,17 @@ export default class FeeLimit extends React.Component<
     };
 
     feeRecommendation = () => {
-        const { feeLimitSat } = this.state;
+        const { feeLimitSat, feeOption, percentAmount } = this.state;
+        // the limit onFeeLimitSatChange reports, so the warning checks
+        // what is sent
+        const limit =
+            BackendUtils.supportsCustomFeeLimit() && feeOption === 'percent'
+                ? percentAmount
+                : feeLimitSat;
         const { InvoicesStore } = this.props;
         const { feeEstimate } = InvoicesStore!;
 
-        if (
-            feeEstimate &&
-            feeLimitSat &&
-            Number(feeEstimate) > Number(feeLimitSat)
-        ) {
+        if (feeEstimate && limit && Number(feeEstimate) > Number(limit)) {
             return (
                 <Text
                     style={{
