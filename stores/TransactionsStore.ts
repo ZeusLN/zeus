@@ -789,13 +789,14 @@ export default class TransactionsStore {
 
         // A synchronous throw sends nothing, so it must not keep the guard.
         // A backend without the method makes the dispatcher return false,
-        // and `.then` on that throws here too.
+        // and `.then` on that throws here too. The error's own text (a JS
+        // TypeError) would mean nothing to the user.
         try {
             return this.dispatchSendCoins(transactionRequest, seq).finally(
                 releaseGuard
             );
-        } catch (error: any) {
-            this.error_msg = errorToUserFriendly(error);
+        } catch {
+            this.error_msg = localeString('error.sendingPayment');
             this.error = true;
             this.crafting = false;
             this.loading = false;

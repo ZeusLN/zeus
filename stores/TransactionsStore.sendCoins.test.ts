@@ -1059,7 +1059,8 @@ describe('TransactionsStore.sendCoins double-submission guard', () => {
         const store = newStore();
         expect(() => store.sendCoins(request())).not.toThrow();
         expect(store.error).toBe(true);
-        expect(store.error_msg).toBe('not connected');
+        // the throw's own text is not the node's answer
+        expect(store.error_msg).toBe('error.sendingPayment');
         expect(store.loading).toBe(false);
         expect(store.onchainSendInFlight).toBe(false);
 
@@ -1078,6 +1079,7 @@ describe('TransactionsStore.sendCoins double-submission guard', () => {
         await settle();
 
         expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('error.sendingPayment');
         expect(store.publishSuccess).toBe(false);
         expect(store.onchainSendInFlight).toBe(false);
     });
