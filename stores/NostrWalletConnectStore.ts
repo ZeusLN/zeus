@@ -5241,13 +5241,20 @@ export default class NostrWalletConnectStore {
             return false;
         }
 
+        // A write over a row whose last attempt failed for good is a new
+        // attempt. isPayInvoiceHoldAbandoned ages a hold from createdAt, so
+        // the new hold must not keep the date of the first attempt.
+        const isRetry =
+            existing?.status === 'failed' &&
+            !connection.isUnresolvedPayInvoiceActivity(existing);
+        const keptCreatedAt = isRetry ? undefined : existing?.createdAt;
+
         if (index !== -1) {
             connection.activity[index] = {
                 ...existing,
                 ...record,
-                // Keep original createdAt unless this is a brand-new write
-                createdAt:
-                    existing?.createdAt ?? record.createdAt ?? new Date(),
+                // Keep original createdAt unless this is a brand-new attempt
+                createdAt: keptCreatedAt ?? record.createdAt ?? new Date(),
                 // Don't clear isBudgetDebited if already true
                 isBudgetDebited:
                     existing?.isBudgetDebited || record.isBudgetDebited,
