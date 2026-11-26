@@ -75,7 +75,6 @@ interface AddOrEditNWCConnectionState {
     customExpiryUnit: TimeUnit;
     budgetValue: number;
     maxBudgetLimit: number;
-    maxBudgetSource: 'lightning' | 'cashu';
 }
 
 @inject('NostrWalletConnectStore', 'ModalStore')
@@ -104,8 +103,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryValue: null,
             customExpiryUnit: NostrConnectUtils.TIME_UNITS[1],
             budgetValue: 0,
-            maxBudgetLimit: 0,
-            maxBudgetSource: 'lightning'
+            maxBudgetLimit: 0
         };
     }
 
@@ -161,7 +159,6 @@ export default class AddOrEditNWCConnection extends React.Component<
         const existingBudgetValue = this.state.budgetValue || 0;
         this.setState({
             maxBudgetLimit: Math.max(0, maxLimit),
-            maxBudgetSource: NostrWalletConnectStore.maxBudgetSource,
             budgetValue: existingBudgetValue
         });
     };
@@ -223,8 +220,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                 customExpiryValue,
                 customExpiryUnit,
                 budgetValue,
-                maxBudgetLimit: Math.max(0, maxBudgetLimit),
-                maxBudgetSource: NostrWalletConnectStore.maxBudgetSource
+                maxBudgetLimit: Math.max(0, maxBudgetLimit)
             });
         }
     };
@@ -850,7 +846,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             error,
             loading,
             maxBudgetLimit,
-            maxBudgetSource,
             showCustomExpiryInput,
             customExpiryValue,
             customExpiryUnit,
@@ -1130,36 +1125,18 @@ export default class AddOrEditNWCConnection extends React.Component<
                                         keyboardType="numeric"
                                         style={styles.textInput}
                                     />
-                                    {maxBudgetLimit === 0 && (
-                                        <View
-                                            style={{
-                                                padding: 12,
-                                                marginTop: 8,
-                                                alignItems: 'center',
-                                                backgroundColor:
-                                                    themeColor('secondary'),
-                                                borderRadius: 8
-                                            }}
-                                        >
-                                            <Text
+                                    {maxBudgetLimit === 0 &&
+                                        NostrWalletConnectStore.canOfferCashuSwitch && (
+                                            <View
                                                 style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    fontFamily:
-                                                        'Roboto-Regular',
-                                                    fontSize: 14
+                                                    padding: 12,
+                                                    marginTop: 8,
+                                                    alignItems: 'center',
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderRadius: 8
                                                 }}
                                             >
-                                                {maxBudgetSource === 'cashu'
-                                                    ? localeString(
-                                                          'views.Settings.NostrWalletConnect.noCashuBalanceAvailable'
-                                                      )
-                                                    : localeString(
-                                                          'views.Settings.NostrWalletConnect.noBalanceAvailable'
-                                                      )}
-                                            </Text>
-                                            {NostrWalletConnectStore.canOfferCashuSwitch && (
                                                 <TouchableOpacity
                                                     onPress={() =>
                                                         navigation.navigate(
@@ -1174,8 +1151,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                             ),
                                                             fontFamily:
                                                                 'Roboto-Regular',
-                                                            fontSize: 16,
-                                                            marginTop: 10
+                                                            fontSize: 16
                                                         }}
                                                     >
                                                         {localeString(
@@ -1183,9 +1159,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                         )}
                                                     </Text>
                                                 </TouchableOpacity>
-                                            )}
-                                        </View>
-                                    )}
+                                            </View>
+                                        )}
                                 </View>
                             </View>
                         )}
