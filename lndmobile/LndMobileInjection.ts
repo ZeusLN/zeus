@@ -66,6 +66,7 @@ import {
     updateChannelPolicy
 } from './channel';
 import {
+    estimateFee,
     getTransactions,
     newAddress,
     newChangeAddress,
@@ -385,6 +386,11 @@ export interface ILndMobileInjections {
         }) => Promise<lnrpc.PolicyUpdateResponse>;
     };
     onchain: {
+        estimateFee: (
+            addr_to_amount: { [address: string]: string },
+            target_conf?: number,
+            spend_unconfirmed?: boolean
+        ) => Promise<lnrpc.EstimateFeeResponse>;
         getTransactions: (data?: any) => Promise<lnrpc.TransactionDetails>;
         newAddress: (
             type: lnrpc.AddressType,
@@ -705,6 +711,7 @@ export default {
         updateChannelPolicy
     },
     onchain: {
+        estimateFee,
         getTransactions,
         newAddress,
         newChangeAddress,
