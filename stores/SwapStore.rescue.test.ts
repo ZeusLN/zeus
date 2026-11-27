@@ -295,6 +295,103 @@ describe('SwapStore.getRescuableSwaps', () => {
         ]);
     });
 
+    describe('the key index sent by the host', () => {
+        // The key index comes from the host and goes into the BIP32 path.
+        // @scure/bip32 throws on most invalid values, failing the whole
+        // restore, and derives a hardened or deeper key from "0'" or
+        // '0/1'. So anything but a non-negative integer below 2^31 is
+        // skipped before deriving, and the valid swaps listed alongside it
+        // are still stored.
+        it.each([
+            ['missing', undefined],
+            ['null', null],
+            ['an empty string', ''],
+            ['not a number', 'x'],
+            ['negative', -1],
+            ['a negative string', '-1'],
+            ['fractional', 1.5],
+            ['a fractional string', '1.5'],
+            ['hardened', 2 ** 31],
+            ['beyond 32 bits', 2 ** 32],
+            ['with a hardened suffix', "0'"],
+            ['a path', '0/1']
+        ])(
+            '%s: skips the entry and stores the valid swaps',
+            async (_, keyIndex) => {
+                restoreResponse([
+                    {
+                        id: 'valid',
+                        type: 'reverse',
+                        claimDetails: {
+                            keyIndex: 0,
+                            preimageHash: KEY_0_PREIMAGE_HASH
+                        }
+                    },
+                    {
+                        id: 'hostile',
+                        type: 'submarine',
+                        refundDetails: { keyIndex }
+                    }
+                ]);
+
+                const result = await newStore().getRescuableSwaps({
+                    seedArray: RESCUE_MNEMONIC.split(' '),
+                    host: 'https://swaps.example.com'
+                });
+
+                expect(result?.success).toBe(true);
+                expect(getStored(SWAPS_KEY).map((s: any) => s.id)).toEqual([
+                    'valid'
+                ]);
+            }
+        );
+
+        it('accepts a key index sent as a string of digits', async () => {
+            restoreResponse([
+                {
+                    id: 'string-index',
+                    type: 'reverse',
+                    claimDetails: {
+                        keyIndex: '0',
+                        preimageHash: KEY_0_PREIMAGE_HASH
+                    }
+                }
+            ]);
+
+            const result = await newStore().getRescuableSwaps({
+                seedArray: RESCUE_MNEMONIC.split(' '),
+                host: 'https://swaps.example.com'
+            });
+
+            expect(result?.success).toBe(true);
+            const [rescued] = getStored(SWAPS_KEY);
+            expect(rescued.id).toBe('string-index');
+            expect(rescued.keyIndex).toBe(0);
+            expect(Buffer.from(rescued.preimage.data).toString('hex')).toBe(
+                '03c0b3323daab895d806870bd1f050bdca624a24882d3e317b151d537fa75bb7'
+            );
+        });
+    });
+
+    it('skips a null entry and stores the valid swaps', async () => {
+        restoreResponse([
+            null,
+            {
+                id: 'valid',
+                type: 'reverse',
+                claimDetails: { keyIndex: 0, preimageHash: KEY_0_PREIMAGE_HASH }
+            }
+        ]);
+
+        const result = await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        expect(result?.success).toBe(true);
+        expect(getStored(SWAPS_KEY).map((s: any) => s.id)).toEqual(['valid']);
+    });
+
     it('rejects an invalid rescue key without calling the host', async () => {
         const result = await newStore().getRescuableSwaps({
             seedArray: 'not a valid bip39 mnemonic at all whatsoever'.split(
