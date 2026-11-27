@@ -1,9 +1,16 @@
-import { NostrWebLNProvider } from '@getalby/sdk';
+import {
+    Nip47PublishTimeoutError,
+    Nip47ReplyTimeoutError,
+    Nip47ResponseDecodingError,
+    NostrWebLNProvider
+} from '@getalby/sdk';
 import BigNumber from 'bignumber.js';
 
 import { settingsStore } from '../stores/Stores';
 
+import Base64Utils from '../utils/Base64Utils';
 import Bolt11Utils from '../utils/Bolt11Utils';
+import { sha256Hex } from '../utils/HashingUtils';
 import { localeString } from '../utils/LocaleUtils';
 import {
     markNodeResponded,
@@ -67,6 +74,22 @@ const isSdkError = (error: any): boolean => {
         typeof message !== 'string' ||
         SDK_ERROR_MESSAGE_PREFIXES.some((prefix) => message.startsWith(prefix))
     );
+};
+
+// The preimage as lowercase hex when it proves payment of `payment_hash`
+// (lowercase hex, as Bolt11Utils.decode and the payment tracker give it),
+// else undefined. The hex check comes first because Base64Utils.hexToBytes
+// uses parseInt, which reads 'dz' as 0x0d.
+const verifiedPreimage = (
+    preimage: unknown,
+    payment_hash: string
+): string | undefined => {
+    if (typeof preimage !== 'string') return undefined;
+    const normalized = preimage.toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(normalized)) return undefined;
+    return sha256Hex(Base64Utils.hexToBytes(normalized)) === payment_hash
+        ? normalized
+        : undefined;
 };
 
 export default class NostrWalletConnect {
@@ -159,9 +182,41 @@ export default class NostrWalletConnect {
         return { payments };
     };
     payLightningInvoice = async (data: any) => {
+        let payment_hash: string | undefined;
         try {
-            return await this.nwc.sendPayment(data.payment_request);
+            payment_hash = Bolt11Utils.decode(
+                data.payment_request
+            ).payment_hash;
+        } catch (e) {
+            // decoding is best-effort; the wallet service validates the
+            // invoice itself
+        }
+
+        let preimage: string | undefined;
+        try {
+            ({ preimage } = await this.nwc.sendPayment(data.payment_request));
         } catch (error: any) {
+            // These errors leave the outcome unknown, so the payment may
+            // still complete:
+            // - reply timeout: the wallet did not answer in time.
+            // - publish timeout: no relay acknowledged the request within
+            //   5 s. The SDK does not cancel the publish, and a relay that
+            //   acknowledges late may already have passed it on.
+            // - response decoding error: the wallet answered with something
+            //   that could not be parsed.
+            // Nip47PublishError still rejects. Since SDK 9.0.0 it only
+            // covers relays that refused the request or could not be
+            // reached; a missing acknowledgement is a publish timeout. A
+            // relay that drops the connection after taking the request
+            // also ends here. A retry reuses the payment hash.
+            // Wallet errors are classified below.
+            if (
+                error instanceof Nip47ReplyTimeoutError ||
+                error instanceof Nip47PublishTimeoutError ||
+                error instanceof Nip47ResponseDecodingError
+            ) {
+                return { status: 'IN_FLIGHT', payment_hash };
+            }
             const code = error?.code;
             // a reply without a message: show the generic failure, not the
             // SDK's placeholder, and don't keep it as the wallet's reason
@@ -184,6 +239,32 @@ export default class NostrWalletConnect {
             }
             throw error;
         }
+
+        // Only a preimage that hashes to the invoice's payment hash proves
+        // the payment. Zeus's own NWC service answers with an empty
+        // preimage while the HTLC is still out, and a wrong one leaves the
+        // outcome unknown: the wallet may or may not have paid. Both are in
+        // flight, so the send screen offers no Try Again and
+        // TransactionsStore asks the wallet for the payment by its hash.
+        if (!preimage) {
+            return { status: 'IN_FLIGHT', payment_hash };
+        }
+
+        // the invoice did not decode: there is nothing to check against
+        if (!payment_hash) {
+            return {
+                status: 'SUCCEEDED',
+                payment_hash,
+                preimage: preimage.toLowerCase()
+            };
+        }
+
+        const verified = verifiedPreimage(preimage, payment_hash);
+        if (!verified) {
+            return { status: 'IN_FLIGHT', payment_hash };
+        }
+
+        return { status: 'SUCCEEDED', payment_hash, preimage: verified };
     };
     decodePaymentRequest = (urlParams?: Array<string>) =>
         Promise.resolve().then(() =>
@@ -216,7 +297,9 @@ export default class NostrWalletConnect {
         const state = tx.state || (tx.settled_at ? 'settled' : 'pending');
         return {
             payment_hash: tx.payment_hash,
-            payment_preimage: tx.preimage,
+            // the wallet's state decides the status, but a preimage that
+            // does not hash to the payment hash is not shown as proof
+            payment_preimage: verifiedPreimage(tx.preimage, data.payment_hash),
             invoice: tx.invoice,
             creation_date: tx.created_at?.toString(),
             amount: Math.floor((tx.amount || 0) / 1000),
