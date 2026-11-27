@@ -1368,6 +1368,36 @@ describe('LND.fundingStateStep', () => {
     });
 });
 
+describe('LND.publishTransaction', () => {
+    const postedFor = async (data: any) => {
+        const lnd = new LND();
+        // TransactionsStore shows lnd's publish_error to the user
+        const response = { publish_error: 'insufficient fee' };
+        const postRequest = jest
+            .spyOn(lnd, 'postRequest')
+            .mockResolvedValue(response);
+
+        await expect(lnd.publishTransaction(data)).resolves.toBe(response);
+
+        expect(postRequest).toHaveBeenCalledTimes(1);
+        expect(postRequest.mock.calls[0][0]).toBe('/v2/wallet/tx');
+        return postRequest.mock.calls[0][1];
+    };
+
+    // lnd reads the tx_hex bytes field as base64
+    it('sends a hex tx_hex as base64', async () => {
+        expect(await postedFor({ tx_hex: '02000000000101ff' })).toEqual({
+            tx_hex: 'AgAAAAABAf8='
+        });
+    });
+
+    it('sends the other fields unchanged', async () => {
+        expect(
+            await postedFor({ tx_hex: '02000000000101ff', label: 'ZEUS send' })
+        ).toEqual({ tx_hex: 'AgAAAAABAf8=', label: 'ZEUS send' });
+    });
+});
+
 describe('LND.abandonChannel', () => {
     // as ChannelsStore abandons a PSBT channel lnd verified but never
     // funded: lnd refuses pending_funding_shim_only for it

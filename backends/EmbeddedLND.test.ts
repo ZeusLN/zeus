@@ -28,6 +28,7 @@ const mockAbandonChannel = jest.fn();
 const mockFundingStateStep = jest.fn();
 const mockSignMessageNodePubkey = jest.fn();
 const mockVerifyMessageNodePubkey = jest.fn();
+const mockPublishTransaction = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
     default: {
@@ -54,7 +55,9 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
             signMessageNodePubkey: (...args: any[]) =>
                 mockSignMessageNodePubkey(...args),
             verifyMessageNodePubkey: (...args: any[]) =>
-                mockVerifyMessageNodePubkey(...args)
+                mockVerifyMessageNodePubkey(...args),
+            publishTransaction: (...args: any[]) =>
+                mockPublishTransaction(...args)
         },
         onchain: {
             getTransactions: (...args: any[]) => mockGetTransactions(...args),
@@ -728,6 +731,37 @@ describe('EmbeddedLND.fundingStateStep', () => {
     ])('sends %s unchanged', async (_, data) => {
         const expected = JSON.parse(JSON.stringify(data));
         expect(await sentFor(data)).toEqual(expected);
+    });
+});
+
+describe('EmbeddedLND.publishTransaction', () => {
+    const sentFor = async (data: any) => {
+        mockPublishTransaction.mockReset();
+        // TransactionsStore shows lnd's publish_error to the user
+        mockPublishTransaction.mockResolvedValue({
+            publish_error: 'insufficient fee'
+        });
+
+        await expect(
+            new EmbeddedLND().publishTransaction(data)
+        ).resolves.toEqual({ publish_error: 'insufficient fee' });
+
+        expect(mockPublishTransaction).toHaveBeenCalledTimes(1);
+        return mockPublishTransaction.mock.calls[0][0];
+    };
+
+    // lndmobile's protobuf encoder base64-decodes a string bytes field
+    it('sends a hex tx_hex as base64', async () => {
+        expect(await sentFor({ tx_hex: '02000000000101ff' })).toEqual({
+            tx_hex: 'AgAAAAABAf8='
+        });
+    });
+
+    // lndmobile then sends only tx_hex to lnd, so a label is dropped there
+    it('passes the other fields to lndmobile', async () => {
+        expect(
+            await sentFor({ tx_hex: '02000000000101ff', label: 'ZEUS send' })
+        ).toEqual({ tx_hex: 'AgAAAAABAf8=', label: 'ZEUS send' });
     });
 });
 
