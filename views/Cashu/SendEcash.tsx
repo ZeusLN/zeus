@@ -312,16 +312,18 @@ export default class SendEcash extends React.Component<
                             | {
                                   token: string;
                                   decoded: CashuToken;
+                                  saveFailed: boolean;
                               }
                             | undefined
                     ) => {
                         if (result?.token && result.decoded) {
-                            const { token, decoded } = result;
+                            const { token, decoded, saveFailed } = result;
                             this.resetForm();
                             navigation.navigate('CashuToken', {
                                 token,
                                 decoded,
-                                startOnQrTab: true
+                                startOnQrTab: true,
+                                saveFailed
                             });
                         }
                     }
