@@ -1,9 +1,10 @@
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import {
     BACKGROUND_LOCK_REARM_GRACE_MS,
     BACKGROUND_LOCK_SUPPRESSION_MAX_MS,
     shouldSkipBackgroundLock,
+    skippedBackgroundLockIsOverdue,
     suppressBackgroundLockDuring
 } from './BackgroundLockUtils';
 import type SettingsStore from '../stores/SettingsStore';
@@ -29,7 +30,7 @@ jest.mock('react-native', () => {
             [...listeners].forEach((handler) => handler(status));
         }
     };
-    return { AppState };
+    return { AppState, Platform: { OS: 'android' } };
 });
 
 const createStore = (loginBackground = true) =>
@@ -48,6 +49,7 @@ const flushMicrotasks = async () => {
 describe('BackgroundLockUtils', () => {
     afterEach(() => {
         (AppState as any).currentState = 'active';
+        Platform.OS = 'android';
         jest.restoreAllMocks();
         jest.useRealTimers();
     });
@@ -187,6 +189,75 @@ describe('BackgroundLockUtils', () => {
         await flow;
 
         expect(store.setLoginStatus).toHaveBeenCalledWith(false);
+    });
+
+    // An export makes more native calls after its save dialog closes
+    // (copying the file, removing staged files), so it settles after the
+    // 'active' event that would have shown the Lockscreen.
+    describe('when the flow settles after the app is back in front', () => {
+        const runFlow = async (dialogUpForMs: number) => {
+            jest.useFakeTimers();
+            const store = createStore();
+            let finishFlow!: () => void;
+            const flow = suppressBackgroundLockDuring(
+                store,
+                () => new Promise<void>((resolve) => (finishFlow = resolve))
+            );
+            (AppState as any).emit('background');
+            shouldSkipBackgroundLock();
+            jest.advanceTimersByTime(dialogUpForMs);
+
+            (AppState as any).emit('active');
+            const overdueOnResume = skippedBackgroundLockIsOverdue();
+            finishFlow();
+            await flow;
+            return { store, overdueOnResume };
+        };
+
+        it('reports the skipped lock as overdue on resume past the ceiling', async () => {
+            const { store, overdueOnResume } = await runFlow(
+                BACKGROUND_LOCK_SUPPRESSION_MAX_MS + 1
+            );
+
+            expect(overdueOnResume).toBe(true);
+            // the Wallet handler locked on 'active'; a lock set after it
+            // would have no Lockscreen in front of it
+            expect(store.setLoginStatus).not.toHaveBeenCalled();
+            expect(skippedBackgroundLockIsOverdue()).toBe(false);
+        });
+
+        it('does not report it within the ceiling', async () => {
+            const { store, overdueOnResume } = await runFlow(1000);
+
+            expect(overdueOnResume).toBe(false);
+            expect(store.setLoginStatus).not.toHaveBeenCalled();
+        });
+    });
+
+    it('is not overdue when no lock was skipped', async () => {
+        jest.useFakeTimers();
+        const store = createStore();
+        let finishFlow!: () => void;
+        const flow = suppressBackgroundLockDuring(
+            store,
+            () => new Promise<void>((resolve) => (finishFlow = resolve))
+        );
+        jest.advanceTimersByTime(BACKGROUND_LOCK_SUPPRESSION_MAX_MS + 1);
+
+        expect(skippedBackgroundLockIsOverdue()).toBe(false);
+        finishFlow();
+        await flow;
+    });
+
+    it('does not skip the lock on iOS, where a background event means the user left the app', async () => {
+        Platform.OS = 'ios';
+        const store = createStore();
+
+        await suppressBackgroundLockDuring(store, async () => {
+            expect(shouldSkipBackgroundLock()).toBe(false);
+        });
+
+        expect(store.setLoginStatus).not.toHaveBeenCalled();
     });
 
     it('does not re-arm when no background event was suppressed (in-process iOS dialogs)', async () => {
