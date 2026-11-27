@@ -1,10 +1,13 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { NativeModules } from 'react-native';
 import {
     localeString,
     formatInlineNoun,
     pascalToHumanReadable,
     bridgeJavaStrings,
-    languagesWithNounCapitalization
+    languagesWithNounCapitalization,
+    allLocaleStrings
 } from './LocaleUtils';
 
 const mockSettings: { locale?: string } = { locale: 'en' };
@@ -38,6 +41,7 @@ jest.mock('../locales/en.json', () => ({
     'test.strayBraces': 'Pay {{{amount}}} and {{ {{amount}}',
     'test.closingInKey': '{{a}b}}',
     'test.emptyInDe': 'English value',
+    'test.shared': 'Shared',
     'androidNotification.nodeRunningBackground': 'nodeRunningBackground',
     'androidNotification.shutdown': 'shutdown',
     'androidNotification.nwcRunningBackground': 'nwcRunningBackground',
@@ -55,7 +59,10 @@ jest.mock('../locales/sk.json', () => ({ 'test.marker': 'sk' }));
 jest.mock('../locales/tr.json', () => ({ 'test.marker': 'tr' }));
 jest.mock('../locales/hu.json', () => ({ 'test.marker': 'hu' }));
 jest.mock('../locales/zh_CN.json', () => ({ 'test.marker': 'zh_CN' }));
-jest.mock('../locales/fr.json', () => ({ 'test.marker': 'fr' }));
+jest.mock('../locales/fr.json', () => ({
+    'test.marker': 'fr',
+    'test.shared': 'Shared'
+}));
 jest.mock('../locales/nl.json', () => ({ 'test.marker': 'nl' }));
 jest.mock('../locales/nb.json', () => ({ 'test.marker': 'nb' }));
 jest.mock('../locales/sv.json', () => ({ 'test.marker': 'sv' }));
@@ -257,5 +264,62 @@ describe('bridgeJavaStrings', () => {
             'androidNotification.nwcRunningBackground': 'nwcRunningBackground',
             'androidNotification.nwcShutdown': 'nwcShutdown'
         });
+    });
+});
+
+describe('allLocaleStrings', () => {
+    it('returns the translation of a key in every locale', () => {
+        const markers = allLocaleStrings('test.marker');
+        expect(markers).toHaveLength(33);
+        expect(markers).toEqual(
+            expect.arrayContaining(['en', 'de', 'fr', 'ko', 'id'])
+        );
+    });
+
+    it('lists each translation once', () => {
+        expect(allLocaleStrings('test.shared')).toEqual(['Shared']);
+    });
+
+    // ALL_LOCALES is a list of its own, next to the switch in localeString.
+    // A language that can be selected but is missing from it would no
+    // longer have its stored labels mapped back.
+    describe('covers every language that can be selected', () => {
+        // SettingsStore cannot be loaded here, so its list is read as text
+        const source = readFileSync(
+            join(__dirname, '../stores/SettingsStore.ts'),
+            'utf8'
+        );
+        const list = source.slice(
+            source.indexOf('export const LOCALE_KEYS = ['),
+            source.indexOf('];', source.indexOf('export const LOCALE_KEYS = ['))
+        );
+        const languages = Array.from(
+            list.matchAll(/\{ key: '([^']+)', value: /g)
+        ).map((match) => match[1]);
+
+        it('reads the languages from SettingsStore', () => {
+            expect(languages.length).toBeGreaterThanOrEqual(33);
+            expect(languages).toEqual(
+                expect.arrayContaining(['en', 'de', 'jp', 'zh_TW', 'id'])
+            );
+        });
+
+        it.each(languages)('%s', (language) => {
+            mockSettings.locale = language;
+            const marker = localeString('test.marker');
+
+            // every language has a marker of its own in this file, so a
+            // new one cannot pass on the English fallback
+            if (language !== 'en') expect(marker).not.toBe('en');
+            expect(allLocaleStrings('test.marker')).toContain(marker);
+        });
+    });
+
+    it('skips locales where the key is empty', () => {
+        expect(allLocaleStrings('test.emptyInDe')).toEqual(['English value']);
+    });
+
+    it('returns an empty list for an unknown key', () => {
+        expect(allLocaleStrings('not.a.key')).toEqual([]);
     });
 });
