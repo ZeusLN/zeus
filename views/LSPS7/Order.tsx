@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
+import { reaction } from 'mobx';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -42,6 +43,10 @@ export default class LSPS7Order extends React.Component<
     OrderProps,
     OrdersState
 > {
+    private isUnmounted = false;
+    private replyReceived = false;
+    private replyDisposer: (() => void) | null = null;
+
     constructor(props: OrderProps) {
         super(props);
         this.state = {
@@ -60,6 +65,7 @@ export default class LSPS7Order extends React.Component<
         console.log('Looking for order in storage...');
         Storage.getItem(LSPS_ORDERS_KEY)
             .then((responseArrayString) => {
+                if (this.isUnmounted) return;
                 if (responseArrayString) {
                     const responseArray = JSON.parse(responseArrayString);
                     const order = responseArray.find((response: any) => {
@@ -79,49 +85,17 @@ export default class LSPS7Order extends React.Component<
                             order: temporaryOrder?.order
                         });
 
-                        LSPStore.lsps7GetOrderCustomMessage(
+                        this.watchForReply(id, orderShouldUpdate);
+
+                        const request = LSPStore.lsps7GetOrderCustomMessage(
                             id,
                             temporaryOrder?.peer
                         );
 
-                        setTimeout(() => {
-                            if (LSPStore.error && LSPStore.error_msg !== '') {
-                                this.setState({
-                                    fetchOldOrder: true
-                                });
-                                LSPStore.loadingLSPS7 = false;
-                                console.log('Old Order state fetched!');
-                            } else if (
-                                Object.keys(LSPStore.getExtensionOrderResponse)
-                                    .length !== 0
-                            ) {
-                                const getExtensionOrderData =
-                                    LSPStore.getExtensionOrderResponse;
-                                this.setState({
-                                    order: getExtensionOrderData,
-                                    fetchOldOrder: false
-                                });
-                                console.log(
-                                    'Latest Order state fetched!',
-                                    this.state.order
-                                );
-                                LSPStore.loadingLSPS7 = false;
-                                const result =
-                                    getExtensionOrderData?.result ||
-                                    getExtensionOrderData;
-                                if (
-                                    (result?.order_state ===
-                                        LSPOrderState.COMPLETED ||
-                                        result?.order_state ===
-                                            LSPOrderState.FAILED) &&
-                                    !orderShouldUpdate
-                                ) {
-                                    LSPStore.updateOrderInStorage(
-                                        getExtensionOrderData
-                                    );
-                                }
-                            }
-                        }, 3000);
+                        request.then(
+                            () => this.handleRequestSettled(),
+                            () => this.handleRequestSettled(true)
+                        );
                     } else {
                         console.log('Order not found in encrypted storage.');
                     }
@@ -138,6 +112,45 @@ export default class LSPS7Order extends React.Component<
                 );
             });
     }
+
+    componentWillUnmount() {
+        this.isUnmounted = true;
+        this.replyDisposer?.();
+    }
+
+    // Applies this order's reply whenever the store receives it, including
+    // one that lands after the request timed out.
+    private watchForReply = (id: string, orderShouldUpdate: boolean) => {
+        const { LSPStore } = this.props;
+        this.replyDisposer = reaction(
+            () => LSPStore.getExtensionOrderResponse,
+            (orderData) => {
+                const result = orderData?.result || orderData;
+                // the slot is shared with the other order requests
+                if (result?.order_id !== id) return;
+                this.replyReceived = true;
+                this.setState({ order: orderData, fetchOldOrder: false });
+                console.log('Latest Order state fetched!', orderData);
+                if (
+                    (result.order_state === LSPOrderState.COMPLETED ||
+                        result.order_state === LSPOrderState.FAILED) &&
+                    !orderShouldUpdate
+                ) {
+                    LSPStore.updateOrderInStorage(orderData);
+                }
+            }
+        );
+    };
+
+    // The stored order stays on screen when the request failed or rejected
+    private handleRequestSettled = (rejected = false) => {
+        const { LSPStore } = this.props;
+        if (this.isUnmounted || this.replyReceived) return;
+        if (rejected || (LSPStore.error && LSPStore.error_msg !== '')) {
+            this.setState({ fetchOldOrder: true });
+            console.log('Old Order state fetched!');
+        }
+    };
 
     render() {
         const { navigation, LSPStore } = this.props;
