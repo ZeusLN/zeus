@@ -19,7 +19,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import LSPS7OrderResponse from './OrderResponse';
 
 import Storage from '../../storage';
-import { LSPOrderState } from '../../models/LSP';
+import { isResponseForOrder, LSPOrderState } from '../../models/LSP';
 
 interface OrderProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -79,6 +79,11 @@ export default class LSPS7Order extends React.Component<
                             order: temporaryOrder?.order
                         });
 
+                        // an error left by an earlier request is not this
+                        // order's, and hardware back skips onBack
+                        LSPStore.error = false;
+                        LSPStore.error_msg = '';
+
                         LSPStore.lsps7GetOrderCustomMessage(
                             id,
                             temporaryOrder?.peer
@@ -92,8 +97,12 @@ export default class LSPS7Order extends React.Component<
                                 LSPStore.loadingLSPS7 = false;
                                 console.log('Old Order state fetched!');
                             } else if (
-                                Object.keys(LSPStore.getExtensionOrderResponse)
-                                    .length !== 0
+                                // every get_order caller writes to this slot,
+                                // so it can hold another order's reply
+                                isResponseForOrder(
+                                    LSPStore.getExtensionOrderResponse,
+                                    id
+                                )
                             ) {
                                 const getExtensionOrderData =
                                     LSPStore.getExtensionOrderResponse;

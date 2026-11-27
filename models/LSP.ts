@@ -173,6 +173,20 @@ export const isValidOrderResponse = (order: any): boolean => {
 };
 
 /**
+ * LSPStore keeps one get_order response per service, and the order screens,
+ * the payment-await poll and the free-order poll all write to it. Returns
+ * true if the response found there (with or without the JSON-RPC `result`
+ * wrapper) is for the given order.
+ */
+export const isResponseForOrder = (
+    response: any,
+    orderId?: string
+): boolean => {
+    const result = response?.result || response;
+    return !!orderId && result?.order_id === orderId;
+};
+
+/**
  * Builds the navigation params for the LSPS payment-await screen from an order's
  * payment object. Shared by every LSPS1/LSPS7 "make payment" call site.
  */

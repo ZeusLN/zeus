@@ -42,9 +42,10 @@ jest.mock('../../storage', () => ({
     getItem: jest.fn(() => Promise.resolve(null))
 }));
 jest.mock('../../utils/BackendUtils', () => ({
-    supportsLSPS1rest: () => true,
+    supportsLSPS1rest: jest.fn(() => true),
     supportsLSPScustomMessage: () => true,
-    supportsLSPS7native: () => false
+    supportsLSPS7native: jest.fn(() => false),
+    supportsPendingChannels: () => false
 }));
 jest.mock('../../utils/handleAnything', () => jest.fn());
 jest.mock('../../utils/ThemeUtils', () => ({
@@ -53,6 +54,7 @@ jest.mock('../../utils/ThemeUtils', () => ({
 jest.mock('../../utils/LocaleUtils');
 
 import Storage from '../../storage';
+import BackendUtils from '../../utils/BackendUtils';
 import { buildPaymentAwaitParams, LSPService } from '../../models/LSP';
 import handleAnything from '../../utils/handleAnything';
 import LSPPaymentAwait from './LSPPaymentAwait';
@@ -72,13 +74,16 @@ const ENDPOINT = 'https://lsp.example.com/api/v1';
 const PEER = '02abc@lsp.example.com:9735';
 
 // order history entry the screen reads its poll endpoint and peer from
-const storedOrders = JSON.stringify([
-    JSON.stringify({
-        order: { result: { order_id: 'order-1' } },
-        endpoint: ENDPOINT,
-        peer: PEER
-    })
-]);
+const storedOrdersWith = (extra: any = {}) =>
+    JSON.stringify([
+        JSON.stringify({
+            order: { result: { order_id: 'order-1' } },
+            endpoint: ENDPOINT,
+            peer: PEER,
+            ...extra
+        })
+    ]);
+const storedOrders = storedOrdersWith();
 
 let lspStore: any;
 
@@ -301,4 +306,218 @@ describe('LSPPaymentAwait invoice check', () => {
         expect(screen.getByText(MISMATCH)).toBeTruthy();
         expect(screen.queryByTestId('order-qr')).toBeNull();
     });
+});
+
+describe('LSPPaymentAwait order status poll', () => {
+    const payment = {
+        bolt11: { invoice: INVOICE_100K, order_total_sat: '100000' }
+    };
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        (Storage.getItem as jest.Mock)
+            .mockClear()
+            .mockResolvedValue(storedOrders);
+        lspStore = {
+            getOrderResponse: {},
+            getExtensionOrderResponse: {},
+            updateOrderInStorage: jest.fn(),
+            lsps1GetOrderREST: jest.fn(() => Promise.resolve()),
+            lsps1GetOrderNative: jest.fn(() => Promise.resolve()),
+            lsps1GetOrderCustomMessage: jest.fn(() => Promise.resolve()),
+            lsps7GetOrderCustomMessage: jest.fn(() => Promise.resolve())
+        };
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    // How each transport answers a get_order for the given order: over
+    // custom messages the reply is left in the service's slot, bare for
+    // LSPS1 and wrapped in `result` for LSPS7. REST and LDK Node return it.
+    const TRANSPORTS = [
+        {
+            name: 'LSPS1 REST',
+            service: LSPService.LSPS1,
+            request: 'lsps1GetOrderREST',
+            slot: 'getOrderResponse',
+            lsps1Rest: true,
+            stored: {},
+            lsps7Native: false,
+            returnsReply: true,
+            wrap: (order: any) => order
+        },
+        {
+            name: 'LSPS1 custom message',
+            service: LSPService.LSPS1,
+            request: 'lsps1GetOrderCustomMessage',
+            slot: 'getOrderResponse',
+            lsps1Rest: false,
+            stored: {},
+            lsps7Native: false,
+            returnsReply: false,
+            wrap: (order: any) => ({ result: order })
+        },
+        {
+            name: 'LSPS1 native',
+            service: LSPService.LSPS1,
+            request: 'lsps1GetOrderNative',
+            slot: 'getOrderResponse',
+            lsps1Rest: true,
+            stored: { native: true },
+            lsps7Native: false,
+            returnsReply: true,
+            wrap: (order: any) => ({ result: order })
+        },
+        {
+            name: 'LSPS7 custom message',
+            service: LSPService.LSPS7,
+            request: 'lsps7GetOrderCustomMessage',
+            slot: 'getExtensionOrderResponse',
+            lsps1Rest: true,
+            stored: {},
+            lsps7Native: false,
+            returnsReply: false,
+            wrap: (order: any) => ({ result: order })
+        },
+        {
+            name: 'LSPS7 on LDK Node',
+            service: LSPService.LSPS7,
+            request: 'lsps7GetOrderCustomMessage',
+            slot: 'getExtensionOrderResponse',
+            lsps1Rest: true,
+            stored: {},
+            lsps7Native: true,
+            returnsReply: true,
+            wrap: (order: any) => ({ result: order })
+        }
+    ] as const;
+
+    describe.each(TRANSPORTS)(
+        '$name',
+        ({
+            service,
+            request,
+            slot,
+            lsps1Rest,
+            stored,
+            lsps7Native,
+            returnsReply,
+            wrap
+        }) => {
+            beforeEach(() => {
+                jest.mocked(BackendUtils.supportsLSPS1rest).mockReturnValue(
+                    lsps1Rest
+                );
+                jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(
+                    lsps7Native
+                );
+                (Storage.getItem as jest.Mock).mockResolvedValue(
+                    storedOrdersWith(stored)
+                );
+            });
+
+            afterEach(() => {
+                jest.mocked(BackendUtils.supportsLSPS1rest).mockReturnValue(
+                    true
+                );
+                jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(
+                    false
+                );
+            });
+
+            const answerWith = (order: any) =>
+                lspStore[request].mockImplementation(async () => {
+                    if (returnsReply) return wrap(order);
+                    lspStore[slot] = wrap(order);
+                });
+
+            it('completes when this order is completed', async () => {
+                const order = { order_id: 'order-1', order_state: 'COMPLETED' };
+                answerWith(order);
+                await renderView(payment, service);
+
+                await advancePastFirstPoll();
+
+                expect(
+                    screen.getByText('views.LSPS1.paymentReceived')
+                ).toBeTruthy();
+                expect(lspStore.updateOrderInStorage).toHaveBeenCalledWith(
+                    wrap(order)
+                );
+            });
+
+            it('fails when this order has failed', async () => {
+                answerWith({ order_id: 'order-1', order_state: 'FAILED' });
+                await renderView(payment, service);
+
+                await advancePastFirstPoll();
+
+                expect(
+                    screen.getByText('views.LSPS1.viewOrderDetails')
+                ).toBeTruthy();
+                expect(screen.queryByTestId('order-qr')).toBeNull();
+            });
+
+            it.each(['COMPLETED', 'FAILED'])(
+                'keeps waiting when the reply in the slot is for another order that is %s',
+                async (orderState) => {
+                    // another get_order caller, such as the free-order poll,
+                    // was answered while this request waited
+                    answerWith({
+                        order_id: 'order-2',
+                        order_state: orderState
+                    });
+                    await renderView(payment, service);
+
+                    await advancePastFirstPoll();
+
+                    expect(screen.getByTestId('order-qr')).toBeTruthy();
+                    expect(
+                        screen.queryByText('views.LSPS1.paymentReceived')
+                    ).toBeNull();
+                    expect(
+                        screen.queryByText('views.LSPS1.viewOrderDetails')
+                    ).toBeNull();
+                    expect(
+                        lspStore.updateOrderInStorage
+                    ).not.toHaveBeenCalled();
+
+                    // and it polls again
+                    const calls = lspStore[request].mock.calls.length;
+                    await advancePastFirstPoll();
+                    expect(lspStore[request]).toHaveBeenCalledTimes(calls + 1);
+                }
+            );
+
+            if (returnsReply) {
+                it('completes on its own reply when a newer get_order keeps it out of the slot', async () => {
+                    const order = {
+                        order_id: 'order-1',
+                        order_state: 'COMPLETED'
+                    };
+                    lspStore[request].mockImplementation(async () => {
+                        // the free-order poll sent its get_order later, so the
+                        // slot holds its answer and this request's is returned
+                        lspStore[slot] = wrap({
+                            order_id: 'order-2',
+                            order_state: 'CREATED'
+                        });
+                        return wrap(order);
+                    });
+                    await renderView(payment, service);
+
+                    await advancePastFirstPoll();
+
+                    expect(
+                        screen.getByText('views.LSPS1.paymentReceived')
+                    ).toBeTruthy();
+                    expect(lspStore.updateOrderInStorage).toHaveBeenCalledWith(
+                        wrap(order)
+                    );
+                });
+            }
+        }
+    );
 });
