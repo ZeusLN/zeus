@@ -1083,9 +1083,18 @@ const handleAnything = async (
         }
     } else if (data.startsWith('zeuscontact:')) {
         const zeusContactData = data.replace('zeuscontact:', '');
-        const card = normalizeContactData(JSON.parse(zeusContactData));
+        let parsed: unknown;
+        try {
+            parsed = JSON.parse(zeusContactData);
+        } catch {
+            parsed = null;
+        }
+        const card = normalizeContactData(parsed);
 
-        if (card.contactId) {
+        // Any JSON object is a card. ZEUS itself writes cards with an
+        // empty contactId (contacts saved before v0.8.1 only have an
+        // id), and the receiver does not use the sender's contactId.
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             // Cards made before v0.11.0 could carry remote photo/banner
             // URLs, which ContactDetails would load as soon as it opens
             // and again on every display after saving.
@@ -1099,6 +1108,10 @@ const handleAnything = async (
                 }
             ];
         }
+
+        // not a JSON object: there is nothing to open
+        if (isClipboardValue) return false;
+        throw new Error(localeString('utils.handleAnything.notValid'));
     } else if (AddressUtils.isValidTxHex(value)) {
         return ['TxHex', { txHex: value }];
     } else if (
