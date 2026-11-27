@@ -991,6 +991,8 @@ describe('NostrWalletConnect capability flags', () => {
         supportsCircularRebalancing: false,
         supportsForceClose: false,
         supportsPendingChannels: false,
+        supportsRouteHintUserChannelIds: false,
+        supportsRouteHints: false,
         supportsClosedChannels: false,
         supportsMPP: false,
         supportsAMP: false,
