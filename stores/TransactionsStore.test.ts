@@ -2312,6 +2312,20 @@ describe('TransactionsStore.getPaymentOutcome', () => {
         expect(outcome.status).toBe(lnrpc.Payment.PaymentStatus.FAILED);
     });
 
+    // SendingLightning reads a donation's result through getPaymentOutcome
+    it("does not mark embedded LND's numeric succeeded status as an error", () => {
+        const store = newStore('embedded-lnd');
+
+        const outcome = store.getPaymentOutcome({
+            payment_hash: 'ab'.repeat(32),
+            payment_preimage: 'cd'.repeat(32),
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+
+        expect(outcome.error).toBeUndefined();
+        expect(outcome.status).toBe(lnrpc.Payment.PaymentStatus.SUCCEEDED);
+    });
+
     it('does not mark an embedded LND payment error without a status as complete', () => {
         const store = newStore('embedded-lnd');
 
@@ -3046,5 +3060,37 @@ describe('TransactionsStore result of an earlier payment', () => {
         // the held payment's screen does not
         expect(store.status).toBe('complete');
         expect(store.lastPaymentSequence).toBe(dispatched);
+    });
+});
+
+describe('TransactionsStore.sendPaymentSilently fee limit', () => {
+    const feeLimitSent = async (fee_limit_sat?: number | string) => {
+        payLightningInvoice.mockReset().mockResolvedValue({});
+        await newStore().sendPaymentSilently({
+            payment_request: 'lnbc1...',
+            fee_limit_sat
+        });
+        return payLightningInvoice.mock.calls[0][0].fee_limit_sat;
+    };
+
+    it('defaults to 100 sats', async () => {
+        expect(await feeLimitSent()).toBe(100);
+        expect(await feeLimitSent('')).toBe(100);
+        expect(await feeLimitSent('NaN')).toBe(100);
+    });
+
+    it('uses a lower limit, including 0', async () => {
+        expect(await feeLimitSent('5')).toBe(5);
+        expect(await feeLimitSent('0')).toBe(0);
+        expect(await feeLimitSent(0)).toBe(0);
+    });
+
+    it('uses a higher limit', async () => {
+        expect(await feeLimitSent(1000)).toBe(1000);
+        expect(await feeLimitSent('5000')).toBe(5000);
+    });
+
+    it('defaults a negative limit to 100 sats', async () => {
+        expect(await feeLimitSent(-1)).toBe(100);
     });
 });
