@@ -73,6 +73,7 @@ import UnitsStore from '../stores/UnitsStore';
 import BalanceStore from '../stores/BalanceStore';
 import UTXOsStore from '../stores/UTXOsStore';
 
+import { getLnurlHost } from '../utils/LnurlPayUtils';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
@@ -1235,6 +1236,7 @@ export default class Receive extends React.Component<
         const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
 
         const lnurl = route.params?.lnurlParams;
+        const lnurlDomain = lnurl ? getLnurlHost(lnurl.callback) : '';
 
         const ClearButton = () => (
             <Icon
@@ -1772,7 +1774,7 @@ export default class Receive extends React.Component<
                                                     localeString(
                                                         'views.Receive.successCreateAndSentTo',
                                                         {
-                                                            domain: lnurl.domain
+                                                            domain: lnurlDomain
                                                         }
                                                     )
                                                 }
@@ -3082,7 +3084,7 @@ export default class Receive extends React.Component<
                                                             ? localeString(
                                                                   'views.Receive.createInvoiceAndSubmitTo',
                                                                   {
-                                                                      domain: lnurl.domain
+                                                                      domain: lnurlDomain
                                                                   }
                                                               )
                                                             : localeString(

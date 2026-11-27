@@ -653,6 +653,7 @@ describe('handleAnything', () => {
 
             const withdrawParams = {
                 tag: 'withdrawRequest',
+                callback: 'https://example.com/api/v1/lnurl/withdraw/cb',
                 domain: 'example.com',
                 k1: 'test-k1-value',
                 minWithdrawable: 1000,
@@ -681,6 +682,7 @@ describe('handleAnything', () => {
 
             const channelParams = {
                 tag: 'channelRequest',
+                callback: 'https://example.com/api/v1/lnurl/channel/cb',
                 domain: 'example.com',
                 k1: 'test-k1-value',
                 uri: 'node@example.com:9735'
@@ -708,6 +710,7 @@ describe('handleAnything', () => {
             });
             const channelParams = {
                 tag: 'channelRequest',
+                callback: 'https://example.com/api/v1/lnurl/channel/cb',
                 domain: 'example.com',
                 k1: 'test-k1-value',
                 uri: 'node@example.com:9735'
@@ -733,6 +736,7 @@ describe('handleAnything', () => {
             });
             mockGetLnurlParamsFn.mockResolvedValue({
                 tag: 'channelRequest',
+                callback: 'https://example.com/api/v1/lnurl/channel/cb',
                 domain: 'example.com',
                 k1: 'test-k1-value',
                 uri: 'node@example.com:9735'
@@ -753,6 +757,109 @@ describe('handleAnything', () => {
                 { cancelable: false }
             );
             alertSpy.mockRestore();
+        });
+
+        it('names the host an LNURL error came from', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlw://other.example/lnurl'
+            });
+            // js-lnurl's getDomain reads shop.example out of this URL
+            mockGetLnurlParamsFn.mockResolvedValue({
+                status: 'ERROR',
+                reason: 'Claim your refund',
+                domain: 'shop.example',
+                url: 'https://other.example\\@shop.example/lnurl'
+            });
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+
+            await handleAnything('lnurlw://other.example/lnurl');
+
+            expect(alertSpy).toHaveBeenCalledWith(
+                'Error',
+                'other.example says: Claim your refund',
+                expect.any(Array),
+                { cancelable: false }
+            );
+            alertSpy.mockRestore();
+        });
+
+        it('rejects an LNURL error from an onion host named by the request host', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlw://other.example/lnurl'
+            });
+            // js-lnurl's getDomain reads shop.example out of this URL, but
+            // the request went to the onion host
+            mockGetLnurlParamsFn.mockResolvedValue({
+                status: 'ERROR',
+                reason: 'Claim your refund',
+                domain: 'shop.example',
+                url: 'http://abc.onion\\@shop.example/lnurl'
+            });
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+
+            await expect(
+                handleAnything('lnurlw://other.example/lnurl')
+            ).rejects.toThrow('Could not parse lnurl params');
+            expect(alertSpy).not.toHaveBeenCalled();
+            alertSpy.mockRestore();
+        });
+
+        it.each([
+            ['withdrawRequest', 'https:///a.example/cb'],
+            ['withdrawRequest', 'https://\\a.example/cb'],
+            ['withdrawRequest', 'https://#a.example/cb'],
+            ['channelRequest', 'https:///a.example/cb']
+        ])(
+            'rejects a %s whose callback %s has no host',
+            async (tag, callback) => {
+                mockProcessBIP21Uri.mockReturnValue({
+                    value: 'lnurlw://example.com/lnurl'
+                });
+                mockGetLnurlParamsFn.mockResolvedValue({
+                    tag,
+                    callback,
+                    k1: 'k1',
+                    uri: 'node@example.com:9735',
+                    minWithdrawable: 1000,
+                    maxWithdrawable: 100000
+                });
+
+                // the resolve refuses a callback without a host before
+                // handleAnything's own check is reached
+                await expect(
+                    handleAnything('lnurlw://example.com/lnurl')
+                ).rejects.toThrow(
+                    'This Lightning service asked the wallet to contact an unsafe address.'
+                );
+            }
+        );
+
+        // The resolve only checks a callback that is present, so params
+        // without one reach handleAnything's own check
+        it.each([
+            ['withdrawRequest', undefined],
+            ['withdrawRequest', ''],
+            ['channelRequest', undefined]
+        ])('rejects a %s whose callback is %p', async (tag, callback) => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlw://example.com/lnurl'
+            });
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag,
+                callback,
+                k1: 'k1',
+                uri: 'node@example.com:9735',
+                minWithdrawable: 1000,
+                maxWithdrawable: 100000
+            });
+
+            await expect(
+                handleAnything('lnurlw://example.com/lnurl')
+            ).rejects.toThrow('Could not parse lnurl params');
         });
 
         it('should return true if from clipboard', async () => {
@@ -3479,6 +3586,7 @@ describe('handleAnything', () => {
             mockProcessBIP21Uri.mockReturnValue({ value: url });
             const params = {
                 tag: 'withdrawRequest',
+                callback: 'https://example.com/api/v1/lnurl/withdraw/cb',
                 domain: 'example.com',
                 k1: 'k1',
                 minWithdrawable: 1000,
@@ -3642,6 +3750,7 @@ describe('handleAnything', () => {
             mockProcessBIP21Uri.mockReturnValue({ value: url });
             const params = {
                 tag: 'withdrawRequest',
+                callback: 'https://example.com/api/v1/lnurl/withdraw/cb',
                 domain: 'example.com',
                 k1: 'k1',
                 minWithdrawable: 1000,

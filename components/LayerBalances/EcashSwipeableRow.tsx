@@ -8,6 +8,7 @@ import { inject, observer } from 'mobx-react';
 import BackendUtils from '../../utils/BackendUtils';
 import { isUnsafeLnurlError } from '../../utils/LnurlFetchUtils';
 import { getLnurlParams } from '../../utils/LnurlResolveUtils';
+import { getLnurlHost } from '../../utils/LnurlPayUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -121,13 +122,14 @@ export default class EcashSwipeableRow extends Component<
                 );
             }
         }
+        const lnurlHost = getLnurlHost(params?.url ?? params?.callback);
         if (
             params &&
             params.status === 'ERROR' &&
-            params.domain?.endsWith('.onion')
+            lnurlHost.endsWith('.onion')
         ) {
             // TODO handle fetching of params with internal Tor
-            throw new Error(`${params.domain} says: ${params.reason}`);
+            throw new Error(`${lnurlHost} says: ${params.reason}`);
         }
 
         switch (params.tag) {
@@ -139,6 +141,16 @@ export default class EcashSwipeableRow extends Component<
                 });
                 break;
             case 'withdrawRequest':
+                // ReceiveEcash names the service by the callback host, so a
+                // callback without one (e.g. "https:///a.example/cb") is
+                // refused, as in handleAnything
+                if (!getLnurlHost(params.callback)) {
+                    Alert.alert(
+                        localeString('general.error'),
+                        localeString('utils.handleAnything.invalidLnurlParams')
+                    );
+                    break;
+                }
                 navigation.navigate('ReceiveEcash', {
                     lnurlParams: params
                 });
@@ -147,7 +159,7 @@ export default class EcashSwipeableRow extends Component<
                 Alert.alert(
                     localeString('general.error'),
                     params.status === 'ERROR'
-                        ? `${params.domain} says: ${params.reason}`
+                        ? `${lnurlHost} says: ${params.reason}`
                         : `${localeString(
                               'utils.handleAnything.unsupportedLnurlType'
                           )}: ${params.tag}`,
