@@ -1830,6 +1830,7 @@
     "stores.ChannelsStore.batchNeedsNativeSegWit": "Opening several channels at once needs UTXOs from SegWit (P2WKH) or Taproot (P2TR) addresses. At least one UTXO funding this batch is Nested SegWit (NP2WKH) or legacy, so ZEUS stopped before spending anything. Select SegWit or Taproot UTXOs, or open the channels one at a time.",
     "stores.ChannelsStore.openOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this channel was opened. Check your pending channels before opening another.",
     "stores.ChannelsStore.openStreamTimeout": "Your node did not start funding this channel in time, so ZEUS stopped the open before spending anything. You can try again.",
+    "stores.ChannelsStore.batchNotPending": "Not every peer in this batch confirmed its channel in time, so ZEUS did not publish the funding transaction and nothing was spent. You can try again.",
     "stores.ChannelBackupStore.invalidBackup": "The backup received from the server is not valid",
     "stores.ChannelBackupStore.seedUnavailable": "Cannot encrypt channel backup: wallet seed is unavailable",
     "stores.ChannelBackupStore.unrecognizedBackupFormat": "Unrecognized channel backup format. It may have been created by a newer version of ZEUS.",
