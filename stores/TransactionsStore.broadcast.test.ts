@@ -16,7 +16,10 @@ jest.mock('../stores/Stores', () => ({
 // react-native-nitro-tor (ESM). Mock BackendUtils so Jest never loads it.
 jest.mock('../utils/BackendUtils', () => ({ __esModule: true, default: {} }));
 
+import * as bitcoin from 'bitcoinjs-lib';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import BackendUtils from '../utils/BackendUtils';
+import Base64Utils from '../utils/Base64Utils';
 import UrlUtils from '../utils/UrlUtils';
 import { alertStore } from './Stores';
 import TransactionsStore from './TransactionsStore';
@@ -148,5 +151,105 @@ describe('TransactionsStore.broadcastRawTxToMempoolSpace alert wiring', () => {
             'https://mempool.space/api/tx',
             'Network error'
         );
+    });
+});
+
+describe('TransactionsStore.broadcast through publishTransaction', () => {
+    let published: any[];
+
+    beforeEach(() => {
+        published = [];
+        Object.assign(BackendUtils as any, {
+            getClass: () => ({ publishTransaction: true }),
+            // as LND, EmbeddedLND and LightningNodeConnect convert it
+            publishTransaction: async (data: any) => {
+                published.push(Base64Utils.hexToBase64(data.tx_hex));
+                return { publish_error: '' };
+            }
+        });
+    });
+
+    afterEach(() => {
+        delete (BackendUtils as any).getClass;
+        delete (BackendUtils as any).publishTransaction;
+    });
+
+    const newBroadcastStore = () => {
+        const stub = {
+            onReconnect: jest.fn(),
+            resetOpenChannel: jest.fn(),
+            nodeInfo: {},
+            settings: {},
+            implementation: 'lnd'
+        };
+        return new TransactionsStore(
+            { ...stub } as any,
+            { ...stub } as any,
+            { ...stub } as any,
+            { ...stub } as any,
+            { ...stub } as any
+        );
+    };
+
+    // a signed segwit tx whose length in bytes has the given remainder
+    // mod 3, which decides whether its base64 ends in '=' padding
+    const txOfLengthMod3 = (remainder: number) => {
+        for (let n = 1; n < 10; n++) {
+            const tx = new bitcoin.Transaction();
+            tx.version = 2;
+            tx.addInput(Buffer.alloc(32, 7), 0);
+            tx.setWitness(0, [Buffer.alloc(71, 1), Buffer.alloc(33, 2)]);
+            tx.addOutput(
+                Buffer.concat([Buffer.from([0x6a, n]), Buffer.alloc(n, 9)]),
+                1000
+            );
+            if (tx.byteLength() % 3 === remainder) return tx;
+        }
+        throw new Error(`no tx of length ${remainder} mod 3`);
+    };
+
+    const expectPublished = async (
+        raw_final_tx: any,
+        tx: bitcoin.Transaction
+    ) => {
+        const store = newBroadcastStore();
+        await store.broadcast(raw_final_tx);
+
+        expect(published).toEqual([tx.toBuffer().toString('base64')]);
+        expect(store.txid).toBe(tx.getId());
+        expect(store.publishSuccess).toBe(true);
+    };
+
+    // lnd's finalizePsbt over REST or LNC returns raw_final_tx as base64,
+    // which has no padding when the length is a multiple of 3
+    it('publishes an unpadded base64 tx', async () => {
+        const tx = txOfLengthMod3(0);
+        const base64 = tx.toBuffer().toString('base64');
+        expect(base64).not.toContain('=');
+
+        await expectPublished(base64, tx);
+    });
+
+    it.each([1, 2])(
+        'publishes a padded base64 tx (length %i mod 3)',
+        async (remainder) => {
+            const tx = txOfLengthMod3(remainder);
+            const base64 = tx.toBuffer().toString('base64');
+            expect(base64).toContain('=');
+
+            await expectPublished(base64, tx);
+        }
+    );
+
+    // PSBT.tsx and TxHex.tsx pass a hex tx
+    it('publishes a hex tx', async () => {
+        const tx = txOfLengthMod3(0);
+        await expectPublished(tx.toHex(), tx);
+    });
+
+    // embedded lnd's finalizePsbt returns raw_final_tx as bytes
+    it('publishes a tx given as bytes', async () => {
+        const tx = txOfLengthMod3(0);
+        await expectPublished(Uint8Array.from(tx.toBuffer()), tx);
     });
 });
