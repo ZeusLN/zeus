@@ -49,4 +49,69 @@ describe('inFlightRequestKey', () => {
     it('accepts missing headers', () => {
         expect(inFlightRequestKey(undefined, url)).toBe(`:${url}`);
     });
+
+    describe('TLS settings', () => {
+        const headers = { Rune: 'a' };
+        const pin = 'MIIBszCCAVmgAwIBAgIUQ';
+        const otherPin = 'MIIBszCCAVmgAwIBAgIUR';
+
+        it('is stable for the same verification mode and pins', () => {
+            expect(
+                inFlightRequestKey(headers, url, undefined, {
+                    certVerification: true,
+                    pinnedCerts: [pin]
+                })
+            ).toBe(
+                inFlightRequestKey(headers, url, undefined, {
+                    certVerification: true,
+                    pinnedCerts: [pin]
+                })
+            );
+        });
+
+        it('differs when only the verification mode differs', () => {
+            expect(
+                inFlightRequestKey(headers, url, undefined, {
+                    certVerification: true
+                })
+            ).not.toBe(
+                inFlightRequestKey(headers, url, undefined, {
+                    certVerification: false
+                })
+            );
+        });
+
+        it('differs when only the pins differ', () => {
+            const key = (pinnedCerts?: string[]) =>
+                inFlightRequestKey(headers, url, undefined, {
+                    certVerification: true,
+                    pinnedCerts
+                });
+            expect(key([pin])).not.toBe(key([otherPin]));
+            expect(key([pin])).not.toBe(key(undefined));
+            expect(key([pin])).not.toBe(key([pin, otherPin]));
+        });
+
+        it('treats no pins and an empty pin list alike', () => {
+            expect(
+                inFlightRequestKey(headers, url, undefined, {
+                    certVerification: true,
+                    pinnedCerts: []
+                })
+            ).toBe(
+                inFlightRequestKey(headers, url, undefined, {
+                    certVerification: true
+                })
+            );
+        });
+
+        it('holds a hash of the pins, not the pins', () => {
+            const key = inFlightRequestKey(headers, url, undefined, {
+                certVerification: true,
+                pinnedCerts: [pin]
+            });
+            expect(key).not.toContain(pin);
+            expect(key).toMatch(/^verify:[0-9a-f]{64}:[0-9a-f]{64}:/);
+        });
+    });
 });
