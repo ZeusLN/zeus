@@ -1,6 +1,12 @@
 import { bech32 } from '@scure/base';
 import { hexToBytes } from '@noble/hashes/utils.js';
-import { Relay } from 'nostr-tools';
+import {
+    Relay,
+    finalizeEvent,
+    generateSecretKey,
+    getPublicKey,
+    nip44
+} from 'nostr-tools';
 
 import ClinkUtils, {
     decodeNoffer,
@@ -604,6 +610,75 @@ describe('ClinkUtils', () => {
                 });
             }
             expect(Relay).not.toHaveBeenCalled();
+        });
+
+        it('resolves with the decrypted response without logging it', async () => {
+            const serviceSk = generateSecretKey();
+            const servicePk = getPublicKey(serviceSk);
+            const response = { bolt11: 'lnbc-service-invoice-123' };
+
+            jest.mocked(Relay).mockImplementation((() => {
+                let handlers: any;
+                return {
+                    connect: () => Promise.resolve(),
+                    subscribe: (_filters: any, h: any) => {
+                        handlers = h;
+                        return { close: () => {} };
+                    },
+                    // answer the request the way the service would
+                    publish: (request: any) => {
+                        const reply = finalizeEvent(
+                            {
+                                kind: CLINK_KIND,
+                                content: nip44.encrypt(
+                                    JSON.stringify(response),
+                                    nip44.getConversationKey(
+                                        serviceSk,
+                                        request.pubkey
+                                    )
+                                ),
+                                tags: [
+                                    ['e', request.id],
+                                    ['p', request.pubkey],
+                                    ['clink_version', CLINK_VERSION]
+                                ],
+                                created_at: Math.floor(Date.now() / 1000)
+                            },
+                            serviceSk
+                        );
+                        handlers.onevent(reply);
+                        return Promise.resolve('');
+                    },
+                    close: () => {}
+                };
+            }) as any);
+            const logSpy = jest
+                .spyOn(console, 'log')
+                .mockImplementation(() => {});
+
+            try {
+                await expect(
+                    requestInvoiceFromNoffer(
+                        {
+                            pubkey: servicePk,
+                            relay,
+                            offer: offerId,
+                            priceType: NofferPriceType.Spontaneous
+                        },
+                        { amountSats: 21 }
+                    )
+                ).resolves.toEqual(response);
+
+                expect(logSpy).toHaveBeenCalledWith(
+                    `[CLINK ${relay}] response accepted`
+                );
+                expect(JSON.stringify(logSpy.mock.calls)).not.toContain(
+                    response.bolt11
+                );
+            } finally {
+                logSpy.mockRestore();
+                jest.mocked(Relay).mockReset();
+            }
         });
     });
 

@@ -315,7 +315,6 @@ export default class SwapDetails extends React.Component<
             }
 
             console.log('Got WebSocket update');
-            console.log(msg);
 
             const data = msg.args[0];
             const { error, failureReason } = updateText(data);
@@ -747,7 +746,6 @@ export default class SwapDetails extends React.Component<
             }
 
             console.log('Got WebSocket update');
-            console.log(msg);
 
             const data = msg.args[0];
             const { error, failureReason } = updateText(data);

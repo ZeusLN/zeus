@@ -72,7 +72,7 @@ export default class LSPS7Order extends React.Component<
                     if (order) {
                         const parsedOrder = JSON.parse(order);
                         temporaryOrder = parsedOrder;
-                        console.log('Order found in storage->', temporaryOrder);
+                        console.log('Order found in storage');
 
                         this.setState({
                             loading: false,
@@ -101,10 +101,7 @@ export default class LSPS7Order extends React.Component<
                                     order: getExtensionOrderData,
                                     fetchOldOrder: false
                                 });
-                                console.log(
-                                    'Latest Order state fetched!',
-                                    this.state.order
-                                );
+                                console.log('Latest Order state fetched!');
                                 LSPStore.loadingLSPS7 = false;
                                 const result =
                                     getExtensionOrderData?.result ||

@@ -389,6 +389,25 @@ describe('SwapDetails submarine claim', () => {
     });
 });
 
+describe('SwapDetails swap updates', () => {
+    it.each([SwapType.Reverse, SwapType.Submarine])(
+        'does not log the host update of a %s swap',
+        async (type) => {
+            await renderView({ type });
+
+            await sendUpdate({
+                status: 'swap.created',
+                transaction: { id: 'update-txid-123', hex: 'update-hex-123' }
+            });
+
+            expect(console.log).toHaveBeenCalledWith('Got WebSocket update');
+            const logged = JSON.stringify(jest.mocked(console.log).mock.calls);
+            expect(logged).not.toContain('update-txid-123');
+            expect(logged).not.toContain('update-hex-123');
+        }
+    );
+});
+
 describe('SwapDetails reverse claim fee', () => {
     const claimedFee = () =>
         (ReverseClaimTransaction.build as jest.Mock).mock.calls[0][0].minerFee;

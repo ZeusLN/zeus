@@ -114,6 +114,28 @@ describe('UTXOsStore.importAccount', () => {
         expect(store.success).toBe(true);
     });
 
+    it('does not log the addresses it generates', async () => {
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        try {
+            const store = newStore();
+            await store.importAccount(dryRunData());
+            await store.importAccount({
+                name: 'SeedSigner',
+                extended_public_key: 'tpubDDfvzhdVV4u',
+                dry_run: false
+            });
+
+            expect(BackendUtils.getNewAddress).toHaveBeenCalledTimes(2);
+            expect(logSpy).toHaveBeenCalledWith('generated address 1');
+            expect(logSpy).toHaveBeenCalledWith('generated change address 1');
+            const logged = JSON.stringify(logSpy.mock.calls);
+            expect(logged).not.toContain('bcrt1p-recv');
+            expect(logged).not.toContain('bcrt1p-change');
+        } finally {
+            logSpy.mockRestore();
+        }
+    });
+
     it('strips birthday_height and skips the rescan on backends without the fork extensions', async () => {
         const store = newStore();
         await store.importAccount(dryRunData());

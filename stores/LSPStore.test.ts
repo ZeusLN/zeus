@@ -134,6 +134,44 @@ describe('LSPStore custom-message request timeouts', () => {
         return expect(promise).resolves.toBeUndefined();
     });
 
+    it('logs neither the send response nor the reply payload', async () => {
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({
+            note: 'send-response-123'
+        });
+        const store = makeStore();
+
+        try {
+            const promise = store.lsps1GetInfoCustomMessage();
+            await jest.advanceTimersByTimeAsync(0);
+            const id = store.getInfoId;
+            store.handleCustomMessages({
+                peer: Buffer.from('aa', 'hex').toString('base64'),
+                data: Buffer.from(
+                    JSON.stringify({
+                        jsonrpc: '2.0',
+                        id,
+                        result: { note: 'reply-payload-123' }
+                    })
+                ).toString('base64')
+            });
+            await promise;
+
+            expect(logSpy).toHaveBeenCalledWith(
+                'Response for custom message (lsps1.get_info) received'
+            );
+            expect(logSpy).toHaveBeenCalledWith('Received custom message', {
+                peer: 'aa',
+                id
+            });
+            const logged = JSON.stringify(logSpy.mock.calls);
+            expect(logged).not.toContain('send-response-123');
+            expect(logged).not.toContain('reply-payload-123');
+        } finally {
+            logSpy.mockRestore();
+        }
+    });
+
     it('background get_extendable_channels probe timeout only sets the lease error', async () => {
         const store = makeStore();
         store.loadingLSPS7 = true;
@@ -2962,5 +3000,38 @@ describe('LSPStore LSPS1 create_order terms', () => {
             });
             expect(store.error).toBe(false);
         });
+    });
+});
+
+describe('LSPStore.lsps1GetOrderREST', () => {
+    it('does not log the order id', async () => {
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        const store = makeStore();
+        jest.mocked(ReactNativeBlobUtil.fetch).mockReset();
+        jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({
+            data: JSON.stringify({ order_id: 'order-secret-123' })
+        } as any);
+
+        try {
+            await store.lsps1GetOrderREST(
+                'order-secret-123',
+                'https://lsp.example.com'
+            );
+
+            expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledWith(
+                'GET',
+                'https://lsp.example.com/api/v1/get_order?order_id=order-secret-123',
+                expect.anything()
+            );
+            expect(logSpy).toHaveBeenCalledWith(
+                'Fetching order from:',
+                'https://lsp.example.com'
+            );
+            expect(JSON.stringify(logSpy.mock.calls)).not.toContain(
+                'order-secret-123'
+            );
+        } finally {
+            logSpy.mockRestore();
+        }
     });
 });
