@@ -40,7 +40,11 @@ jest.mock('react-native-blob-util', () => ({
 }));
 
 jest.mock('react-native-share', () => ({ open: jest.fn() }));
-jest.mock('react-native-restart', () => ({ Restart: jest.fn() }));
+jest.mock('./RestartUtils', () => ({
+    restartApp: jest.fn(),
+    stopNodeAndRestart: jest.fn(),
+    restartNeeded: jest.fn()
+}));
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
@@ -89,12 +93,17 @@ import {
     validateChannelBackupFile,
     handleExportChannels,
     importChannelDb,
+    exportChannelDb,
     uploadChannelBackupToOlympus,
     exportChannelDb,
     restoreChannelBackupFromOlympus,
     unlockWalletFromMigration,
     purgeChannelDbStagingFiles
 } from './ChannelMigrationUtils';
+import { restartApp, stopNodeAndRestart } from './RestartUtils';
+import { stopLnd } from './LndMobileUtils';
+import Storage from '../storage';
+import Share from 'react-native-share';
 import { sourceMethods } from '../backends/lncTestUtils';
 
 // What the graph directory holds after a backup has been unzipped into it
@@ -113,6 +122,11 @@ const RESTORED_GRAPH_DIR = [
 const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
 const mockSignNodePubkey = signMessageNodePubkey as jest.Mock;
 const mockAlert = Alert.alert as jest.Mock;
+const mockRestartApp = restartApp as jest.Mock;
+const mockStopNodeAndRestart = stopNodeAndRestart as jest.Mock;
+const mockStopLnd = stopLnd as jest.Mock;
+const mockSetItem = Storage.setItem as jest.Mock;
+const mockShareOpen = Share.open as jest.Mock;
 
 const jsonResponse = (body: any) => ({
     info: () => ({ status: 200 }),
@@ -1067,6 +1081,87 @@ describe('ChannelMigrationUtils', () => {
         });
     });
 
+    describe('exportChannelDb', () => {
+        beforeEach(() => {
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+        });
+
+        afterEach(() => jest.restoreAllMocks());
+
+        it('on Android success copies the zip, sets migration, and restartApp', async () => {
+            await exportChannelDb('lnd', false);
+
+            expect(mockCopyFile).toHaveBeenCalledWith(
+                expect.stringContaining('/cache/'),
+                expect.stringContaining('/downloads/')
+            );
+            expect(mockSetItem).toHaveBeenCalledWith(
+                CHANNEL_MIGRATION_ACTIVE,
+                JSON.stringify({ migrationStatus: true, lndDir: 'lnd' })
+            );
+            const successCall = mockAlert.mock.calls.find(
+                (c) => c[0] === 'views.Tools.migration.export.success'
+            );
+            successCall![2][0].onPress();
+            expect(mockRestartApp).toHaveBeenCalledTimes(1);
+        });
+
+        it('shows an error without restart when the graph directory is missing', async () => {
+            mockExists.mockResolvedValue(false);
+
+            await exportChannelDb('lnd', false);
+
+            expect(mockStopLnd).not.toHaveBeenCalled();
+            expect(mockRestartApp).not.toHaveBeenCalled();
+            expect(mockAlert).toHaveBeenCalledWith(
+                'general.error',
+                'views.Tools.migration.databaseNotFound'
+            );
+            expect(mockAlert.mock.calls[0][2]).toBeUndefined();
+        });
+
+        it('shows failedToStopLnd without restart when stopLnd fails', async () => {
+            mockStopLnd.mockRejectedValueOnce(new Error('stop failed'));
+
+            await exportChannelDb('lnd', false);
+
+            expect(mockRestartApp).not.toHaveBeenCalled();
+            expect(mockAlert).toHaveBeenCalledWith(
+                'general.error',
+                'views.Tools.migration.export.failedToStopLnd'
+            );
+        });
+
+        it('offers restart on zip failure without setting migration', async () => {
+            mockZipFolder.mockRejectedValueOnce(new Error('zip fail'));
+
+            await exportChannelDb('lnd', false);
+
+            const errorCall = mockAlert.mock.calls.find(
+                (c) => c[0] === 'general.error' && Array.isArray(c[2])
+            );
+            errorCall![2][0].onPress();
+            expect(mockRestartApp).toHaveBeenCalledTimes(1);
+            expect(mockSetItem).not.toHaveBeenCalled();
+        });
+
+        it('offers restart when iOS share is dismissed', async () => {
+            const { Platform } = require('react-native');
+            (Platform as any).OS = 'ios';
+            mockShareOpen.mockResolvedValueOnce({ dismissedAction: true });
+
+            await exportChannelDb('lnd', false);
+
+            const cancelled = mockAlert.mock.calls.find(
+                (c) => c[0] === 'views.Tools.migration.export.cancelled'
+            );
+            cancelled![2][0].onPress();
+            expect(mockRestartApp).toHaveBeenCalledTimes(1);
+            expect(mockSetItem).not.toHaveBeenCalled();
+            (Platform as any).OS = 'android';
+        });
+    });
+
     describe('Olympus auth challenge', () => {
         beforeEach(() => {
             jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -1129,6 +1224,93 @@ describe('ChannelMigrationUtils', () => {
                     ['b2'.repeat(64)]
                 ]);
                 expect(fetchedPaths()).toContain('/api/channels-backup');
+            });
+        });
+
+        describe('uploadChannelBackupToOlympus restarts', () => {
+            it('calls restartApp after a successful upload', async () => {
+                serveChallenges([CHALLENGE, 'b2'.repeat(64)]);
+
+                await uploadChannelBackupToOlympus(
+                    'lnd',
+                    false,
+                    '03cd',
+                    'seed'
+                );
+
+                const successCall = mockAlert.mock.calls.find(
+                    (c) => c[0] === 'views.Tools.migration.export.success'
+                );
+                expect(successCall).toBeDefined();
+                const restartButton = successCall![2][0];
+                restartButton.onPress();
+                expect(mockRestartApp).toHaveBeenCalledTimes(1);
+            });
+
+            it('calls restartApp when the server rejects the upload', async () => {
+                const queue = [CHALLENGE, 'b2'.repeat(64)];
+                mockFetch.mockImplementation(
+                    async (_m: string, url: string) => {
+                        const path = url.replace(BACKUPS, '');
+                        if (path === '/api/channels-backup') {
+                            return {
+                                info: () => ({ status: 500 }),
+                                json: () => ({ success: false, error: 'nope' })
+                            };
+                        }
+                        const body =
+                            path === '/api/auth'
+                                ? { success: true, verification: queue.shift() }
+                                : { success: true };
+                        return {
+                            info: () => ({ status: 200 }),
+                            json: () => body,
+                            text: async () => 'ZW5j'
+                        };
+                    }
+                );
+
+                await uploadChannelBackupToOlympus(
+                    'lnd',
+                    false,
+                    '03cd',
+                    'seed'
+                );
+
+                const errorCall = mockAlert.mock.calls.find(
+                    (c) =>
+                        c[0] === 'general.error' &&
+                        Array.isArray(c[2]) &&
+                        c[2].length > 0
+                );
+                expect(errorCall).toBeDefined();
+                errorCall![2][0].onPress();
+                expect(mockRestartApp).toHaveBeenCalledTimes(1);
+            });
+
+            it('calls stopNodeAndRestart when proceedToUpload fails before LND stops', async () => {
+                serveChallenges([CHALLENGE, 'b2'.repeat(64)]);
+                signMessageMock
+                    .mockResolvedValueOnce({ signature: 'sig' })
+                    .mockRejectedValueOnce(new Error('sign failed'));
+
+                await uploadChannelBackupToOlympus(
+                    'lnd',
+                    false,
+                    '03cd',
+                    'seed'
+                );
+
+                const uploadFail = mockAlert.mock.calls.find(
+                    (c) =>
+                        c[1] ===
+                            'views.Tools.migration.export.failedToUpload' &&
+                        Array.isArray(c[2])
+                );
+                expect(uploadFail).toBeDefined();
+                uploadFail![2][0].onPress();
+                expect(mockStopNodeAndRestart).toHaveBeenCalledTimes(1);
+                expect(mockRestartApp).not.toHaveBeenCalled();
             });
         });
 
