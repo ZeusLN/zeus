@@ -71,6 +71,7 @@ import {
 } from '../stores/NostrWalletConnectStore';
 import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
+import { deleteBiometryKey } from './BiometricUtils';
 import { purgeChannelDbStagingFiles } from './ChannelMigrationUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import {
@@ -1137,6 +1138,12 @@ export async function clearAllData(): Promise<void> {
     // Olympus flows staged in app cache, outside the node directories
     // deleted in 2c.
     await purgeChannelDbStagingFiles();
+
+    // 2g. Delete the biometric unlock key. It lives in the iOS keychain or
+    // the Android Keystore, which the storage clears below do not reach, and
+    // on iOS it survives an uninstall. Left behind, it shows that biometrics
+    // were set up, which a duress wipe must not reveal.
+    await deleteBiometryKey();
 
     // 3. Clear all known storage keys. The legacy settings blob goes first:
     // getSettings() loads it whenever the keychain blob is missing, and it

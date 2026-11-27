@@ -34,6 +34,7 @@ interface SetPassphraseState {
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
     passphraseEmptyError: boolean;
+    deleteFailedError: boolean;
     isBiometryEnabled: boolean;
     saveError: boolean;
 }
@@ -51,6 +52,7 @@ export default class SetPassphrase extends React.Component<
         passphraseMismatchError: false,
         passphraseInvalidError: false,
         passphraseEmptyError: false,
+        deleteFailedError: false,
         isBiometryEnabled: false,
         saveError: false
     };
@@ -149,20 +151,29 @@ export default class SetPassphrase extends React.Component<
         // deletes passphrase and duress passphrase because duress
         // passphrase should not exist if passphrase does not exist
         const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { disableBiometry, updateSettings } = SettingsStore;
 
-        await updateSettings({
-            duressPassphraseVerifier: undefined,
-            passphraseVerifier: undefined,
-            // and any plaintext the verifier migration has not hashed yet
-            duressPassphrase: undefined,
-            passphrase: undefined,
-            // and the other method's records from before a downgrade, which
-            // would otherwise become the lock
-            pinVerifier: undefined,
-            duressPinVerifier: undefined,
-            isBiometryEnabled: false
-        });
+        this.setState({ deleteFailedError: false });
+        // A failed settings write leaves the password in place, so stay
+        // here and tell the user to try again
+        try {
+            await disableBiometry();
+            await updateSettings({
+                duressPassphraseVerifier: undefined,
+                passphraseVerifier: undefined,
+                // and any plaintext the verifier migration has not hashed yet
+                duressPassphrase: undefined,
+                passphrase: undefined,
+                // and the other method's records from before a downgrade, which
+                // would otherwise become the lock
+                pinVerifier: undefined,
+                duressPinVerifier: undefined
+            });
+        } catch (error) {
+            console.error('Failed to delete password', error);
+            this.setState({ deleteFailedError: true });
+            return;
+        }
         navigation.popTo('Security');
     };
 
@@ -175,6 +186,7 @@ export default class SetPassphrase extends React.Component<
             passphraseMismatchError,
             passphraseInvalidError,
             passphraseEmptyError,
+            deleteFailedError,
             saveError
         } = this.state;
 
@@ -227,6 +239,13 @@ export default class SetPassphrase extends React.Component<
                         <ErrorMessage
                             message={localeString(
                                 'views.Settings.Security.saveFailed'
+                            )}
+                        />
+                    )}
+                    {deleteFailedError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.Security.deleteFailed'
                             )}
                         />
                     )}
