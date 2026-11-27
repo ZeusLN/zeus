@@ -45,6 +45,7 @@ jest.mock('../cashu-cdk', () => ({
         addExternalMintQuote: jest.fn(),
         mintExternal: jest.fn(),
         restore: jest.fn(),
+        checkProofsState: jest.fn(),
         send: jest.fn()
     }
 }));
@@ -144,6 +145,7 @@ beforeEach(() => {
     cdk.addExternalMintQuote.mockResolvedValue(undefined);
     cdk.mintExternal.mockResolvedValue(undefined);
     cdk.restore.mockResolvedValue(0);
+    cdk.checkProofsState.mockResolvedValue([{ state: 'Unspent' }]);
     lnurlFetch.mockResolvedValue({ json: () => ({ status: 'OK' }) });
     storage.setItem.mockResolvedValue(true);
     storage.getItem.mockResolvedValue(null);
@@ -791,6 +793,193 @@ describe('CashuStore.checkInvoicePaid', () => {
             expect(result).toMatchObject({ isPaid: true, amtSat: 2100 });
         });
 
+        // CDK's restore releases proofs this wallet has reserved (#5567)
+        describe('issued external quote on a mint with reserved proofs', () => {
+            const issued = () => {
+                cdk.checkExternalMintQuote.mockResolvedValue({
+                    state: 'ISSUED',
+                    amount: 2100
+                });
+                cdk.restore.mockResolvedValue(1500);
+            };
+            const sent = (mint: string, spent = false) =>
+                ({
+                    mint,
+                    spent,
+                    encodedToken: `token-${mint}`,
+                    proofs: [{ amount: 300, id: 'k', secret: 's', C: 'c' }]
+                } as any);
+            const storeOnA = () => {
+                const store = newStore();
+                // runs after a quote is reported paid
+                jest.spyOn(store, 'checkAndSweepMints').mockResolvedValue(
+                    undefined
+                );
+                return store;
+            };
+
+            it('does not restore while a sent token is unclaimed, and leaves the quote for the next check', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(A)];
+                issued();
+
+                const result = await store.checkInvoicePaid('quote-x', A);
+
+                // the token was checked with the mint first
+                expect(cdk.checkProofsState).toHaveBeenCalledWith(A, [
+                    { amount: 300, keyset_id: 'k', secret: 's', c: 'c' }
+                ]);
+                expect(cdk.restore).not.toHaveBeenCalled();
+                expect(result).toMatchObject({
+                    isPaid: false,
+                    restoreDeferred: true
+                });
+                expect(store.sentTokens?.[0].spent).toBe(false);
+            });
+
+            it('restores when the mint reports the sent token claimed since the last check', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(A)];
+                cdk.checkProofsState.mockResolvedValue([{ state: 'Spent' }]);
+                issued();
+
+                const result = await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).toHaveBeenCalledWith(A);
+                expect(result).toMatchObject({ isPaid: true, amtSat: 1500 });
+                expect(store.sentTokens?.[0].spent).toBe(true);
+                expect(storage.setItem).toHaveBeenCalledWith(
+                    'node1-cashu-sent-tokens',
+                    store.sentTokens
+                );
+                expect(mockActivityStore.getSortedActivity).toHaveBeenCalled();
+            });
+
+            it('does not restore while one of two sent tokens on the mint is unclaimed', async () => {
+                const store = storeOnA();
+                store.sentTokens = [
+                    sent(A),
+                    { ...sent(A), encodedToken: 'token-2' }
+                ];
+                cdk.checkProofsState
+                    .mockResolvedValueOnce([{ state: 'Spent' }])
+                    .mockResolvedValueOnce([{ state: 'Unspent' }]);
+                issued();
+
+                const result = await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.checkProofsState).toHaveBeenCalledTimes(2);
+                expect(cdk.restore).not.toHaveBeenCalled();
+                expect(result).toMatchObject({ restoreDeferred: true });
+            });
+
+            it('only asks the mint about unclaimed tokens of this mint', async () => {
+                const store = storeOnA();
+                store.sentTokens = [
+                    sent(A, true),
+                    sent(B),
+                    { spent: false, encodedToken: 'no-mint' } as any,
+                    sent(A)
+                ];
+                issued();
+
+                await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.checkProofsState).toHaveBeenCalledTimes(1);
+                expect(cdk.checkProofsState).toHaveBeenCalledWith(
+                    A,
+                    expect.any(Array)
+                );
+                expect(cdk.restore).not.toHaveBeenCalled();
+            });
+
+            it('does not restore when the token cannot be checked, and reports no error', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(A)];
+                cdk.checkProofsState.mockRejectedValue(new Error('timeout'));
+                issued();
+
+                const result = await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).not.toHaveBeenCalled();
+                expect(result).toMatchObject({ restoreDeferred: true });
+                expect(store.error).toBe(false);
+            });
+
+            it('does not ask the mint while offline', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(A)];
+                mockConnectivity.isOffline = true;
+                issued();
+
+                const result = await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.checkProofsState).not.toHaveBeenCalled();
+                expect(cdk.restore).not.toHaveBeenCalled();
+                expect(result).toMatchObject({ restoreDeferred: true });
+            });
+
+            it('does not restore while a melt on the mint is unsettled', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(A)];
+                store.pendingMelts = [{ mintUrl: A, quote: 'melt-1' } as any];
+                cdk.checkProofsState.mockResolvedValue([{ state: 'Spent' }]);
+                issued();
+
+                const result = await store.checkInvoicePaid('quote-x', A);
+
+                // a settled token does not help while the melt holds proofs
+                expect(cdk.checkProofsState).not.toHaveBeenCalled();
+                expect(cdk.restore).not.toHaveBeenCalled();
+                expect(result).toMatchObject({
+                    isPaid: false,
+                    restoreDeferred: true
+                });
+            });
+
+            it('compares mint URLs without their trailing slash', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(`${A}/`)];
+                issued();
+
+                await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).not.toHaveBeenCalled();
+            });
+
+            it('restores once the sent token has been claimed', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(A, true)];
+                issued();
+
+                const result = await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).toHaveBeenCalledWith(A);
+                expect(result).toMatchObject({ isPaid: true, amtSat: 1500 });
+            });
+
+            it('restores when the reserved proofs belong to another mint', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(B), { spent: false } as any];
+                store.pendingMelts = [{ mintUrl: B, quote: 'melt-1' } as any];
+                issued();
+
+                await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).toHaveBeenCalledWith(A);
+            });
+
+            it('restores before the sent tokens have been loaded', async () => {
+                const store = storeOnA();
+                store.sentTokens = undefined;
+                issued();
+
+                await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).toHaveBeenCalledWith(A);
+            });
+        });
+
         it('leaves an unpaid external quote alone', async () => {
             const store = newStore();
             cdk.checkExternalMintQuote.mockResolvedValue({ state: 'UNPAID' });
@@ -823,6 +1012,105 @@ describe('CashuStore.checkInvoicePaid', () => {
             'database locked'
         );
         expect(cdk.checkExternalMintQuote).not.toHaveBeenCalled();
+    });
+});
+
+// addMint(url, true) restores a mint to check for existing balances
+describe('CashuStore.restoreCDK', () => {
+    beforeEach(() => {
+        cdk.restore.mockResolvedValue(700);
+        cdk.getBalances.mockResolvedValue({});
+        cdk.getTotalBalance.mockResolvedValue(0);
+    });
+
+    it('restores a mint with no reserved proofs', async () => {
+        const store = newStore();
+
+        await expect(store.restoreCDK(`${A}/`)).resolves.toBe(700);
+
+        expect(cdk.restore).toHaveBeenCalledWith(A);
+    });
+
+    const unclaimed = () =>
+        ({
+            mint: A,
+            spent: false,
+            encodedToken: 'token',
+            proofs: [{ amount: 300, id: 'k', secret: 's', C: 'c' }]
+        } as any);
+
+    it('skips the restore while a sent token of the mint is unclaimed (#5567)', async () => {
+        const store = newStore();
+        store.sentTokens = [unclaimed()];
+
+        // null, not 0: a skipped restore is not a restore that found nothing
+        await expect(store.restoreCDK(A)).resolves.toBeNull();
+
+        expect(cdk.checkProofsState).toHaveBeenCalledWith(A, [
+            expect.objectContaining({ secret: 's' })
+        ]);
+        expect(cdk.restore).not.toHaveBeenCalled();
+        // balances are still read
+        expect(cdk.getBalances).toHaveBeenCalled();
+    });
+
+    it('restores when the mint reports the sent token claimed', async () => {
+        const store = newStore();
+        store.sentTokens = [unclaimed()];
+        cdk.checkProofsState.mockResolvedValue([{ state: 'Spent' }]);
+
+        await expect(store.restoreCDK(A)).resolves.toBe(700);
+
+        expect(cdk.restore).toHaveBeenCalledWith(A);
+        expect(store.sentTokens?.[0].spent).toBe(true);
+    });
+
+    it('skips the restore while a melt on the mint is unsettled (#5567)', async () => {
+        const store = newStore();
+        store.pendingMelts = [{ mintUrl: A, quote: 'melt-1' } as any];
+
+        await expect(store.restoreCDK(A)).resolves.toBeNull();
+
+        expect(cdk.restore).not.toHaveBeenCalled();
+    });
+});
+
+// addMint's "check for existing balances"
+describe('CashuStore.restoreMintProofs', () => {
+    beforeEach(() => {
+        cdk.restore.mockResolvedValue(700);
+        cdk.getBalances.mockResolvedValue({});
+        cdk.getTotalBalance.mockResolvedValue(0);
+    });
+
+    it('tells the user when the restore had to wait (#5567)', async () => {
+        const store = newStore();
+        store.pendingMelts = [{ mintUrl: A, quote: 'melt-1' } as any];
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+        await expect(store.restoreMintProofs(A)).resolves.toBe(true);
+
+        expect(alert).toHaveBeenCalledTimes(1);
+        expect(alert).toHaveBeenCalledWith(
+            'views.Cashu.Mint.restoreDeferred.title',
+            'views.Cashu.Mint.restoreDeferred.message'
+        );
+        expect(localeString).toHaveBeenCalledWith(
+            'views.Cashu.Mint.restoreDeferred.message',
+            { mint: A }
+        );
+        expect(store.restorationProgress).toBeUndefined();
+    });
+
+    it('says nothing when the restore ran, also when it found nothing', async () => {
+        const store = newStore();
+        cdk.restore.mockResolvedValue(0);
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+        await expect(store.restoreMintProofs(A)).resolves.toBe(true);
+
+        expect(cdk.restore).toHaveBeenCalledWith(A);
+        expect(alert).not.toHaveBeenCalled();
     });
 });
 
