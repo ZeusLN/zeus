@@ -90,7 +90,12 @@ jest.mock('../storage', () => ({
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { autorun, runInAction } from 'mobx';
-import { DeviceEventEmitter, NativeModules, Platform } from 'react-native';
+import {
+    AppState,
+    DeviceEventEmitter,
+    NativeModules,
+    Platform
+} from 'react-native';
 import {
     finalizeEvent,
     generateSecretKey,
@@ -8864,6 +8869,11 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
                     ({ balanceStore }) => balanceStore.getLightningBalance,
                     undefined,
                     async (store) => {
+                        // loadConnections writes a scheduled save before it
+                        // reads, and that save reads the stored records
+                        // too, so write it first: the rejected read below
+                        // is then the load's own
+                        await (store as any).flushScheduledSave();
                         storedItems.set(
                             NWC_CONNECTIONS_KEY,
                             JSON.stringify(
@@ -11696,4 +11706,532 @@ describe('NostrWalletConnectStore request event checks with the real SDK', () =>
             expect(handler.getInfo).toHaveBeenCalledTimes(1);
         }
     );
+});
+
+describe('NostrWalletConnectStore scheduled save', () => {
+    // one connection that has been used before, as it sits in storage
+    async function buildStore() {
+        const harness = createStore();
+        addConnection(harness.store, {
+            permissions: ['get_info', 'pay_invoice'],
+            lastUsed: new Date('2024-01-01T00:00:00Z'),
+            maxAmountSats: 10_000
+        });
+        await harness.store.saveConnections();
+        return harness;
+    }
+
+    function debit(store: NostrWalletConnectStore, amountSats: number) {
+        const connection = store.connections[0];
+        connection.trackSpending(amountSats);
+        (store as any).findAndUpdateConnection(connection);
+    }
+
+    const storedConnection = () =>
+        JSON.parse(storedItems.get(NWC_CONNECTIONS_KEY)!)[0];
+
+    beforeEach(() => {
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockResolvedValue({
+            paymentRequest: 'lnbc1scheduledsave',
+            paymentHash: hex64('d'),
+            descriptionHash: '',
+            description: '',
+            amount: 10_000,
+            expiryTime: 0,
+            createdAt: 0,
+            isExpired: false,
+            network: 'bitcoin'
+        });
+        jest.spyOn(
+            NostrConnectUtils,
+            'notifyOutgoingNwcPayment'
+        ).mockImplementation(() => undefined);
+    });
+
+    it('writes a scheduled change 1 s after it was made', async () => {
+        const { store } = await buildStore();
+        debit(store, 10_000);
+
+        await jest.advanceTimersByTimeAsync(999);
+        expect(storedConnection().totalSpendSats).toBe(0);
+        await jest.advanceTimersByTimeAsync(1);
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+    });
+
+    it('stores a debit while requests keep arriving less than 1 s apart', async () => {
+        const { store } = await buildStore();
+        debit(store, 10_000);
+
+        for (let i = 0; i < 10; i++) {
+            await jest.advanceTimersByTimeAsync(300);
+            await (store as any).markConnectionUsed('conn-1');
+        }
+
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+    });
+
+    it('writes a settled payment to storage before finalizePayment returns', async () => {
+        const { store } = await buildStore();
+
+        await (store as any).finalizePayment({
+            rawInvoice: 'lnbc1scheduledsave',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            decoded: null,
+            connection: store.connections[0],
+            amountSats: 10_000
+        });
+
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+        expect(storedConnection().activity[0].status).toBe('success');
+    });
+
+    it('writes a pending hold to storage before recordPendingPayment returns', async () => {
+        const { store } = await buildStore();
+
+        await (store as any).recordPendingPayment({
+            rawInvoice: 'lnbc1scheduledsave',
+            connection: store.connections[0],
+            amountSats: 10_000,
+            payment_source: 'lightning'
+        });
+
+        expect(storedConnection().activity[0].status).toBe('pending');
+        expect(storedConnection().activity[0].satAmount).toBe(10_000);
+    });
+
+    it('does not lose a debit to a reload while the save is scheduled', async () => {
+        const { store } = await buildStore();
+        debit(store, 10_000);
+
+        await store.loadConnections();
+
+        expect(store.connections[0].totalSpendSats).toBe(10_000);
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+    });
+
+    it('saves on background without the persistent service', async () => {
+        const addEventListener = jest
+            .spyOn(AppState, 'addEventListener')
+            .mockReturnValue({ remove: jest.fn() } as any);
+        const { store } = await buildStore();
+        store.persistentNWCServiceEnabled = false;
+        (store as any).setupAppStateMonitoring();
+        debit(store, 10_000);
+
+        await (addEventListener.mock.calls[0][1] as any)('background');
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+    });
+
+    // The timer does not fire on Android in the background, and the
+    // background flush finds nothing scheduled while the lookup is pending
+    it('stores a debit found by the reconcile on active when the app goes to background during it', async () => {
+        const addEventListener = jest
+            .spyOn(AppState, 'addEventListener')
+            .mockReturnValue({ remove: jest.fn() } as any);
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockReturnValue(true);
+        let settleLookup: (payment: any) => void = () => undefined;
+        (BackendUtils.lookupPayment as jest.Mock).mockReturnValue(
+            new Promise((resolve) => {
+                settleLookup = resolve;
+            })
+        );
+        const { store } = createStore();
+        addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 10_000,
+            activity: [
+                {
+                    id: 'lnbc1scheduledsave',
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 10_000,
+                    paymentHash: hex64('d'),
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+        await store.saveConnections();
+        store.persistentNWCServiceEnabled = false;
+        (store as any).setupAppStateMonitoring();
+        const onAppState = addEventListener.mock.calls[0][1] as any;
+
+        await onAppState('active');
+        await onAppState('background');
+        settleLookup({
+            payment_hash: hex64('d'),
+            status: 'SUCCEEDED',
+            value_sat: 10_000,
+            fee_sat: '0',
+            payment_preimage: hex64('9')
+        });
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(store.connections[0].totalSpendSats).toBe(10_000);
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+        expect(storedConnection().activity[0].status).toBe('success');
+    });
+
+    // A second wallet's connection, stored next to conn-1. A write that
+    // saved the first wallet's connections as the second wallet's would
+    // drop it from storage.
+    function storeSecondWalletConnection() {
+        storedItems.set(
+            NWC_CONNECTIONS_KEY,
+            JSON.stringify([
+                ...persistedConnections(),
+                connectionData({
+                    id: 'conn-b',
+                    pubkey: hex64('b'),
+                    nodePubkey: 'node-b'
+                })
+            ])
+        );
+    }
+
+    // one entry per stored record, so a duplicate id shows up
+    const storedSpend = () =>
+        persistedConnections().map((c) => [c.id, c.totalSpendSats]);
+
+    // reset(true) leaves the first wallet's connections in memory until the
+    // next wallet's loadConnections
+    describe('across a wallet switch', () => {
+        it("keeps the next wallet's connections when its load writes a change made after the reset", async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            await store.reset(true);
+            debit(store, 10_000);
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+
+            await store.loadConnections();
+
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
+        });
+
+        it("keeps the next wallet's connections when a payment settles after the switch", async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            const connection = store.connections[0];
+            await store.reset(true);
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+
+            await (store as any).finalizePayment({
+                rawInvoice: 'lnbc1scheduledsave',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: null,
+                connection,
+                amountSats: 10_000
+            });
+
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
+            await store.loadConnections();
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
+        });
+
+        it("keeps the next wallet's connections when the timer fires after the switch", async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            await store.reset(true);
+            debit(store, 10_000);
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+
+            await jest.advanceTimersByTimeAsync(1000);
+
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
+        });
+    });
+
+    // A load that cannot read storage empties the connections in memory.
+    // A save from that state must not store the empty list as the current
+    // wallet's connections.
+    describe('after a load that could not read storage', () => {
+        const failLoad = async (store: NostrWalletConnectStore) => {
+            (Storage.getItem as jest.Mock).mockRejectedValueOnce(
+                new Error('storage read failed')
+            );
+            await store.loadConnections();
+            expect(store.connections).toHaveLength(0);
+        };
+
+        beforeEach(() => silence('error'));
+
+        it('keeps the stored connections when a save follows', async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+
+            await store.saveConnections();
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it('keeps the stored connections when a scheduled save is flushed on background', async () => {
+            const addEventListener = jest
+                .spyOn(AppState, 'addEventListener')
+                .mockReturnValue({ remove: jest.fn() } as any);
+            const { store } = await buildStore();
+            store.persistentNWCServiceEnabled = false;
+            (store as any).setupAppStateMonitoring();
+            await failLoad(store);
+            (store as any).scheduleSave();
+
+            await (addEventListener.mock.calls[0][1] as any)('background');
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it('keeps the stored connections when the timer fires', async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+            (store as any).scheduleSave();
+
+            await jest.advanceTimersByTimeAsync(1000);
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it('keeps the stored connections when the stored JSON does not parse', async () => {
+            const { store } = await buildStore();
+            const stored = storedItems.get(NWC_CONNECTIONS_KEY)!;
+            storedItems.set(NWC_CONNECTIONS_KEY, '{');
+            await store.loadConnections();
+            storedItems.set(NWC_CONNECTIONS_KEY, stored);
+
+            await store.saveConnections();
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        // a connection created after the failed load, as it is in storage
+        const storeNewConnection = async (store: NostrWalletConnectStore) => {
+            addConnection(store, { id: 'conn-new', pubkey: hex64('c') });
+            await store.saveConnections();
+            expect(persistedConnections().map((c) => c.id)).toEqual([
+                'conn-1',
+                'conn-new'
+            ]);
+        };
+
+        it('removes a connection deleted after the failed load from storage', async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+            await storeNewConnection(store);
+
+            await store.deleteConnection('conn-new');
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it("removes a deleted connection on the next save when the delete's write fails", async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+            await storeNewConnection(store);
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+
+            await expect(store.deleteConnection('conn-new')).rejects.toThrow(
+                'storage write failed'
+            );
+            expect(persistedConnections().map((c) => c.id)).toEqual([
+                'conn-1',
+                'conn-new'
+            ]);
+            await store.saveConnections();
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it('keeps a connection created again with the id of a deleted one', async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+            await storeNewConnection(store);
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+            await expect(store.deleteConnection('conn-new')).rejects.toThrow(
+                'storage write failed'
+            );
+
+            // regenerate deletes the connection and creates it with its id
+            addConnection(store, { id: 'conn-new', pubkey: hex64('d') });
+            await store.saveConnections();
+
+            expect(persistedConnections().map((c) => [c.id, c.pubkey])).toEqual(
+                [
+                    ['conn-1', hex64('a')],
+                    ['conn-new', hex64('d')]
+                ]
+            );
+        });
+
+        it('removes the last connection from storage once a load has succeeded', async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+            await store.loadConnections();
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-1']);
+
+            runInAction(() => {
+                store.connections = [];
+            });
+            await store.saveConnections();
+
+            expect(persistedConnections()).toHaveLength(0);
+        });
+    });
+
+    describe('when a write fails', () => {
+        const finalize = (store: NostrWalletConnectStore) =>
+            (store as any).finalizePayment({
+                rawInvoice: 'lnbc1scheduledsave',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: null,
+                connection: store.connections[0],
+                amountSats: 10_000
+            });
+
+        beforeEach(() => silence('error'));
+
+        it('writes a settled payment again on the timer', async () => {
+            const { store } = await buildStore();
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+
+            await finalize(store);
+            expect(storedConnection().totalSpendSats).toBe(0);
+
+            await jest.advanceTimersByTimeAsync(1000);
+            expect(storedConnection().totalSpendSats).toBe(10_000);
+        });
+
+        it('writes a pending hold again on the timer', async () => {
+            const { store } = await buildStore();
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+
+            await (store as any).recordPendingPayment({
+                rawInvoice: 'lnbc1scheduledsave',
+                connection: store.connections[0],
+                amountSats: 10_000,
+                payment_source: 'lightning'
+            });
+            expect(storedConnection().activity).toEqual([]);
+
+            await jest.advanceTimersByTimeAsync(1000);
+            expect(storedConnection().activity[0].status).toBe('pending');
+        });
+
+        it('writes a settled payment again before a reload', async () => {
+            const { store } = await buildStore();
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+            await finalize(store);
+
+            await store.loadConnections();
+
+            expect(store.connections[0].totalSpendSats).toBe(10_000);
+            expect(storedConnection().totalSpendSats).toBe(10_000);
+        });
+
+        it('writes a debit again when the timer write fails', async () => {
+            const { store } = await buildStore();
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+            debit(store, 10_000);
+
+            await jest.advanceTimersByTimeAsync(1000);
+            expect(storedConnection().totalSpendSats).toBe(0);
+
+            await jest.advanceTimersByTimeAsync(1000);
+            expect(storedConnection().totalSpendSats).toBe(10_000);
+        });
+
+        it('writes a change made while a retry is pending again when the retry fails', async () => {
+            const { store } = await buildStore();
+            failWrites(NWC_CONNECTIONS_KEY);
+            debit(store, 1_000);
+            await jest.advanceTimersByTimeAsync(1000);
+            debit(store, 2_000);
+            await jest.advanceTimersByTimeAsync(1000);
+
+            writeFailures.delete(NWC_CONNECTIONS_KEY);
+            await jest.advanceTimersByTimeAsync(1000);
+
+            expect(storedConnection().totalSpendSats).toBe(3_000);
+        });
+
+        it('writes again once, not more, when the retry fails too', async () => {
+            const { store } = await buildStore();
+            const writesBefore = connectionWrites();
+            failWrites(NWC_CONNECTIONS_KEY);
+
+            await finalize(store);
+            await jest.advanceTimersByTimeAsync(5_000);
+
+            expect(connectionWrites() - writesBefore).toBe(2);
+        });
+
+        it("keeps the next wallet's connections when a failed flush in a reset is written again after the switch", async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            debit(store, 10_000);
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+
+            await store.reset(true);
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+            await jest.advanceTimersByTimeAsync(1000);
+            await store.loadConnections();
+
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
+        });
+
+        it("keeps the next wallet's connections when a reset starts during a flush that then fails", async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            const write = holdNextWrite(NWC_CONNECTIONS_KEY);
+            const paying = finalize(store);
+            await write.entered;
+
+            await settle(store.reset(true));
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+            write.fail(new Error('storage write failed'));
+            await paying;
+            await jest.advanceTimersByTimeAsync(1000);
+
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
+        });
+
+        it("keeps the next wallet's connections when a reset starts during a timer write that then fails", async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            const write = holdNextWrite(NWC_CONNECTIONS_KEY);
+            debit(store, 10_000);
+            await jest.advanceTimersByTimeAsync(1000);
+            await write.entered;
+
+            await settle(store.reset(true));
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+            write.fail(new Error('storage write failed'));
+            await jest.advanceTimersByTimeAsync(1000);
+
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
+        });
+    });
 });

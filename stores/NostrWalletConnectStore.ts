@@ -99,7 +99,9 @@ const PAYMENT_FEE_LIMIT_SATS = 1000;
  * already given up on the request.
  */
 const MAX_PAYMENT_QUEUE_WAIT_MS = 30_000;
-const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
+// One save reads and writes the whole connections record: about 70 ms for
+// 3 connections with 100 payments each on an Android 15 emulator
+const SAVE_CONNECTIONS_DEBOUNCE_MS = 1000;
 /** Min time a pay_invoice must stay pending before getActivities polls the node */
 const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
 /** Per-connection debounce for pending pay_invoice status refresh in getActivities */
@@ -267,6 +269,14 @@ export default class NostrWalletConnectStore {
     // Bumped by every teardown, so an initializeService() that a reset ran
     // during (node switch, Android Stop Service) does not finish over it
     private resetGeneration = 0;
+    private _scheduledSaveRetries = true;
+    // The last loadConnections could not read storage, so memory is not the
+    // current wallet's full set of connections
+    private connectionsLoadFailed = false;
+    // Connections removed by deleteConnection whose stored record no
+    // write has removed yet. A save that keeps stored records it has no
+    // connection in memory for (see saveConnections) removes these.
+    private deletedConnectionIds = new Set<string>();
     private initializeInFlight: Promise<void> | null = null;
     private lastPendingPaymentStatusFetchByConnection = new Map<
         string,
@@ -653,6 +663,12 @@ export default class NostrWalletConnectStore {
                 console.log('NWC: resetting service');
                 this.cancelScheduledMaxBudgetRefresh();
                 this.maxBudgetRefreshNeeded = false;
+                // If this write fails, the retry it schedules can fire
+                // after the switch. The next wallet's loadConnections
+                // flushes first, which stores the previous wallet's change
+                // under its own records. If that write fails too, the load
+                // replaces memory and the change is lost: accepted, as for
+                // any change whose write fails twice in a row.
                 await this.flushScheduledSave();
                 if (Platform.OS === 'ios') {
                     this.teardownIOSAppStateMonitor();
@@ -936,6 +952,7 @@ export default class NostrWalletConnectStore {
                 const { index: liveIndex } = this.getConnection({
                     connectionId
                 });
+                this.deletedConnectionIds.add(connectionId);
                 runInAction(() => {
                     if (liveIndex !== -1) {
                         this.connections.splice(liveIndex, 1);
@@ -1352,10 +1369,16 @@ export default class NostrWalletConnectStore {
 
     @action
     public loadConnections = async () => {
+        // storage lags behind memory while a save is scheduled; write it
+        // first so the reload doesn't drop changes such as a budget debit
+        await this.flushScheduledSave();
         try {
             const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
-            if (connectionsData) {
-                const connections = JSON.parse(connectionsData);
+            const connections = connectionsData
+                ? JSON.parse(connectionsData)
+                : undefined;
+            this.connectionsLoadFailed = false;
+            if (connections) {
                 void this.pruneProcessedEventIds(
                     new Set(connections.map((c: NWCConnectionData) => c.id))
                 ).catch((error) =>
@@ -1414,6 +1437,7 @@ export default class NostrWalletConnectStore {
             }
         } catch (error: any) {
             console.error('Failed to load NWC connections:', error);
+            this.connectionsLoadFailed = true;
             runInAction(() => {
                 this.connections = [];
                 this.setError(
@@ -1430,25 +1454,38 @@ export default class NostrWalletConnectStore {
             this._scheduledSave = null;
         }
     }
-    private scheduleSave(): void {
-        this.cancelScheduledSave();
+    // Leave a scheduled save in place: it writes the state as of when it
+    // fires, so every change reaches storage within
+    // SAVE_CONNECTIONS_DEBOUNCE_MS. Restarting the timer on each call would
+    // let a steady stream of requests (each marks its connection as used)
+    // put off the save indefinitely.
+    private scheduleSave({ retry = true } = {}): void {
+        if (this._scheduledSave !== null) {
+            // a change made while a retry is pending gets its own retry
+            if (retry) this._scheduledSaveRetries = true;
+            return;
+        }
+        this._scheduledSaveRetries = retry;
         this._scheduledSave = setTimeout(() => {
             this._scheduledSave = null;
-            this.saveConnections().catch((err) =>
-                console.error(
-                    'NWC: scheduleSave → saveConnections failed:',
-                    err
-                )
-            );
+            void this.writeScheduledSave({
+                retry: this._scheduledSaveRetries
+            });
         }, SAVE_CONNECTIONS_DEBOUNCE_MS);
     }
     private async flushScheduledSave(): Promise<void> {
         if (this._scheduledSave === null) return;
         this.cancelScheduledSave();
+        await this.writeScheduledSave({ retry: true });
+    }
+    // If the write fails, the changes are still only in memory, so write
+    // them once more on the timer
+    private async writeScheduledSave({ retry }: { retry: boolean }) {
         try {
             await this.saveConnections();
         } catch (err) {
-            console.error('NWC: flushScheduledSave failed:', err);
+            console.error('NWC: scheduled save failed:', err);
+            if (retry) this.scheduleSave({ retry: false });
         }
     }
 
@@ -1475,9 +1512,28 @@ export default class NostrWalletConnectStore {
                 const allConnections: any[] = existingData
                     ? JSON.parse(existingData)
                     : [];
+                // After a reset for a wallet switch, memory holds the
+                // previous wallet's connections until the next load.
+                // Replacing the current wallet's records with them would
+                // remove its connections, so only update their own records.
+                // The same applies after a load that could not read storage:
+                // memory is empty then, and replacing would remove every
+                // stored connection of the current wallet. A deleted
+                // connection's record is removed either way: kept, it
+                // would be subscribed again on the next load.
+                const replacesCurrentWallet =
+                    !this.connectionsLoadFailed &&
+                    this.connections.every((c) =>
+                        this.connectionBelongsToCurrentWallet(c)
+                    );
+                const deletedIds = new Set(this.deletedConnectionIds);
                 const filteredExisting = allConnections.filter(
                     (c: NWCConnectionData) =>
-                        !this.connectionBelongsToCurrentWallet(c)
+                        !deletedIds.has(c.id) &&
+                        !(
+                            replacesCurrentWallet &&
+                            this.connectionBelongsToCurrentWallet(c)
+                        )
                 );
                 const mergedConnections = [
                     ...filteredExisting,
@@ -1493,6 +1549,9 @@ export default class NostrWalletConnectStore {
                     NWC_CONNECTIONS_KEY,
                     JSON.stringify(Array.from(dedupedById.values()))
                 );
+                for (const id of deletedIds) {
+                    this.deletedConnectionIds.delete(id);
+                }
             });
         } catch (error: any) {
             console.error('Failed to save NWC connections:', error);
@@ -4581,6 +4640,10 @@ export default class NostrWalletConnectStore {
         if (changed) {
             this.scheduleMaxBudgetRefresh();
             this.findAndUpdateConnection(stored);
+            // write a debit now, like finalizePayment does. A reconcile that
+            // finishes after the app went to background on Android would
+            // otherwise wait for a timer that does not fire there.
+            await this.flushScheduledSave();
         }
         return changed;
     }
@@ -5108,6 +5171,9 @@ export default class NostrWalletConnectStore {
                 );
             }
         });
+        // write the debit now instead of on the timer, so it is not lost if
+        // the process ends before the timer fires
+        await this.flushScheduledSave();
         this.scheduleMaxBudgetRefresh();
         NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
         if (notifyActivity) {
@@ -5167,6 +5233,8 @@ export default class NostrWalletConnectStore {
                 // isBudgetDebited intentionally unset — held via pendingSpendSats
             });
         });
+        // the hold counts against the budget, so write it now like a debit
+        await this.flushScheduledSave();
     }
 
     private async recordFailedPayment({
@@ -5748,6 +5816,12 @@ export default class NostrWalletConnectStore {
                     void this.reconcileAllPendingPayInvoiceActivities();
                 }
 
+                // without the persistent service the process may be killed
+                // before a scheduled save fires, so write it now
+                if (nextAppState === 'background') {
+                    void this.flushScheduledSave();
+                }
+
                 if (!this.persistentNWCServiceEnabled) {
                     return;
                 }
@@ -5755,7 +5829,6 @@ export default class NostrWalletConnectStore {
                 try {
                     const { NostrConnectModule } = NativeModules;
                     if (nextAppState === 'background') {
-                        void this.flushScheduledSave();
                         await NostrConnectModule.startBackgroundMonitoring();
                     } else if (nextAppState === 'active') {
                         await NostrConnectModule.stopBackgroundMonitoring();
