@@ -151,6 +151,9 @@ describe('EmbeddedLND.createInvoice', () => {
 
     it('supports description hash invoices', () => {
         expect(new EmbeddedLND().supportsDescriptionHashInvoices()).toBe(true);
+        expect(new EmbeddedLND().supportsDescriptionHashOnlyInvoices()).toBe(
+            true
+        );
     });
 });
 

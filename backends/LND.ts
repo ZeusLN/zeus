@@ -1175,6 +1175,7 @@ export default class LND {
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsDescriptionHashInvoices = () => true;
+    supportsDescriptionHashOnlyInvoices = () => true;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsChannelMemo = () => this.supports('v0.17.0');

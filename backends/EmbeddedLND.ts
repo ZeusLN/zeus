@@ -694,6 +694,7 @@ export default class EmbeddedLND extends LND {
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsDescriptionHashInvoices = () => true;
+    supportsDescriptionHashOnlyInvoices = () => true;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => this.supports('v0.18.3');
     // the native openChannelSync does not forward a memo

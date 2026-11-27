@@ -1191,6 +1191,7 @@ describe('CLNRest capability flags', () => {
         supportsSimpleTaprootChannels: false,
         supportsCustomPreimages: false,
         supportsDescriptionHashInvoices: true,
+        supportsDescriptionHashOnlyInvoices: false,
         supportsSweep: true,
         supportsOnchainSendMax: true,
         supportsOnchainBatching: false,

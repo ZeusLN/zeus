@@ -282,6 +282,8 @@ class BackendUtils {
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
     supportsDescriptionHashInvoices = () =>
         this.call('supportsDescriptionHashInvoices');
+    supportsDescriptionHashOnlyInvoices = () =>
+        this.call('supportsDescriptionHashOnlyInvoices');
     supportsSweep = () => this.call('supportsSweep');
     supportsOnchainSendMax = () => this.call('supportsOnchainSendMax');
     supportsChannelMemo = () => this.call('supportsChannelMemo');

@@ -973,6 +973,9 @@ export default class CLNRest {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsDescriptionHashInvoices = () => true;
+    // CLN hashes the description it is given (deschashonly), so it needs
+    // the text the hash was made from
+    supportsDescriptionHashOnlyInvoices = () => false;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => true;
     supportsChannelMemo = () => false;

@@ -186,9 +186,15 @@ describe('LND.createInvoice', () => {
         expect(lnd.supportsDescriptionHashInvoices()).toBe(true);
     });
 
+    // lnd puts the hash in the invoice whatever the memo says
+    it('takes a description hash without its description', () => {
+        expect(lnd.supportsDescriptionHashOnlyInvoices()).toBe(true);
+    });
+
     // LndHub extends LND but its createInvoice sends no hash
     it('does not leak the support to LndHub, which extends LND', () => {
         expect(new LndHub().supportsDescriptionHashInvoices()).toBe(false);
+        expect(new LndHub().supportsDescriptionHashOnlyInvoices()).toBe(false);
     });
 });
 

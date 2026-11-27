@@ -1128,6 +1128,7 @@ describe('LdkNode createInvoice', () => {
 
         it('supports description hash invoices', () => {
             expect(ldk.supportsDescriptionHashInvoices()).toBe(true);
+            expect(ldk.supportsDescriptionHashOnlyInvoices()).toBe(true);
         });
     });
 

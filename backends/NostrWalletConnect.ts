@@ -267,6 +267,7 @@ export default class NostrWalletConnect {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsDescriptionHashInvoices = () => false;
+    supportsDescriptionHashOnlyInvoices = () => false;
     supportsSweep = () => false;
     supportsOnchainSendMax = () => false;
     supportsChannelMemo = () => false;

@@ -1732,6 +1732,9 @@ describe('LightningNodeConnect.createInvoice', () => {
         expect(
             new LightningNodeConnect().supportsDescriptionHashInvoices()
         ).toBe(true);
+        expect(
+            new LightningNodeConnect().supportsDescriptionHashOnlyInvoices()
+        ).toBe(true);
     });
 });
 

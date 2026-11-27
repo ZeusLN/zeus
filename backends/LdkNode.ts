@@ -2412,6 +2412,7 @@ export default class LdkNode {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsDescriptionHashInvoices = () => true;
+    supportsDescriptionHashOnlyInvoices = () => true;
     supportsSweep = () => false;
     supportsOnchainSendMax = () => true;
     supportsChannelMemo = () => false;
