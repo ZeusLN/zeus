@@ -47,6 +47,56 @@ export const getImportableNodes = (nodes: unknown[]): Node[] =>
             ({ lndDir: _lndDir, ldkNodeDir: _ldkNodeDir, ...node }: any) => node
         );
 
+const normalizeSeed = (seed: unknown): string | undefined => {
+    const words = Array.isArray(seed)
+        ? seed
+        : typeof seed === 'string'
+        ? seed.split(/\s+/)
+        : [];
+    const normalized = words
+        .map((word) =>
+            String(word ?? '')
+                .toLowerCase()
+                .trim()
+        )
+        .filter(Boolean)
+        .join(' ');
+    return normalized || undefined;
+};
+
+// Whether an on-device wallet config (embedded-lnd or ldk-node) is already
+// on this device: an existing config of the same implementation uses its
+// data directory or its seed. The legacy restore offers whole settings
+// snapshots, which also list the wallets still present, and a second config
+// on one data directory lets deleting either wipe the other. A second config
+// on the same seed is a second node with the same keys, which SeedRecovery
+// refuses for the same reason. The lndDir default mirrors
+// SettingsStore.updateNodeProperties. An ldk-node config without
+// ldkNodeDir is matched by its mnemonic only.
+export const isOnDeviceWalletPresent = (
+    node: any,
+    nodes: any[] = []
+): boolean => {
+    const implementation = node?.implementation;
+    if (implementation !== 'embedded-lnd' && implementation !== 'ldk-node') {
+        return false;
+    }
+    const dataDir = (n: any): string | undefined =>
+        implementation === 'embedded-lnd' ? n?.lndDir || 'lnd' : n?.ldkNodeDir;
+    const seed = (n: any): string | undefined =>
+        normalizeSeed(
+            implementation === 'embedded-lnd' ? n?.seedPhrase : n?.ldkMnemonic
+        );
+    const dir = dataDir(node);
+    const nodeSeed = seed(node);
+    return nodes.some(
+        (existing) =>
+            existing?.implementation === implementation &&
+            ((!!dir && dataDir(existing) === dir) ||
+                (!!nodeSeed && seed(existing) === nodeSeed))
+    );
+};
+
 // True for files written before the v2 format: a v1 CryptoJS blob (MD5
 // key derivation, one iteration) or an unencrypted envelope. They still
 // import, but the user should export again and delete the old file.

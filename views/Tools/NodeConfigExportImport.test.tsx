@@ -16,6 +16,10 @@ jest.mock('../../utils/NodeConfigUtils', () => ({
     exportNodeConfigs: jest.fn(),
     decryptExportData: jest.fn(),
     decryptExportDataV2: jest.fn(),
+    isOnDeviceWalletPresent: (...args: any[]) =>
+        jest
+            .requireActual('../../utils/NodeConfigUtils')
+            .isOnDeviceWalletPresent(...args),
     isValidExportPassword: jest.fn(),
     EXPORT_FORMAT_VERSION: 2,
     MIN_EXPORT_PASSWORD_LENGTH: 8
@@ -41,7 +45,18 @@ jest.mock('@react-native-documents/picker', () => ({
     isErrorWithCode: jest.fn(),
     errorCodes: {}
 }));
-jest.mock('@rneui/themed', () => ({ CheckBox: 'CheckBox', Icon: 'Icon' }));
+jest.mock('@rneui/themed', () => {
+    const { View } = require('react-native');
+    return {
+        // Keeps checked / disabled on the host view for the tests to read
+        CheckBox: ({ title, ...props }: any) => (
+            <View testID="checkbox" {...props}>
+                {typeof title === 'string' ? null : title}
+            </View>
+        ),
+        Icon: 'Icon'
+    };
+});
 jest.mock('@react-native-vector-icons/feather', () => 'Feather');
 jest.mock('../../components/Header', () => 'Header');
 jest.mock('../../components/Screen', () => {
@@ -192,5 +207,116 @@ describe('NodeConfigExportImport', () => {
         expect(navigation.navigate).toHaveBeenCalledWith('Wallets');
 
         alert.mockRestore();
+    });
+
+    describe('restoring a snapshot that lists wallets still on this device', () => {
+        const PRESENT = { implementation: 'embedded-lnd', lndDir: 'a1' };
+        const MISSING = { implementation: 'embedded-lnd', lndDir: 'b2' };
+        const REMOTE = { implementation: 'lnd', host: 'node.example' };
+        const ALREADY_ON_DEVICE =
+            'views.Tools.nodeConfigExportImport.recovery.alreadyOnDevice';
+
+        // Opens the node selection for a snapshot of PRESENT, MISSING and
+        // REMOTE on a device that has PRESENT
+        const openSnapshot = async (
+            nodes: any[] = [
+                { ...PRESENT, nickname: 'old name' },
+                MISSING,
+                REMOTE
+            ]
+        ) => {
+            (
+                KeychainRecoveryUtils.scanForRecoverableData as jest.Mock
+            ).mockResolvedValueOnce({
+                settingsFound: [
+                    {
+                        key: 'zeus-settings-v2',
+                        source: 'unprefixed-local',
+                        data: JSON.stringify({ nodes }),
+                        description: 'Wallet Configurations'
+                    }
+                ],
+                otherDataFound: [],
+                hasCurrentSettings: true
+            });
+            await renderView({ nodes: [PRESENT] });
+            await fireEvent.press(screen.getByText(RESTORE_LEGACY));
+            await fireEvent.press(
+                await screen.findByText(
+                    'views.Tools.nodeConfigExportImport.recovery.tapToRestore'
+                )
+            );
+        };
+
+        const restoreSelected = () =>
+            fireEvent.press(
+                screen.getByText(
+                    'views.Tools.nodeConfigExportImport.recovery.restoreSelected'
+                )
+            );
+
+        // The select-all box comes first, then one per snapshot node
+        const checkBoxes = () => screen.getAllByTestId('checkbox');
+
+        beforeEach(() => {
+            jest.spyOn(Alert, 'alert').mockImplementation();
+        });
+
+        afterEach(() => {
+            (Alert.alert as jest.Mock).mockRestore();
+        });
+
+        it('marks the wallet already on this device and leaves it unselected', async () => {
+            await openSnapshot();
+
+            expect(screen.getAllByText(ALREADY_ON_DEVICE)).toHaveLength(1);
+            const [, present, missing, remote] = checkBoxes();
+            expect(present.props.disabled).toBe(true);
+            expect(present.props.checked).toBe(false);
+            expect(missing.props.checked).toBe(true);
+            expect(remote.props.checked).toBe(true);
+
+            await restoreSelected();
+
+            expect(saveNodeConfigs).toHaveBeenCalledWith([MISSING, REMOTE], {
+                settings: { nodes: [PRESENT] }
+            });
+        });
+
+        it('does not select the wallet already on this device when pressed', async () => {
+            await openSnapshot();
+
+            await fireEvent.press(checkBoxes()[1]);
+            await restoreSelected();
+
+            expect(saveNodeConfigs).toHaveBeenCalledWith(
+                [MISSING, REMOTE],
+                expect.anything()
+            );
+        });
+
+        it('leaves the wallet already on this device out of select all', async () => {
+            await openSnapshot();
+
+            // Everything selectable starts selected, so the first press
+            // clears the selection and the second selects all again
+            expect(checkBoxes()[0].props.checked).toBe(true);
+            await fireEvent.press(checkBoxes()[0]);
+            expect(checkBoxes()[0].props.checked).toBe(false);
+            await fireEvent.press(checkBoxes()[0]);
+            await restoreSelected();
+
+            expect(saveNodeConfigs).toHaveBeenCalledWith(
+                [MISSING, REMOTE],
+                expect.anything()
+            );
+        });
+
+        it('hides select all when one wallet is left to restore', async () => {
+            await openSnapshot([PRESENT, MISSING]);
+
+            // One box per snapshot node, no select-all box
+            expect(checkBoxes()).toHaveLength(2);
+        });
     });
 });

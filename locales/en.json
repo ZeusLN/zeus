@@ -1114,6 +1114,7 @@
     "views.Tools.nodeConfigExportImport.recovery.parseError": "Unable to parse configuration data",
     "views.Tools.nodeConfigExportImport.recovery.selectConfigsToRestore": "Select Configurations to Restore",
     "views.Tools.nodeConfigExportImport.recovery.restoreSelected": "Restore Selected",
+    "views.Tools.nodeConfigExportImport.recovery.alreadyOnDevice": "Already on this device",
     "views.Tools.nodeConfigExportImport.recovery.restore": "Restore This Configuration",
     "views.Tools.nodeConfigExportImport.recovery.rescan": "Scan Again",
     "views.Tools.nodeConfigExportImport.recovery.restoreSuccess": "Successfully restored {count} wallet configuration(s).",
