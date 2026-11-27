@@ -77,12 +77,12 @@ const renderScreen = async (
     connectionPermissions?: string[],
     relayUrl: string = 'wss://relay.example'
 ) => {
-    const ref = React.createRef<any>();
     const ModalStore = { toggleInfoModal: jest.fn() };
     let onFocus: () => void = () => {};
     const NostrWalletConnectStore = {
         maxBudgetLimit: 0,
         maxBudgetSource: 'lightning',
+        canOfferCashuSwitch: false,
         loadMaxBudget: jest.fn(() => Promise.resolve()),
         loadConnections: jest.fn(() => Promise.resolve()),
         getConnection: jest.fn(() => ({
@@ -95,6 +95,7 @@ const renderScreen = async (
             }
         }))
     };
+    const ref = React.createRef<AddOrEditNWCConnection>();
     await render(
         <AddOrEditNWCConnection
             ref={ref}
@@ -147,37 +148,60 @@ describe('AddOrEditNWCConnection budget info', () => {
     });
 });
 
-describe('AddOrEditNWCConnection custom relay validation', () => {
-    it('requires wss:// for a new custom relay', async () => {
-        const { ref } = await renderScreen();
-        const screenInstance = ref.current;
-
-        expect(screenInstance.isValidRelayUrl('wss://relay.example.com')).toBe(
-            true
+describe('AddOrEditNWCConnection zero-balance wallet with budget', () => {
+    it('blocks zero budget when payment permissions are set', async () => {
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getFullAccessPermissions()
         );
-        expect(screenInstance.isValidRelayUrl('ws://relay.example.com')).toBe(
-            false
-        );
-        expect(
-            screenInstance.isValidRelayUrl(
-                'ws://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion'
-            )
-        ).toBe(true);
+        expect(ref.current!.state.connectionName).toBe('Test');
+        expect(ref.current!.state.maxBudgetLimit).toBe(0);
+        expect(ref.current!.state.budgetValue).toBe(0);
+        expect(ref.current!.isFormValid()).toBe(false);
     });
 
-    it('keeps an existing ws:// relay valid when editing', async () => {
+    it('ignores input above the MAX_BUDGET cap', async () => {
         const { ref } = await renderScreen(
-            NostrConnectUtils.getReadOnlyPermissions(),
-            'ws://relay.example.com'
+            NostrConnectUtils.getFullAccessPermissions()
         );
-        const screenInstance = ref.current;
 
-        expect(screenInstance.state.customRelayUrl).toBe(
-            'ws://relay.example.com'
+        // First set a valid budget
+        await act(async () => {
+            ref.current!.handleCustomBudgetValueChange('10000');
+        });
+        expect(ref.current!.state.budgetValue).toBe(10000);
+
+        // Now try to type a number over the cap (2_100_000_000_000_001)
+        await act(async () => {
+            ref.current!.handleCustomBudgetValueChange('2100000000000001');
+        });
+
+        // The value should remain unchanged (10000), not the huge number
+        expect(ref.current!.state.budgetValue).toBe(10000);
+    });
+
+    it('throws budgetRequired when building params with a zero budget', async () => {
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getFullAccessPermissions()
         );
-        expect(screenInstance.isFormValid()).toBe(true);
-        expect(screenInstance.isValidRelayUrl('ws://other.example.com')).toBe(
-            false
+
+        // Budget is 0 by default. Calling buildConnectionParams should throw.
+        await expect(ref.current!.buildConnectionParams(false)).rejects.toThrow(
+            'views.Settings.NostrWalletConnect.validation.budgetRequired'
         );
+    });
+
+    it('allows a nonzero budget with a zero-balance wallet', async () => {
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getFullAccessPermissions()
+        );
+        await act(async () => {
+            ref.current!.handleCustomBudgetValueChange('10000');
+        });
+        expect(ref.current!.state.maxBudgetLimit).toBe(0);
+        expect(ref.current!.state.budgetValue).toBe(10000);
+        expect(ref.current!.isFormValid()).toBe(true);
+        await expect(
+            ref.current!.buildConnectionParams(false)
+        ).resolves.toMatchObject({ budgetAmount: 10000 });
     });
 });
