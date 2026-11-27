@@ -66,8 +66,18 @@ import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import Payment from '../models/Payment';
 import { isInvoiceNotFoundError } from '../utils/PaymentLookupUtils';
 import * as LocaleUtils from '../utils/LocaleUtils';
+import { settingsStore } from '../stores/Stores';
 
 const PAYMENT_ID = 'payment-id';
+
+const MAINNET_INVOICE =
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vqcqpj9qypqsq2vynt4pr072a6kxqxke74s3lhg83939xvm2u8wmsnqg34j7l6y5q92yy9ey8vyve6jupggy22y3dz00uy70q3dryra2dmwg0693lp9gpj93x0l';
+const TESTNET_INVOICE =
+    'lntb1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vqcqpj9qypqsqcnr4xnjgqh9lq2shjstc78mv3cw3tu7upkmj37ly6cu4um4s7f0kzzmnnedk5au2wgt5c7pydjy6pr2eqhpj284j8lryjdrtentxnhgpgelv6l';
+const SIGNET_INVOICE =
+    'lntbs567780n1pnqr26ypp5c0wcrpzwxwqnwu2nld5q36dfc9yjrfdp87nn9d5y093jjncvqresdq0w3jhxar8v3n8xeccqzpuxqrrsssp5r94e3nwnw63gjaxc8wex38ufv2m6442vnrw49m7dad9jdum3tdsq9qyyssqk4dvvuk7zhhju8ztf7nfc2hzqq9gqtzuyc0ljz8nl93laxwv4869lt9fsxkxacje6eh4ur5ymg83hvakn4tfpzdu6fq49705sar7fxspga8qjp';
+const REGTEST_INVOICE =
+    'lnbcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
 
 const succeededPayment = (feePaidMsat?: number) => ({
     id: PAYMENT_ID,
@@ -93,7 +103,7 @@ describe('LdkNode payment results', () => {
     });
 
     const payBolt11 = () =>
-        ldk.payLightningInvoice({ payment_request: 'lnbcrt1...' });
+        ldk.payLightningInvoice({ payment_request: MAINNET_INVOICE });
     const payKeysend = () => ldk.sendKeysend({ pubkey: '02abc', amt: '5000' });
     const payOffer = () => ldk.payOffer({ offer: 'lno1...', amt: '5000' });
 
@@ -193,9 +203,11 @@ describe('LdkNode.payLightningInvoice with an explicit amount', () => {
     });
 
     it('ignores amt when only the sat amount of the invoice decodes', async () => {
-        const decode = jest
-            .spyOn(Bolt11Utils, 'decode')
-            .mockReturnValue({ satoshis: 250000, millisatoshis: null } as any);
+        const decode = jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+            satoshis: 250000,
+            millisatoshis: null,
+            network: { bech32: 'bc' }
+        } as any);
 
         await ldk.payLightningInvoice({
             payment_request: FIXED_AMOUNT_INVOICE,
@@ -243,7 +255,7 @@ describe('LdkNode routing fee limit', () => {
         fee_limit_sat: any
     ) => {
         await ldk[method]({
-            payment_request: 'lnbcrt1...',
+            payment_request: MAINNET_INVOICE,
             offer: 'lno1...',
             pubkey: '02abc',
             // the invoice carries the amount
@@ -401,7 +413,7 @@ describe('LdkNode payment timeouts', () => {
 
         const { error }: any = await settle(
             ldk.payLightningInvoice({
-                payment_request: 'lnbcrt1...',
+                payment_request: MAINNET_INVOICE,
                 timeout_seconds: '1'
             })
         );
@@ -1353,5 +1365,76 @@ describe('LdkNode.lookupInvoice', () => {
             );
 
         expect(isInvoiceNotFoundError(error)).toBe(true);
+    });
+});
+
+describe('LdkNode invoice network', () => {
+    let ldk: LdkNode;
+
+    const INVOICES: { [prefix: string]: string } = {
+        lnbc: MAINNET_INVOICE,
+        lntb: TESTNET_INVOICE,
+        lntbs: SIGNET_INVOICE,
+        lnbcrt: REGTEST_INVOICE
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ldk = new LdkNode();
+        ldk.subscribeToEvents = () => () => {};
+        mockSendBolt11.mockResolvedValue(PAYMENT_ID);
+        mockSendBolt11UsingAmount.mockResolvedValue(PAYMENT_ID);
+        mockListPayments.mockResolvedValue([succeededPayment(0)]);
+    });
+
+    afterEach(() => {
+        settingsStore.ldkNetwork = undefined;
+    });
+
+    describe.each([
+        [undefined, 'lnbc'],
+        ['mainnet', 'lnbc'],
+        ['Mainnet', 'lnbc'],
+        ['testnet', 'lntb'],
+        ['signet', 'lntbs'],
+        ['mutinynet', 'lntbs'],
+        ['regtest', 'lnbcrt']
+    ])('on %s', (ldkNetwork, ownPrefix) => {
+        beforeEach(() => {
+            settingsStore.ldkNetwork = ldkNetwork;
+        });
+
+        it(`decodes and pays an ${ownPrefix} invoice`, async () => {
+            const invoice = INVOICES[ownPrefix];
+
+            const decoded = await ldk.decodePaymentRequest([invoice]);
+            expect(decoded.paymentRequest).toEqual(invoice);
+
+            await ldk.payLightningInvoice({ payment_request: invoice });
+            expect(mockSendBolt11).toHaveBeenCalledTimes(1);
+        });
+
+        it.each(Object.keys(INVOICES).filter((p) => p !== ownPrefix))(
+            'refuses to decode or pay an %s invoice',
+            async (prefix) => {
+                const invoice = INVOICES[prefix];
+
+                await expect(
+                    ldk.decodePaymentRequest([invoice])
+                ).rejects.toThrow('error.ldk.invoiceWrongNetwork');
+                await expect(
+                    ldk.payLightningInvoice({ payment_request: invoice })
+                ).rejects.toThrow('error.ldk.invoiceWrongNetwork');
+                await expect(
+                    ldk.payLightningInvoice({
+                        payment_request: invoice,
+                        amt: '1000'
+                    })
+                ).rejects.toThrow('error.ldk.invoiceWrongNetwork');
+
+                expect(mockSendBolt11).not.toHaveBeenCalled();
+                expect(mockSendBolt11UsingAmount).not.toHaveBeenCalled();
+            }
+        );
     });
 });
