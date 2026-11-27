@@ -82,11 +82,8 @@ import {
     clearCDKDatabaseForNode,
     deleteNodeDataDirectoryWithRetry
 } from '../../utils/DataClearUtils';
-import {
-    optimizeNeutrinoPeers,
-    createLndWallet,
-    stopLnd
-} from '../../utils/LndMobileUtils';
+import { createLndWallet, stopLnd } from '../../utils/LndMobileUtils';
+import { optimizeNeutrinoPeers } from '../../utils/NeutrinoPeersUtils';
 import {
     createLdkNodeWallet,
     stopLdkNode,

@@ -8,7 +8,7 @@ jest.mock('react-native-device-info', () => ({
 jest.mock('../../stores/SettingsStore', () => ({
     DEFAULT_NEUTRINO_PEERS_MAINNET: []
 }));
-jest.mock('../../utils/LndMobileUtils', () => ({
+jest.mock('../../utils/NeutrinoPeersUtils', () => ({
     pingPeer: jest.fn(),
     NEUTRINO_PING_THRESHOLD_MS: 0
 }));

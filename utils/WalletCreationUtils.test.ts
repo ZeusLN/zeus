@@ -1,7 +1,9 @@
 jest.mock('uuid', () => ({ v4: jest.fn(() => 'new-dir') }));
 jest.mock('./LndMobileUtils', () => ({
-    optimizeNeutrinoPeers: jest.fn(),
     createLndWallet: jest.fn()
+}));
+jest.mock('./NeutrinoPeersUtils', () => ({
+    optimizeNeutrinoPeers: jest.fn()
 }));
 jest.mock('./LdkNodeUtils', () => ({
     createLdkNodeWallet: jest.fn()
@@ -12,7 +14,8 @@ jest.mock('./LocaleUtils', () => ({
 jest.mock('../stores/SettingsStore', () => ({}));
 
 import { createOnboardingWallet } from './WalletCreationUtils';
-import { optimizeNeutrinoPeers, createLndWallet } from './LndMobileUtils';
+import { createLndWallet } from './LndMobileUtils';
+import { optimizeNeutrinoPeers } from './NeutrinoPeersUtils';
 import { createLdkNodeWallet } from './LdkNodeUtils';
 
 const mockedOptimizePeers = optimizeNeutrinoPeers as jest.Mock;

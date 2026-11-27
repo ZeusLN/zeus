@@ -24,10 +24,11 @@ import SettingsStore, {
 } from '../../../../stores/SettingsStore';
 
 import {
+    bitcoinP2pPort,
     optimizeNeutrinoPeers,
     pingPeer,
     NEUTRINO_PING_THRESHOLD_MS
-} from '../../../../utils/LndMobileUtils';
+} from '../../../../utils/NeutrinoPeersUtils';
 import { localeString } from '../../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../../utils/RestartUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
@@ -77,6 +78,10 @@ export default class NeutrinoPeers extends React.Component<
         };
     }
 
+    // Set synchronously, so a second tap before the re-render that disables
+    // the button cannot start another run
+    private optimizing = false;
+
     remove = (arrOriginal: Array<string>, elementToRemove: any) => {
         return arrOriginal.filter(function (el) {
             return el !== elementToRemove;
@@ -96,6 +101,8 @@ export default class NeutrinoPeers extends React.Component<
             loading
         } = this.state;
         const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
+
+        const p2pPort = bitcoinP2pPort(embeddedLndNetwork === 'Testnet');
 
         const mainnetPeersChanged =
             embeddedLndNetwork === 'Mainnet' &&
@@ -221,6 +228,7 @@ export default class NeutrinoPeers extends React.Component<
                                         }}
                                     >
                                         <Switch
+                                            disabled={loading}
                                             value={dontAllowOtherPeers ?? false}
                                             onValueChange={async () => {
                                                 this.setState({
@@ -279,6 +287,7 @@ export default class NeutrinoPeers extends React.Component<
                                             }}
                                         >
                                             <TouchableOpacity
+                                                disabled={loading}
                                                 onPress={async () => {
                                                     if (!addPeer) return;
                                                     try {
@@ -293,7 +302,9 @@ export default class NeutrinoPeers extends React.Component<
 
                                                         const result =
                                                             await pingPeer(
-                                                                addPeer
+                                                                addPeer,
+                                                                undefined,
+                                                                p2pPort
                                                             );
                                                         if (result.reachable) {
                                                             this.setState({
@@ -337,6 +348,7 @@ export default class NeutrinoPeers extends React.Component<
                                                         : themeColor('text')
                                                 }}
                                                 iconOnly
+                                                disabled={loading}
                                                 onPress={async () => {
                                                     if (!addPeer) return;
                                                     const newNeutrinoPeers = [
@@ -398,6 +410,7 @@ export default class NeutrinoPeers extends React.Component<
                                                         }}
                                                     >
                                                         <TouchableOpacity
+                                                            disabled={loading}
                                                             onPress={async () => {
                                                                 try {
                                                                     this.setState(
@@ -416,7 +429,9 @@ export default class NeutrinoPeers extends React.Component<
 
                                                                     const result =
                                                                         await pingPeer(
-                                                                            item
+                                                                            item,
+                                                                            undefined,
+                                                                            p2pPort
                                                                         );
                                                                     if (
                                                                         result.reachable
@@ -478,6 +493,7 @@ export default class NeutrinoPeers extends React.Component<
                                                                 )
                                                             }}
                                                             iconOnly
+                                                            disabled={loading}
                                                             onPress={async () => {
                                                                 const newNeutrinoPeers =
                                                                     this.remove(
@@ -539,37 +555,64 @@ export default class NeutrinoPeers extends React.Component<
                             </View>
                         </ScrollView>
                     </View>
-                    {embeddedLndNetwork === 'Mainnet' && (
-                        <View style={{ marginBottom: 10, marginTop: 10 }}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.EmbeddedNode.NeutrinoPeers.optimize'
-                                )}
-                                onPress={async () => {
-                                    this.setState({
-                                        loading: true
-                                    });
-                                    await optimizeNeutrinoPeers();
+                    <View style={{ marginBottom: 10, marginTop: 10 }}>
+                        <Button
+                            title={localeString(
+                                'views.Settings.EmbeddedNode.NeutrinoPeers.optimize'
+                            )}
+                            disabled={loading}
+                            onPress={async () => {
+                                if (this.optimizing) return;
+                                this.optimizing = true;
+                                const isTestnet =
+                                    embeddedLndNetwork === 'Testnet';
+                                const peersOf = (settings: any) =>
+                                    (isTestnet
+                                        ? settings?.neutrinoPeersTestnet
+                                        : settings?.neutrinoPeersMainnet) || [];
+                                this.setState({
+                                    loading: true
+                                });
+                                let changed = false;
+                                try {
                                     const { getSettings } = SettingsStore;
+                                    const before = peersOf(await getSettings());
+                                    await optimizeNeutrinoPeers(isTestnet);
                                     const settings = await getSettings();
+                                    const after = peersOf(settings);
+                                    changed =
+                                        JSON.stringify(before) !==
+                                        JSON.stringify(after);
+                                    // Optimize also sets dontAllowOtherPeers
                                     this.setState({
-                                        loading: false,
-                                        neutrinoPeers:
-                                            settings.neutrinoPeersMainnet
+                                        neutrinoPeers: after,
+                                        dontAllowOtherPeers:
+                                            settings?.dontAllowOtherPeers ??
+                                            false
                                     });
+                                } catch (e) {
+                                    console.log(
+                                        'Neutrino peer optimize failed',
+                                        e
+                                    );
+                                } finally {
+                                    this.optimizing = false;
+                                    this.setState({ loading: false });
+                                }
 
-                                    restartNeeded();
-                                }}
-                                tertiary
-                            />
-                        </View>
-                    )}
+                                // LND only reads its peers at startup
+                                if (changed) restartNeeded();
+                            }}
+                            tertiary
+                        />
+                    </View>
                     {(dontAllowOtherPeers ||
                         mainnetPeersChanged ||
                         testnetPeersChanged) && (
                         <View style={{ marginBottom: 10, marginTop: 10 }}>
                             <Button
                                 title={localeString('general.reset')}
+                                disabled={loading}
                                 onPress={async () => {
                                     if (embeddedLndNetwork === 'Mainnet') {
                                         this.setState({

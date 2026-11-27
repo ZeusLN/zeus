@@ -8,7 +8,7 @@ import ModalBox from '../ModalBox';
 import AlertStore from '../../stores/AlertStore';
 import ModalStore from '../../stores/ModalStore';
 
-import { NEUTRINO_PING_THRESHOLD_MS } from '../../utils/LndMobileUtils';
+import { NEUTRINO_PING_THRESHOLD_MS } from '../../utils/NeutrinoPeersUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
