@@ -84,6 +84,14 @@ export default class CashuSendingLightning extends React.Component<
     // later payments made while this screen stays mounted.
     private donationAttempted = false;
 
+    // Whether the payment this screen started was paid, from its own
+    // result. CashuStore.paymentSuccess is shared with every other payment,
+    // including NWC payments made while this one fails or is still in
+    // flight, so it can't decide whether to donate.
+    private ownPaymentPaid = false;
+
+    private mounted = false;
+
     constructor(props: CashuSendingLightningProps) {
         super(props);
         this.state = {
@@ -108,12 +116,18 @@ export default class CashuSendingLightning extends React.Component<
         // short timeout keeps the wait bounded on a busy thread; the kickoff
         // is cancelled on unmount so a screen the user has already left never
         // starts a payment.
+        this.mounted = true;
         CashuStore.resetPaymentState();
         this.cancelPaymentKickoff = runWhenIdle(
             () =>
                 CashuStore.payLnInvoiceFromEcash({
                     amount: paymentAmount,
                     paymentRequest
+                }).then((result) => {
+                    // both success paths return the payment; every failure
+                    // and the in-flight guard return undefined
+                    this.ownPaymentPaid = !!result;
+                    this.maybeSendDonation();
                 }),
             500
         );
@@ -140,8 +154,7 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     componentDidUpdate() {
-        const { CashuStore, route } = this.props;
-        const { donationAmount } = route.params;
+        const { CashuStore } = this.props;
 
         const wasSuccessful = this.successfullySent(CashuStore);
 
@@ -150,20 +163,23 @@ export default class CashuSendingLightning extends React.Component<
         } else if (!wasSuccessful && this.state.wasSuccessful) {
             this.setState({ wasSuccessful: false });
         }
+    }
 
+    private maybeSendDonation = () => {
         // donationAmount is only set when CashuPaymentRequest resolved a
         // donation to send, against the same balance check it showed the
         // user. Deciding again here could send one that was never counted.
+        const { donationAmount } = this.props.route.params || {};
         if (
-            wasSuccessful &&
-            !this.state.wasSuccessful &&
+            this.mounted &&
+            this.ownPaymentPaid &&
             donationAmount &&
             !this.donationAttempted
         ) {
             this.donationAttempted = true;
             this.handleDonationPayment(donationAmount);
         }
-    }
+    };
 
     handleDonationPayment = async (donationAmount: string) => {
         const { CashuStore } = this.props;
@@ -236,6 +252,7 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     componentWillUnmount(): void {
+        this.mounted = false;
         this.cancelPaymentKickoff?.();
         if (this.focusListener) {
             this.focusListener();
