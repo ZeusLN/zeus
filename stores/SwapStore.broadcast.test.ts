@@ -7,6 +7,9 @@ jest.mock('../utils/ThemeUtils', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (s: string) => s
 }));
+jest.mock('../utils/SleepUtils', () => ({
+    sleep: jest.fn(async () => {})
+}));
 const mockServesNetwork = jest.fn((_nodeInfo?: any) => true);
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
@@ -84,7 +87,11 @@ jest.mock('../storage', () => {
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Transaction } from 'bitcoinjs-lib';
 
-import SwapStore from './SwapStore';
+import SwapStore, {
+    HOST_BROADCAST_LOOKUPS,
+    HOST_BROADCAST_LOOKUP_DELAY_MS
+} from './SwapStore';
+import { sleep } from '../utils/SleepUtils';
 import Storage from '../storage';
 import { SWAPS_KEY, REVERSE_SWAPS_KEY } from '../utils/SwapUtils';
 
@@ -147,29 +154,140 @@ describe('SwapStore.broadcastSwapTransaction', () => {
         );
     });
 
-    it.each([
-        ['an error status', respond(503, 'unavailable')],
-        ['a network error', new Error('network down')]
-    ])(
-        'falls back to the swap host when the mempool instance gives %s',
-        async (_, mempool) => {
-            routes({
-                [MEMPOOL_TX]: mempool,
-                [HOST_TX]: respond(201, JSON.stringify({ id: CLAIM_TXID }))
-            });
+    // A reverse claim gives the host the preimage. A host that answered 200
+    // and dropped the transaction could settle the invoice and take the
+    // lockup back after the timeout, so its answer alone is not a broadcast
+    // (#5501)
+    describe('when only the swap host accepts it', () => {
+        const LOOKUP = `https://mempool.test/api/tx/${CLAIM_TXID}`;
+        const known = respond(200, JSON.stringify({ txid: CLAIM_TXID }));
+        const hostOnly = (
+            mempool: any = respond(503, 'unavailable')
+        ): { [url: string]: any } => ({
+            [MEMPOOL_TX]: mempool,
+            [HOST_TX]: respond(201, JSON.stringify({ id: CLAIM_TXID }))
+        });
+        const lookups = () =>
+            fetchMock.mock.calls.filter(([method]) => method === 'GET');
+
+        it.each([
+            ['an error status', respond(503, 'unavailable')],
+            ['a network error', new Error('network down')]
+        ])(
+            'falls back to the swap host when the mempool instance gives %s, and returns the txid the mempool instance then has',
+            async (_, mempool) => {
+                routes({ ...hostOnly(mempool), [LOOKUP]: known });
+
+                await expect(
+                    newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
+                ).resolves.toBe(CLAIM_TXID);
+
+                expect(fetchMock.mock.calls).toEqual([
+                    [
+                        'POST',
+                        MEMPOOL_TX,
+                        { 'Content-Type': 'text/plain' },
+                        CLAIM_HEX
+                    ],
+                    [
+                        'POST',
+                        HOST_TX,
+                        { 'Content-Type': 'application/json' },
+                        JSON.stringify({ hex: CLAIM_HEX })
+                    ],
+                    ['GET', LOOKUP]
+                ]);
+                expect(sleep).not.toHaveBeenCalled();
+            }
+        );
+
+        it('waits for the transaction to reach the mempool instance', async () => {
+            let asked = 0;
+            fetchMock.mockImplementation(async (_method: string, url: string) =>
+                url === LOOKUP
+                    ? ++asked < 2
+                        ? respond(404, 'Transaction not found')
+                        : known
+                    : hostOnly()[url]
+            );
 
             await expect(
                 newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
             ).resolves.toBe(CLAIM_TXID);
 
-            expect(fetchMock).toHaveBeenLastCalledWith(
-                'POST',
-                HOST_TX,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({ hex: CLAIM_HEX })
+            expect(lookups()).toHaveLength(2);
+            expect(sleep).toHaveBeenCalledTimes(1);
+            expect(sleep).toHaveBeenCalledWith(HOST_BROADCAST_LOOKUP_DELAY_MS);
+        });
+
+        it('throws when the mempool instance does not have it after every lookup', async () => {
+            routes({
+                ...hostOnly(),
+                [LOOKUP]: respond(404, 'Transaction not found')
+            });
+
+            await expect(
+                newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
+            ).rejects.toThrow(
+                'https://swaps.test/v2: accepted the transaction, but https://mempool.test/api does not have it'
             );
-        }
-    );
+
+            expect(lookups()).toHaveLength(HOST_BROADCAST_LOOKUPS);
+            expect(HOST_BROADCAST_LOOKUPS).toBeGreaterThan(1);
+            // no wait after the last lookup
+            expect(sleep).toHaveBeenCalledTimes(HOST_BROADCAST_LOOKUPS - 1);
+        });
+
+        it.each([
+            ['cannot be reached', new Error('network down')],
+            ['is rate limited', respond(429, 'Too Many Requests')],
+            ['gives a server error', respond(503, 'unavailable')],
+            ['returns another txid', respond(200, '{"txid":"other"}')],
+            ['returns something other than JSON', respond(200, '<html>')]
+        ])(
+            'throws after one lookup when the mempool instance %s',
+            async (_case, lookup) => {
+                routes({ ...hostOnly(), [LOOKUP]: lookup });
+
+                await expect(
+                    newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
+                ).rejects.toThrow(
+                    'https://swaps.test/v2: accepted the transaction, but https://mempool.test/api does not have it'
+                );
+
+                expect(lookups()).toHaveLength(1);
+                expect(sleep).not.toHaveBeenCalled();
+            }
+        );
+
+        it('stops looking when a lookup fails after a 404', async () => {
+            let asked = 0;
+            fetchMock.mockImplementation(async (_method: string, url: string) =>
+                url === LOOKUP
+                    ? ++asked < 2
+                        ? respond(404, 'Transaction not found')
+                        : respond(503, 'unavailable')
+                    : hostOnly()[url]
+            );
+
+            await expect(
+                newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
+            ).rejects.toThrow(/accepted the transaction/);
+
+            expect(lookups()).toHaveLength(2);
+            expect(sleep).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps the mempool instance error in the message', async () => {
+            routes(hostOnly(respond(429, 'Too Many Requests')));
+
+            await expect(
+                newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
+            ).rejects.toThrow(
+                /mempool\.test\/api\/tx: 429 Too Many Requests; /
+            );
+        });
+    });
 
     it('counts a transaction already in the mempool as broadcast', async () => {
         routes({
@@ -236,6 +354,19 @@ describe('SwapStore.broadcastSwapTransaction', () => {
                 newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
             ).resolves.toBe(CLAIM_TXID);
             expect(fetchMock).toHaveBeenLastCalledWith('GET', LOOKUP);
+        });
+
+        it('looks the transaction up once, with no wait', async () => {
+            routes({ ...rejected, [LOOKUP]: respond(404, 'not found') });
+
+            await expect(
+                newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
+            ).rejects.toThrow(/mempool\.test.*swaps\.test/);
+
+            expect(
+                fetchMock.mock.calls.filter(([method]) => method === 'GET')
+            ).toHaveLength(1);
+            expect(sleep).not.toHaveBeenCalled();
         });
 
         it.each([

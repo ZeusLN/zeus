@@ -38,6 +38,7 @@ import AddressUtils from '../utils/AddressUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { sleep } from '../utils/SleepUtils';
 
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore, {
@@ -188,6 +189,17 @@ const invoiceAmountSats = (invoice?: string): number | undefined => {
 // swap, so the host of any one of them must not be able to hold them up.
 // RNBlobUtil's native default (60s) only measures inactivity.
 const SWAP_STATUS_TIMEOUT_MS = 10000;
+
+// How many times, and how far apart, the mempool instance is asked for a
+// transaction that only the swap host accepted
+export const HOST_BROADCAST_LOOKUPS = 3;
+export const HOST_BROADCAST_LOOKUP_DELAY_MS = 1000;
+
+// A refund this wallet broadcast: updateSwapOnRefund stores it with its
+// txid. The host is not told about it, so a status it sends later (such as
+// swap.expired) must not replace it and offer the refund again.
+const isRefundedByWallet = (swap: any) =>
+    swap?.status === SwapState.TransactionRefunded && !!swap?.txid;
 
 /**
  * Keeps one stored entry per swap ID. Running the rescue again used to
@@ -1627,7 +1639,11 @@ export default class SwapStore {
                         ? JSON.parse(latestReverseSwaps)
                         : [])
                 ].map((swap: any) => {
-                    if (swap?.id && statuses.has(swap.id)) {
+                    if (
+                        swap?.id &&
+                        statuses.has(swap.id) &&
+                        !isRefundedByWallet(swap)
+                    ) {
                         return { ...swap, status: statuses.get(swap.id) };
                     }
                     // stored before only strings were accepted as a status
@@ -1685,12 +1701,17 @@ export default class SwapStore {
         if (typeof status !== 'string') return;
         try {
             const key = isSubmarineSwap ? SWAPS_KEY : REVERSE_SWAPS_KEY;
+            let keptRefund = false;
             await this.withSwapStorage(async () => {
                 const storedSwaps = await Storage.getItem(key);
                 const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+                keptRefund = swaps.some(
+                    (swap: any) =>
+                        swap.id === swapId && isRefundedByWallet(swap)
+                );
 
                 const updatedSwaps = swaps.map((swap: any) =>
-                    swap.id === swapId
+                    swap.id === swapId && !isRefundedByWallet(swap)
                         ? {
                               ...swap,
                               status,
@@ -1705,10 +1726,11 @@ export default class SwapStore {
 
                 await Storage.setItem(key, JSON.stringify(updatedSwaps));
             });
+            const kind = isSubmarineSwap ? `swap` : `reverse swap`;
             console.log(
-                `Updated ${
-                    isSubmarineSwap ? `swap` : `reverse swap`
-                } status for swap ID ${swapId} to "${status}"`
+                keptRefund
+                    ? `Kept the recorded refund of ${kind} ID ${swapId}, ignored status "${status}"`
+                    : `Updated ${kind} status for swap ID ${swapId} to "${status}"`
             );
         } catch (error) {
             console.error('Error updating swap status in storage:', error);
@@ -1804,6 +1826,15 @@ export default class SwapStore {
      * whose outputs are spent, which bitcoind rejects as missing inputs.
      * The mempool instance is skipped when it is not on the node's network.
      * Returns the txid, or throws with every error.
+     *
+     * The host's answer alone is not a broadcast. A reverse claim gives the
+     * host the preimage, so a host that answered 200 and dropped the
+     * transaction could settle the invoice and take the lockup back after
+     * the timeout while the swap shows as claimed (#5501). A transaction
+     * only the host accepted counts once the mempool instance has it; until
+     * then this throws, the claim stays stored and is sent again, and a
+     * refund is not recorded. With no mempool instance on the node's
+     * network the host's answer cannot be checked and is taken as before.
      */
     public broadcastSwapTransaction = async (
         txHex: string,
@@ -1830,21 +1861,38 @@ export default class SwapStore {
             return txid;
         }
 
-        if (
-            endpoint &&
+        const hostAccepted =
+            !!endpoint &&
             (await this.postTransaction(
                 `${endpoint}/chain/BTC/transaction`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({ hex: txHex }),
                 [200, 201],
                 errors
-            ))
-        ) {
-            return txid;
+            ));
+        if (hostAccepted && !apiUrl) return txid;
+
+        if (apiUrl) {
+            // a transaction the host relayed takes a moment to reach
+            // the mempool instance. Only a 404 is worth asking again: an
+            // instance that failed or answered anything else will not
+            // change in a second, and a request to it may wait for the
+            // native timeout.
+            const lookups = hostAccepted ? HOST_BROADCAST_LOOKUPS : 1;
+            for (let lookup = 1; lookup <= lookups; lookup++) {
+                const found = await this.lookUpTransaction(apiUrl, txid);
+                if (found === 'known') return txid;
+                if (found !== 'not-found') break;
+                if (lookup < lookups) {
+                    await sleep(HOST_BROADCAST_LOOKUP_DELAY_MS);
+                }
+            }
         }
 
-        if (apiUrl && (await this.isTransactionKnown(apiUrl, txid))) {
-            return txid;
+        if (hostAccepted) {
+            errors.push(
+                `${endpoint}: accepted the transaction, but ${apiUrl} does not have it`
+            );
         }
 
         if (!errors.length) {
@@ -1884,20 +1932,25 @@ export default class SwapStore {
     };
 
     // Whether the mempool instance has the transaction in its mempool or
-    // a block. Lookup errors count as unknown.
-    private isTransactionKnown = async (
+    // a block: 'known', 'not-found' (a 404), or 'unavailable' for a failed
+    // request or any other answer.
+    private lookUpTransaction = async (
         apiUrl: string,
         txid: string
-    ): Promise<boolean> => {
+    ): Promise<'known' | 'not-found' | 'unavailable'> => {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
                 `${apiUrl}/tx/${txid}`
             );
-            if (response.info().status !== 200) return false;
-            return JSON.parse(String(await response.text()))?.txid === txid;
+            const httpStatus = response.info().status;
+            if (httpStatus === 404) return 'not-found';
+            if (httpStatus !== 200) return 'unavailable';
+            return JSON.parse(String(await response.text()))?.txid === txid
+                ? 'known'
+                : 'unavailable';
         } catch (e) {
-            return false;
+            return 'unavailable';
         }
     };
 
