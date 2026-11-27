@@ -1,3 +1,5 @@
+import type { AppStateStatus } from 'react-native';
+
 import WalletRefreshRunner from './WalletRefreshRunner';
 
 // A refresh the test resolves by hand, so it can act while one is in flight.
@@ -114,5 +116,43 @@ describe('WalletRefreshRunner', () => {
         const next = jest.fn().mockResolvedValue(undefined);
         await runner.run(next);
         expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    describe('trackAppState', () => {
+        const track = (...states: AppStateStatus[]) =>
+            states.map((state) => runner.trackAppState(state));
+
+        it('reports a return from the background', () => {
+            // Android has no 'inactive' state
+            expect(track('background', 'active')).toEqual([false, true]);
+        });
+
+        it('reports the iOS background sequence, which starts with inactive', () => {
+            expect(track('inactive', 'background', 'active')).toEqual([
+                false,
+                false,
+                true
+            ]);
+        });
+
+        it('does not report a return from inactive alone', () => {
+            // iOS system sheets: Face ID, Control Center, Notification Center
+            expect(track('inactive', 'active')).toEqual([false, false]);
+        });
+
+        it('keeps the background in mind through a later inactive', () => {
+            expect(track('background', 'inactive', 'active')).toEqual([
+                false,
+                false,
+                true
+            ]);
+        });
+
+        it('reports each return once', () => {
+            // A resume, then a Face ID prompt on the Lockscreen
+            expect(track('background', 'active', 'inactive', 'active')).toEqual(
+                [false, true, false, false]
+            );
+        });
     });
 });
