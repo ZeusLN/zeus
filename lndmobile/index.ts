@@ -596,6 +596,7 @@ export const addInvoice = async ({
     is_blinded,
     is_private,
     preimage,
+    description_hash,
     route_hints
 }: {
     amount?: number;
@@ -606,6 +607,8 @@ export const addInvoice = async ({
     is_blinded?: boolean;
     is_private?: boolean;
     preimage?: string;
+    // hex, as in the NWC make_invoice request
+    description_hash?: string;
     route_hints?: lnrpc.IRouteHint[] | null;
 }): Promise<lnrpc.AddInvoiceResponse> => {
     const response = await sendCommand<
@@ -626,6 +629,9 @@ export const addInvoice = async ({
             is_amp,
             is_blinded,
             r_preimage: preimage ? Base64Utils.hexToBytes(preimage) : undefined,
+            description_hash: description_hash
+                ? Base64Utils.hexToBytes(description_hash)
+                : undefined,
             route_hints
         }
     });

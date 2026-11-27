@@ -276,6 +276,8 @@ export default class LndHub extends LND {
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
+    supportsDescriptionHashInvoices = () => false;
+    supportsDescriptionHashOnlyInvoices = () => false;
     supportsSweep = () => false;
     supportsOnchainSendMax = () => false;
     supportsChannelMemo = () => false;

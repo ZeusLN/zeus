@@ -460,6 +460,9 @@ export default class LightningNodeConnect {
                 r_preimage: data.preimage
                     ? Base64Utils.hexToBase64(data.preimage)
                     : undefined,
+                description_hash: data.description_hash
+                    ? Base64Utils.hexToBase64(data.description_hash)
+                    : undefined,
                 route_hints: data.route_hints
             })
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
@@ -1418,6 +1421,8 @@ export default class LightningNodeConnect {
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
+    supportsDescriptionHashInvoices = () => true;
+    supportsDescriptionHashOnlyInvoices = () => true;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsChannelMemo = () => this.supports('v0.17.0');

@@ -39,7 +39,9 @@ jest.mock('../utils/BackendUtils', () => ({
         decodePaymentRequest: jest.fn(),
         createInvoice: jest.fn(),
         supportsFlowLSP: jest.fn(() => false),
-        supportsOnchainReceiving: jest.fn(() => false)
+        supportsOnchainReceiving: jest.fn(() => false),
+        supportsDescriptionHashInvoices: jest.fn(() => false),
+        supportsDescriptionHashOnlyInvoices: jest.fn(() => true)
     }
 }));
 
@@ -87,6 +89,7 @@ jest.mock('../storage', () => ({
     }
 }));
 
+import { createHash } from 'crypto';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { autorun, runInAction } from 'mobx';
@@ -5664,6 +5667,12 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
     };
 
     beforeEach(() => {
+        (BackendUtils.supportsDescriptionHashInvoices as jest.Mock)
+            .mockReset()
+            .mockReturnValue(false);
+        (BackendUtils.supportsDescriptionHashOnlyInvoices as jest.Mock)
+            .mockReset()
+            .mockReturnValue(true);
         jest.spyOn(
             NostrConnectUtils,
             'decodeInvoiceTagsForMakeInvoice'
@@ -5729,7 +5738,7 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
         expect(connection.activity[0].paymentHash).toBe(hex);
     });
 
-    it('rejects a description_hash request instead of making a plain invoice', async () => {
+    it('rejects a description_hash request on a backend that cannot set it', async () => {
         const { store, connection } = setup();
         (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
             payment_request: 'lnbc-plain',
@@ -5744,6 +5753,193 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
         expect(response.error?.code).toBe(Nip47ErrorCode.NOT_IMPLEMENTED);
         expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
         expect(connection.activity).toHaveLength(0);
+    });
+
+    describe('on a backend that can set a description hash', () => {
+        const HASH = 'ab'.repeat(32);
+
+        beforeEach(() => {
+            (
+                BackendUtils.supportsDescriptionHashInvoices as jest.Mock
+            ).mockReturnValue(true);
+        });
+
+        it('makes the invoice with the hash and records it', async () => {
+            const { store, connection } = setup();
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-hash',
+                r_hash: 'dd'
+            });
+
+            const response = await (store as any).handleMakeInvoice(
+                connection,
+                {
+                    amount: 21_000,
+                    description: 'zap',
+                    description_hash: HASH
+                }
+            );
+
+            expect(response.error).toBeUndefined();
+            expect(response.result.invoice).toBe('lnbc-hash');
+            expect(BackendUtils.createInvoice).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    memo: 'zap',
+                    description_hash: HASH
+                })
+            );
+            expect(connection.activity).toHaveLength(1);
+        });
+
+        // An LSP would wrap the invoice in its own, which does not carry
+        // the hash
+        it('makes the invoice without an LSP', async () => {
+            const { store, connection, invoicesStore } = setup();
+            const createUnifiedInvoice = jest.spyOn(
+                invoicesStore,
+                'createUnifiedInvoice'
+            );
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-hash',
+                r_hash: 'dd'
+            });
+
+            const response = await (store as any).handleMakeInvoice(
+                connection,
+                {
+                    amount: 21_000,
+                    description: 'zap',
+                    description_hash: HASH
+                }
+            );
+
+            expect(response.error).toBeUndefined();
+            expect(createUnifiedInvoice).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    descriptionHash: HASH,
+                    noLsp: true
+                })
+            );
+        });
+
+        it('accepts the hash in uppercase hex', async () => {
+            const { store, connection } = setup();
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-hash',
+                r_hash: 'dd'
+            });
+
+            const response = await (store as any).handleMakeInvoice(
+                connection,
+                { amount: 21_000, description_hash: HASH.toUpperCase() }
+            );
+
+            expect(response.error).toBeUndefined();
+        });
+
+        it.each(['zz'.repeat(32), 'ab'.repeat(31), 'ab'.repeat(33), 'xyz'])(
+            'refuses the hash %p, which is not 32 bytes of hex, before any backend call',
+            async (descriptionHash) => {
+                const { store, connection } = setup();
+
+                const response = await (store as any).handleMakeInvoice(
+                    connection,
+                    { amount: 21_000, description_hash: descriptionHash }
+                );
+
+                expect(response.error?.code).toBe(Nip47ErrorCode.OTHER);
+                expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+                expect(connection.activity).toHaveLength(0);
+            }
+        );
+
+        // LNbits sends description_hash: null with every plain request
+        it.each([null, ''])(
+            'still makes a plain invoice when description_hash is %p',
+            async (descriptionHash) => {
+                const { store, connection } = setup();
+                (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                    payment_request: 'lnbc-plain',
+                    r_hash: 'ee'
+                });
+
+                const response = await (store as any).handleMakeInvoice(
+                    connection,
+                    { amount: 21_000, description_hash: descriptionHash }
+                );
+
+                expect(response.error).toBeUndefined();
+                expect(
+                    (BackendUtils.createInvoice as jest.Mock).mock.calls[0][0]
+                ).not.toHaveProperty('description_hash');
+            }
+        );
+
+        // CLN hashes the description it is sent, so it needs that text
+        describe('that needs the description the hash was made from', () => {
+            const DESCRIPTION = 'zap';
+            const DESCRIPTION_HASH = createHash('sha256')
+                .update(DESCRIPTION)
+                .digest('hex');
+
+            beforeEach(() => {
+                (
+                    BackendUtils.supportsDescriptionHashOnlyInvoices as jest.Mock
+                ).mockReturnValue(false);
+            });
+
+            it.each([
+                ['no description', undefined],
+                ['another description', 'not the zap']
+            ])(
+                'refuses the hash with %s as not implemented, before any backend call',
+                async (_, description) => {
+                    const { store, connection } = setup();
+
+                    const response = await (store as any).handleMakeInvoice(
+                        connection,
+                        {
+                            amount: 21_000,
+                            description,
+                            description_hash: DESCRIPTION_HASH
+                        }
+                    );
+
+                    expect(response.error?.code).toBe(
+                        Nip47ErrorCode.NOT_IMPLEMENTED
+                    );
+                    expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+                    expect(connection.activity).toHaveLength(0);
+                }
+            );
+
+            it.each([DESCRIPTION_HASH, DESCRIPTION_HASH.toUpperCase()])(
+                'makes the invoice when the description hashes to %p',
+                async (descriptionHash) => {
+                    const { store, connection } = setup();
+                    (BackendUtils.createInvoice as jest.Mock).mockResolvedValue(
+                        { payment_request: 'lnbc-hash', r_hash: 'dd' }
+                    );
+
+                    const response = await (store as any).handleMakeInvoice(
+                        connection,
+                        {
+                            amount: 21_000,
+                            description: DESCRIPTION,
+                            description_hash: descriptionHash
+                        }
+                    );
+
+                    expect(response.error).toBeUndefined();
+                    expect(BackendUtils.createInvoice).toHaveBeenCalledWith(
+                        expect.objectContaining({
+                            memo: DESCRIPTION,
+                            description_hash: descriptionHash
+                        })
+                    );
+                }
+            );
+        });
     });
 
     // LNbits sends description_hash: null with every plain invoice request
@@ -5921,6 +6117,12 @@ describe('NostrWalletConnectStore make_invoice from Cashu', () => {
     };
 
     beforeEach(() => {
+        (BackendUtils.supportsDescriptionHashInvoices as jest.Mock)
+            .mockReset()
+            .mockReturnValue(false);
+        (BackendUtils.supportsDescriptionHashOnlyInvoices as jest.Mock)
+            .mockReset()
+            .mockReturnValue(true);
         jest.spyOn(
             NostrConnectUtils,
             'decodeInvoiceTagsForMakeInvoice'
@@ -5934,7 +6136,10 @@ describe('NostrWalletConnectStore make_invoice from Cashu', () => {
         );
     });
 
-    it('rejects a description_hash request without making a Cashu invoice', async () => {
+    it('rejects a description_hash request without making a Cashu invoice, even on a backend that can set it', async () => {
+        (
+            BackendUtils.supportsDescriptionHashInvoices as jest.Mock
+        ).mockReturnValue(true);
         const { store, connection, cashuStore } = setup();
         cashuStore.createInvoice = jest.fn();
 

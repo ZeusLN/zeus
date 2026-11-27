@@ -973,6 +973,89 @@ describe('CLNRest payment request bodies', () => {
     );
 });
 
+describe('CLNRest.createInvoice', () => {
+    const TEXT = 'zap request';
+    // Node's own SHA-256 of the UTF-8 text, so the wrapper is not checked
+    // against its own helper
+    const sha256 = (text: string) =>
+        require('crypto')
+            .createHash('sha256')
+            .update(text, 'utf8')
+            .digest('hex');
+
+    const sentBody = () => JSON.parse(fetchArgs()[3]);
+
+    beforeEach(() => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{}'));
+    });
+
+    it('asks CLN for a description hash when the description matches', async () => {
+        await cln.createInvoice({
+            memo: TEXT,
+            value: '21',
+            expiry_seconds: 3600,
+            description_hash: sha256(TEXT)
+        });
+
+        expect(sentBody()).toMatchObject({
+            description: TEXT,
+            deschashonly: true
+        });
+    });
+
+    it('accepts the hash in uppercase hex', async () => {
+        await cln.createInvoice({
+            memo: TEXT,
+            value: '21',
+            expiry_seconds: 3600,
+            description_hash: sha256(TEXT).toUpperCase()
+        });
+
+        expect(sentBody().deschashonly).toBe(true);
+    });
+
+    it('hashes the text as UTF-8', async () => {
+        const text = 'zäp ⚡';
+        await cln.createInvoice({
+            memo: text,
+            value: '21',
+            expiry_seconds: 3600,
+            description_hash: sha256(text)
+        });
+
+        expect(sentBody().deschashonly).toBe(true);
+    });
+
+    it.each([
+        ['another description', { memo: 'something else' }],
+        ['no description', { memo: '' }],
+        ['no description field', {}]
+    ])('refuses a hash with %s, before any request', async (_name, extra) => {
+        mockFetch.mockClear();
+
+        await expect(
+            cln.createInvoice({
+                value: '21',
+                expiry_seconds: 3600,
+                description_hash: sha256(TEXT),
+                ...extra
+            })
+        ).rejects.toThrow();
+
+        expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('sends no deschashonly without a hash', async () => {
+        await cln.createInvoice({
+            memo: 'plain',
+            value: '21',
+            expiry_seconds: 3600
+        });
+
+        expect(sentBody()).not.toHaveProperty('deschashonly');
+    });
+});
+
 describe('CLNRest on-chain fee rate', () => {
     const sentBody = () => JSON.parse(fetchArgs()[3]);
 
@@ -1107,6 +1190,8 @@ describe('CLNRest capability flags', () => {
         supportsNetworkInfo: false,
         supportsSimpleTaprootChannels: false,
         supportsCustomPreimages: false,
+        supportsDescriptionHashInvoices: true,
+        supportsDescriptionHashOnlyInvoices: false,
         supportsSweep: true,
         supportsOnchainSendMax: true,
         supportsOnchainBatching: false,

@@ -53,6 +53,7 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 import {
+    addInvoice,
     clearTrackPaymentStreams,
     listInvoices,
     listPayments,
@@ -597,6 +598,33 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
         await expect(invoice).resolves.toMatchObject({
             payment_hash: SPEC_PAYMENT_HASH
         });
+    });
+});
+
+describe('addInvoice', () => {
+    beforeEach(() => {
+        (sendCommand as jest.Mock).mockReset().mockResolvedValue({});
+    });
+
+    const options = () => (sendCommand as jest.Mock).mock.calls[0][0].options;
+
+    it('passes a description hash as bytes', async () => {
+        await addInvoice({
+            memo: 'zap',
+            amount_msat: 21000,
+            expiry: 3600,
+            description_hash: 'ab'.repeat(32)
+        });
+
+        expect(Array.from(options().description_hash)).toEqual(
+            Array(32).fill(0xab)
+        );
+    });
+
+    it('passes no description hash when there is none', async () => {
+        await addInvoice({ memo: 'plain', amount_msat: 21000, expiry: 3600 });
+
+        expect(options().description_hash).toBeUndefined();
     });
 });
 

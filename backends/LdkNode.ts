@@ -1326,7 +1326,24 @@ export default class LdkNode {
             throw new Error(localeString('error.invalidInvoiceAmountOrExpiry'));
         }
 
-        if (amountMsat > 0) {
+        // The invoice carries the hash of the description instead of its
+        // text. LDK Node takes the hash as lowercase hex.
+        const descriptionHash: string | undefined =
+            data.description_hash?.toLowerCase();
+
+        if (descriptionHash && amountMsat > 0) {
+            invoice =
+                await LdkNodeInjection.bolt11.receiveBolt11WithDescriptionHash({
+                    amountMsat,
+                    descriptionHash,
+                    expirySecs
+                });
+        } else if (descriptionHash) {
+            invoice =
+                await LdkNodeInjection.bolt11.receiveVariableAmountBolt11WithDescriptionHash(
+                    { descriptionHash, expirySecs }
+                );
+        } else if (amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
                 description: data.memo || '',
@@ -2394,6 +2411,8 @@ export default class LdkNode {
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
+    supportsDescriptionHashInvoices = () => true;
+    supportsDescriptionHashOnlyInvoices = () => true;
     supportsSweep = () => false;
     supportsOnchainSendMax = () => true;
     supportsChannelMemo = () => false;

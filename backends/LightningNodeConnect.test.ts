@@ -1687,6 +1687,58 @@ describe('LightningNodeConnect on-chain sends', () => {
     });
 });
 
+describe('LightningNodeConnect.createInvoice', () => {
+    const HASH_HEX = 'ab'.repeat(32);
+
+    const makeBackend = async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        lnc.lnd.lightning.addInvoice = jest.fn(async () => ({
+            payment_request: 'lnbc-test',
+            r_hash: 'aa'
+        }));
+        return backend;
+    };
+
+    const request = (backend: LightningNodeConnect) =>
+        (backend.lnc.lnd.lightning.addInvoice as jest.Mock).mock.calls[0][0];
+
+    it('sends a description hash as base64, like the preimage', async () => {
+        const backend = await makeBackend();
+
+        await backend.createInvoice({
+            memo: 'zap',
+            value: '21',
+            expiry_seconds: 3600,
+            description_hash: HASH_HEX
+        });
+
+        expect(request(backend).description_hash).toBe(
+            Buffer.from(HASH_HEX, 'hex').toString('base64')
+        );
+        expect(request(backend).memo).toBe('zap');
+    });
+
+    it('sends no description hash when there is none', async () => {
+        const backend = await makeBackend();
+
+        await backend.createInvoice({ memo: 'plain', value: '21' });
+
+        expect(request(backend).description_hash).toBeUndefined();
+    });
+
+    it('supports description hash invoices', () => {
+        expect(
+            new LightningNodeConnect().supportsDescriptionHashInvoices()
+        ).toBe(true);
+        expect(
+            new LightningNodeConnect().supportsDescriptionHashOnlyInvoices()
+        ).toBe(true);
+    });
+});
+
 describe('LightningNodeConnect.abandonChannel', () => {
     const abandonWith = async (params: Array<string | boolean | undefined>) => {
         mockSettings.implementation = 'lightning-node-connect';

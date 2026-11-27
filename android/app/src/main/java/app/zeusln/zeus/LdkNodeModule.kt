@@ -1395,6 +1395,36 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    // The invoice carries the hash of its description, not the text. The hash
+    // is the hex SHA-256 that Bolt11InvoiceDescription.Hash expects.
+    @ReactMethod
+    fun receiveBolt11WithDescriptionHash(amountMsat: Double, descriptionHash: String, expirySecs: Double, promise: Promise) {
+        try {
+            val node = this.node ?: throw Exception("Node not initialized")
+            val bolt11 = node.bolt11Payment()
+            val invoiceDescription = Bolt11InvoiceDescription.Hash(descriptionHash)
+            val invoice = bolt11.receive(toULongExact(amountMsat, "amount"), invoiceDescription, toUIntExact(expirySecs, "expiry"))
+            val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("error", errorMessage(e))
+        }
+    }
+
+    @ReactMethod
+    fun receiveVariableAmountBolt11WithDescriptionHash(descriptionHash: String, expirySecs: Double, promise: Promise) {
+        try {
+            val node = this.node ?: throw Exception("Node not initialized")
+            val bolt11 = node.bolt11Payment()
+            val invoiceDescription = Bolt11InvoiceDescription.Hash(descriptionHash)
+            val invoice = bolt11.receiveVariableAmount(invoiceDescription, toUIntExact(expirySecs, "expiry"))
+            val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("error", errorMessage(e))
+        }
+    }
+
     // Number Conversion Helpers
 
     // Double.toLong().toULong() and Double.toInt().toUInt() wrap a negative

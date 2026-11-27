@@ -41,6 +41,7 @@ jest.mock('../utils/TorWebSocket', () => ({
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import LND from './LND';
+import LndHub from './LndHub';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import { nodeInfoStore, settingsStore } from '../stores/Stores';
 import { localeString } from '../utils/LocaleUtils';
@@ -144,6 +145,56 @@ describe('LND.getURL', () => {
                 lnd.getURL('https://node.example.com/', '', '/v1/route', true)
             ).toBe('wss://node.example.com/v1/route');
         });
+    });
+});
+
+describe('LND.createInvoice', () => {
+    // the hash NWC make_invoice passes: hex SHA-256 of the description
+    const HASH_HEX = 'ab'.repeat(32);
+
+    let lnd: LND;
+    let postRequest: jest.SpyInstance;
+
+    beforeEach(() => {
+        lnd = new LND();
+        postRequest = jest.spyOn(lnd, 'postRequest').mockResolvedValue({});
+    });
+
+    const body = () => postRequest.mock.calls[0][1];
+
+    it('sends a description hash as base64, the encoding of the REST gateway', async () => {
+        await lnd.createInvoice({
+            memo: 'zap',
+            value: '21',
+            description_hash: HASH_HEX
+        });
+
+        expect(postRequest.mock.calls[0][0]).toBe('/v1/invoices');
+        expect(body().description_hash).toBe(
+            Buffer.from(HASH_HEX, 'hex').toString('base64')
+        );
+        expect(body().memo).toBe('zap');
+    });
+
+    it('sends no description hash when there is none', async () => {
+        await lnd.createInvoice({ memo: 'plain', value: '21' });
+
+        expect(body().description_hash).toBeUndefined();
+    });
+
+    it('supports description hash invoices', () => {
+        expect(lnd.supportsDescriptionHashInvoices()).toBe(true);
+    });
+
+    // lnd puts the hash in the invoice whatever the memo says
+    it('takes a description hash without its description', () => {
+        expect(lnd.supportsDescriptionHashOnlyInvoices()).toBe(true);
+    });
+
+    // LndHub extends LND but its createInvoice sends no hash
+    it('does not leak the support to LndHub, which extends LND', () => {
+        expect(new LndHub().supportsDescriptionHashInvoices()).toBe(false);
+        expect(new LndHub().supportsDescriptionHashOnlyInvoices()).toBe(false);
     });
 });
 

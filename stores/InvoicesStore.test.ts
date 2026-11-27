@@ -971,6 +971,62 @@ describe('InvoicesStore.createInvoice LSP decision', () => {
     });
 });
 
+describe('InvoicesStore description hash', () => {
+    const HASH = 'ab'.repeat(32);
+
+    const setup = () => {
+        const store = new InvoicesStore(
+            { settings: {} } as any,
+            { resetFee: jest.fn(), clearFee: jest.fn() } as any,
+            {} as any,
+            {
+                flowLspNotConfigured: () => ({ flowLspNotConfigured: true })
+            } as any
+        );
+        (BackendUtils.createInvoice as jest.Mock).mockReset();
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-hash',
+            r_hash: 'hash'
+        });
+        return store;
+    };
+
+    it('forwards the hash of createUnifiedInvoice to the backend', async () => {
+        const store = setup();
+
+        await store.createUnifiedInvoice({
+            memo: 'zap',
+            value: '21',
+            expirySeconds: '3600',
+            descriptionHash: HASH,
+            noLsp: true,
+            skipOnchain: true,
+            silent: true
+        });
+
+        expect(BackendUtils.createInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'zap', description_hash: HASH })
+        );
+    });
+
+    it('sends no hash when none was asked for', async () => {
+        const store = setup();
+
+        await store.createUnifiedInvoice({
+            memo: 'plain',
+            value: '21',
+            expirySeconds: '3600',
+            noLsp: true,
+            skipOnchain: true,
+            silent: true
+        });
+
+        expect(
+            (BackendUtils.createInvoice as jest.Mock).mock.calls[0][0]
+        ).not.toHaveProperty('description_hash');
+    });
+});
+
 describe('InvoicesStore.createInvoice LSP fee quote', () => {
     const lnurl = {
         callback: 'https://service.example/withdraw?x=1',

@@ -1,6 +1,8 @@
 const mockListPayments = jest.fn();
 const mockReceiveBolt11 = jest.fn();
 const mockReceiveVariableAmountBolt11 = jest.fn();
+const mockReceiveBolt11WithDescriptionHash = jest.fn();
+const mockReceiveVariableAmountBolt11WithDescriptionHash = jest.fn();
 const mockSendBolt11 = jest.fn();
 const mockSendBolt11UsingAmount = jest.fn();
 const mockSendSpontaneousPayment = jest.fn();
@@ -31,7 +33,11 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
                 mockSendBolt11UsingAmount(...args),
             receiveBolt11: (...args: any[]) => mockReceiveBolt11(...args),
             receiveVariableAmountBolt11: (...args: any[]) =>
-                mockReceiveVariableAmountBolt11(...args)
+                mockReceiveVariableAmountBolt11(...args),
+            receiveBolt11WithDescriptionHash: (...args: any[]) =>
+                mockReceiveBolt11WithDescriptionHash(...args),
+            receiveVariableAmountBolt11WithDescriptionHash: (...args: any[]) =>
+                mockReceiveVariableAmountBolt11WithDescriptionHash(...args)
         },
         spontaneous: {
             sendSpontaneousPayment: (...args: any[]) =>
@@ -1047,6 +1053,83 @@ describe('LdkNode createInvoice', () => {
         ldk.subscribeToEvents = () => () => {};
         mockReceiveBolt11.mockResolvedValue(INVOICE);
         mockReceiveVariableAmountBolt11.mockResolvedValue(INVOICE);
+        mockReceiveBolt11WithDescriptionHash.mockResolvedValue(INVOICE);
+        mockReceiveVariableAmountBolt11WithDescriptionHash.mockResolvedValue(
+            INVOICE
+        );
+    });
+
+    describe('with a description hash', () => {
+        const HASH = 'ab'.repeat(32);
+
+        it('creates an invoice with the hash instead of the text', async () => {
+            await ldk.createInvoice({
+                value: '21',
+                memo: 'zap',
+                expiry_seconds: '3600',
+                description_hash: HASH
+            });
+
+            expect(mockReceiveBolt11WithDescriptionHash).toHaveBeenCalledWith({
+                amountMsat: 21_000,
+                descriptionHash: HASH,
+                expirySecs: 3600
+            });
+            expect(mockReceiveBolt11).not.toHaveBeenCalled();
+        });
+
+        it('passes the hash to LDK as lowercase hex', async () => {
+            await ldk.createInvoice({
+                value: '21',
+                expiry_seconds: '3600',
+                description_hash: HASH.toUpperCase()
+            });
+
+            expect(
+                mockReceiveBolt11WithDescriptionHash.mock.calls[0][0]
+                    .descriptionHash
+            ).toBe(HASH);
+        });
+
+        it('creates a variable amount invoice with the hash', async () => {
+            await ldk.createInvoice({
+                value: '0',
+                expiry_seconds: '3600',
+                description_hash: HASH
+            });
+
+            expect(
+                mockReceiveVariableAmountBolt11WithDescriptionHash
+            ).toHaveBeenCalledWith({ descriptionHash: HASH, expirySecs: 3600 });
+            expect(mockReceiveVariableAmountBolt11).not.toHaveBeenCalled();
+        });
+
+        it('still validates the amount and expiry', async () => {
+            await expect(
+                ldk.createInvoice({
+                    value: '21',
+                    expiry_seconds: '4294967296',
+                    description_hash: HASH
+                })
+            ).rejects.toThrow();
+            expect(mockReceiveBolt11WithDescriptionHash).not.toHaveBeenCalled();
+        });
+
+        it('keeps the text invoice when there is no hash', async () => {
+            await ldk.createInvoice({
+                value: '21',
+                memo: 'plain',
+                expiry_seconds: '3600'
+            });
+
+            expect(mockReceiveBolt11).toHaveBeenCalled();
+            expect(mockReceiveBolt11WithDescriptionHash).not.toHaveBeenCalled();
+        });
+
+        it('supports description hash invoices', () => {
+            expect(ldk.supportsDescriptionHashInvoices()).toBe(true);
+            expect(ldk.supportsDescriptionHashOnlyInvoices()).toBe(true);
+        });
     });
 
     it('passes an amount and expiry that fit the native types', async () => {
