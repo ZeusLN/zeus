@@ -214,11 +214,14 @@ export default class SendingLightning extends React.Component<
             this.setState({ wasSuccessful: false });
         }
 
+        // no donation when the result is in doubt, e.g. a success whose
+        // preimage doesn't match the payment hash
         if (
             NodeInfoStore!.nodeInfo.isMainNet &&
             wasSuccessful &&
             this.paymentSequence !== null &&
             TransactionsStore.lastPaymentSequence === this.paymentSequence &&
+            !TransactionsStore.error &&
             enableDonations &&
             donationAmount &&
             !this.donationAttempted
@@ -716,33 +719,37 @@ export default class SendingLightning extends React.Component<
                                             same way. The send guard is still
                                             held while the node is checked for
                                             this payment, so a retry would be
-                                            silently ignored */}
-                                        {!paymentRejectedByRecipient && (
-                                            <Button
-                                                title={localeString(
-                                                    paymentInFlight
-                                                        ? 'views.SendingLightning.checkingPayment'
-                                                        : 'views.SendingLightning.tryAgain'
-                                                )}
-                                                icon={{
-                                                    name: 'rotate-ccw',
-                                                    type: 'feather',
-                                                    size: 25
-                                                }}
-                                                disabled={paymentInFlight}
-                                                onPress={() =>
-                                                    navigation.goBack()
-                                                }
-                                                buttonStyle={{
-                                                    backgroundColor: 'white',
-                                                    height: 40
-                                                }}
-                                                containerStyle={{
-                                                    width: '100%',
-                                                    margin: 3
-                                                }}
-                                            />
-                                        )}
+                                            silently ignored. Not offered when
+                                            the node reported the payment as
+                                            sent: a retry can pay twice */}
+                                        {!paymentRejectedByRecipient &&
+                                            !success && (
+                                                <Button
+                                                    title={localeString(
+                                                        paymentInFlight
+                                                            ? 'views.SendingLightning.checkingPayment'
+                                                            : 'views.SendingLightning.tryAgain'
+                                                    )}
+                                                    icon={{
+                                                        name: 'rotate-ccw',
+                                                        type: 'feather',
+                                                        size: 25
+                                                    }}
+                                                    disabled={paymentInFlight}
+                                                    onPress={() =>
+                                                        navigation.goBack()
+                                                    }
+                                                    buttonStyle={{
+                                                        backgroundColor:
+                                                            'white',
+                                                        height: 40
+                                                    }}
+                                                    containerStyle={{
+                                                        width: '100%',
+                                                        margin: 3
+                                                    }}
+                                                />
+                                            )}
                                         {BackendUtils.isLocalWallet() && (
                                             <Button
                                                 title={localeString(
