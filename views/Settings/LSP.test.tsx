@@ -19,11 +19,19 @@ jest.mock('../../stores/SettingsStore', () => ({
             ? settings.lspTestnet
             : settings.lspMainnet,
         defaultFlowHost: 'https://flow.zeuslsp.com'
-    })
+    }),
+    getLdkNodeLspConfig: () => ({})
 }));
+// a backend without LSPS2, so the Flow fields are shown
 jest.mock('../../utils/BackendUtils', () => ({
+    supportsLSPS2: () => false,
     supportsSimpleTaprootChannels: () => false
 }));
+jest.mock('../../utils/LdkNodeUtils', () => ({
+    getActiveLsps2Config: () => undefined,
+    getActiveLsps2NodeId: () => undefined
+}));
+jest.mock('../../utils/RestartUtils', () => ({ restartNeeded: jest.fn() }));
 jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'

@@ -411,9 +411,14 @@ export default class InvoicesStore {
             ((!!this.settingsStore.settings?.enableLSP || !!forceLsp) &&
                 !this.nodeInfoStore.flowLspNotConfigured()
                     .flowLspNotConfigured);
+        // An LDK node with a dedicated LSPS2 LSP gets JIT channels from it
+        // instead of Flow. forceLsp comes from Flow's own settings screen.
+        const lsps2 =
+            lspRequested && !forceLsp && !!BackendUtils.isLsps2Active();
         const lspFeeRequested =
             BackendUtils.supportsFlowLSP() &&
             lspRequested &&
+            !lsps2 &&
             !!value &&
             value !== '0' &&
             !noLsp;
@@ -518,6 +523,8 @@ export default class InvoicesStore {
         }
 
         if (customPreimage) req.preimage = customPreimage;
+
+        if (lsps2 && value && value !== '0' && !noLsp) req.lsps2_jit = true;
 
         // The quote this invoice is priced with: its fee and the fee_id the
         // proposal sends. lspStore.zeroConfFee/feeId are shared with the
@@ -700,6 +707,52 @@ export default class InvoicesStore {
                         if (!unified) this.creatingInvoice = false;
                     });
 
+                // The fee the LSPS2 LSP takes when a JIT channel is bought
+                // for this invoice. Rounded down like Flow's: a fee just
+                // under the amount must not reach it and read as on top
+                const lsps2FeeSats: number | null = data.lsp_fee_msat
+                    ? Math.floor(data.lsp_fee_msat / 1000)
+                    : null;
+
+                // An LNURL-withdraw invoice is submitted as soon as it is
+                // created, and the LSPS2 fee is only known now, so it has
+                // to be accepted before the submit. A JIT invoice whose fee
+                // couldn't be read is never submitted.
+                if (data.lsps2_jit && lnurl && isCurrent()) {
+                    if (data.lsp_fee_msat == null) {
+                        const error_msg = localeString(
+                            'stores.InvoicesStore.lsps2.feeUnknown'
+                        );
+                        if (silent) throw new Error(error_msg);
+                        if (shared())
+                            runInAction(() => {
+                                this.payment_request = null;
+                                this.payment_request_amt = null;
+                                this.payment_request_lsp_fee = null;
+                                this.creatingInvoiceError = true;
+                                this.creatingInvoice = false;
+                                this.error_msg = error_msg;
+                            });
+                        return;
+                    }
+                    const accepted = confirmLspFee
+                        ? await confirmLspFee(
+                              Math.floor(data.lsp_fee_msat / 1000),
+                              value
+                          )
+                        : false;
+                    if (!accepted) {
+                        if (shared())
+                            runInAction(() => {
+                                this.payment_request = null;
+                                this.payment_request_amt = null;
+                                this.payment_request_lsp_fee = null;
+                                this.creatingInvoice = false;
+                            });
+                        return;
+                    }
+                }
+
                 let jit_bolt11: string = '';
                 if (lspFeeRequested) {
                     try {
@@ -775,7 +828,7 @@ export default class InvoicesStore {
                     paymentRequest: jit_bolt11
                         ? jit_bolt11
                         : invoice.getPaymentRequest,
-                    lspFeeSats: jit_bolt11 ? lspQuote.feeSats : null
+                    lspFeeSats: jit_bolt11 ? lspQuote.feeSats : lsps2FeeSats
                 };
             })
             .catch((error: any) => {

@@ -1348,6 +1348,42 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    // The fee limit is required: without one, ldk-node accepts the LSP's cheapest offer at any cost
+    @objc(receiveViaJitChannel:invoiceDescription:expirySecs:maxLspFeeLimitMsat:resolver:rejecter:)
+    func receiveViaJitChannel(_ amountMsat: Double, invoiceDescription: String, expirySecs: Double, maxLspFeeLimitMsat: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        guard let amount = toUInt64(amountMsat), let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid amount or expiry", nil)
+            return
+        }
+
+        guard let maxFeeMsat = toUInt64(maxLspFeeLimitMsat) else {
+            reject("error", "Invalid fee limit", nil)
+            return
+        }
+
+        // Connects to the LSP and waits on two LSPS2 requests
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bolt11 = node.bolt11Payment()
+                let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
+                let invoice = try bolt11.receiveViaJitChannel(
+                    amountMsat: amount,
+                    description: descriptionObj,
+                    expirySecs: expiry,
+                    maxLspFeeLimitMsat: maxFeeMsat
+                )
+                resolve(["invoice": invoice.description])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
     @objc(sendBolt11:maxTotalRoutingFeeMsat:maxPathCount:paymentTimeoutSecs:resolver:rejecter:)
     func sendBolt11(_ invoice: String, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
