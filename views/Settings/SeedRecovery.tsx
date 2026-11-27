@@ -81,6 +81,7 @@ import SettingsStore, {
     SWAP_HOST_KEYS_TESTNET,
     EMBEDDED_NODE_NETWORK_KEYS,
     getLspConfigForNetwork,
+    getTrustedZeroConfPeers,
     Settings
 } from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -804,16 +805,7 @@ export default class SeedRecovery extends React.PureComponent<
                               }
                             : undefined;
 
-                    // Always include Flow LSP pubkey as trusted 0-conf peer
-                    const flowLspPubkey = lspConfig.defaultPubkey;
-
-                    const trustedPeers = [flowLspPubkey];
-                    if (
-                        lsps1Config?.nodeId &&
-                        lsps1Config.nodeId !== flowLspPubkey
-                    ) {
-                        trustedPeers.push(lsps1Config.nodeId);
-                    }
+                    const trustedPeers = getTrustedZeroConfPeers(lspConfig);
 
                     const networkType = network as
                         | 'mainnet'

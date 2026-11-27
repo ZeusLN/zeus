@@ -2,7 +2,7 @@ import { action, observable, runInAction } from 'mobx';
 import NetworkInfo from '../models/NetworkInfo';
 import NodeInfo from '../models/NodeInfo';
 import ChannelsStore from './ChannelsStore';
-import SettingsStore from './SettingsStore';
+import SettingsStore, { getLspConfigForNetwork } from './SettingsStore';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Storage from '../storage';
@@ -182,15 +182,23 @@ export default class NodeInfoStore {
         const zeroConfConfig = zeroConf && scidAlias;
 
         const restIsConfigured = certVerification && zeroConfConfig;
-        const flowLspNotConfigured =
+        const nodeNotConfigured =
             implementation === 'lnd'
                 ? !restIsConfigured
                 : BackendUtils.isLocalWallet()
                 ? false
                 : true;
+        // Empty on a network with no LSP (regtest, plain signet) unless
+        // the user set a host
+        const noFlowHost = !getLspConfigForNetwork(
+            this.settingsStore.settings,
+            this.nodeInfo
+        ).flowHost;
 
         return {
-            flowLspNotConfigured,
+            flowLspNotConfigured: nodeNotConfigured || noFlowHost,
+            // the node's own part, for the LSP settings checklist
+            nodeNotConfigured,
             restIsConfigured,
             zeroConfConfig,
             zeroConf,

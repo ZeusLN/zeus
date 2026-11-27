@@ -39,8 +39,16 @@ jest.mock('../utils/LocaleUtils');
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
     default: class {},
-    getLspConfigForNetwork: () => ({ lsps1Pubkey: 'aa' })
+    getLspConfigForNetwork: () => mockLspConfig
 }));
+let mockLspConfig: any;
+const DEFAULT_MOCK_LSP_CONFIG = {
+    lsps1Pubkey: 'aa',
+    flowHost: 'https://flow.test'
+};
+beforeEach(() => {
+    mockLspConfig = { ...DEFAULT_MOCK_LSP_CONFIG };
+});
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { observable } from 'mobx';
@@ -1427,6 +1435,24 @@ describe('LSPStore.initFlowLSP', () => {
 
     // getLSPInfo is not awaited; let its rejection and catch run
     const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+    // regtest and plain signet have no Flow host unless the user set one
+    it.each(['ldk-node', 'embedded-lnd', 'lnd'])(
+        'does not fetch LSP info on %s when the network has no Flow host (#5681)',
+        async (implementation) => {
+            mockLspConfig = { lsps1Pubkey: '', flowHost: '' };
+            const store = makeFlowStore(implementation);
+            const getLSPInfo = jest.spyOn(store, 'getLSPInfo');
+
+            store.initFlowLSP();
+            await settle();
+
+            expect(getLSPInfo).not.toHaveBeenCalled();
+            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+            // the node-side setup does not depend on the LSP
+            expect(store.initChannelAcceptor).toHaveBeenCalled();
+        }
+    );
 
     it('finishes setup when the LSP cannot be reached (#4779)', async () => {
         jest.mocked(ReactNativeBlobUtil.fetch).mockRejectedValue(
@@ -2962,5 +2988,40 @@ describe('LSPStore LSPS1 create_order terms', () => {
             });
             expect(store.error).toBe(false);
         });
+    });
+});
+
+describe('LSPStore.isOlympus', () => {
+    const makeStore = () =>
+        new LSPStore(
+            { implementation: 'lnd', settings: {} } as any,
+            { channels: [] } as any,
+            { nodeInfo: {} } as any
+        );
+
+    beforeEach(() => {
+        jest.mocked(BackendUtils.supportsLSPS1native).mockReturnValue(false);
+        jest.mocked(BackendUtils.supportsLSPS1rest).mockReturnValue(false);
+    });
+
+    it('is true when the configured peer is the network default', () => {
+        mockLspConfig = { lsps1Pubkey: 'aa', defaultPubkey: 'aa' };
+
+        expect(makeStore().isOlympus()).toBe(true);
+    });
+
+    it('is false on a network with no LSP, where nothing is configured (#5681)', () => {
+        mockLspConfig = {
+            lsps1Pubkey: '',
+            lsps1Rest: '',
+            defaultPubkey: '',
+            defaultLsps1Rest: ''
+        };
+        const store = makeStore();
+
+        expect(store.isOlympus()).toBe(false);
+        expect(store.isOlympus('LSPS7' as any)).toBe(false);
+        jest.mocked(BackendUtils.supportsLSPS1rest).mockReturnValue(true);
+        expect(store.isOlympus()).toBe(false);
     });
 });

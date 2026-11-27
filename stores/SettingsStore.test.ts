@@ -119,6 +119,7 @@ import SettingsStore, {
     STORAGE_KEY,
     THEME_KEYS,
     getLspConfigForNetwork,
+    getTrustedZeroConfPeers,
     isOlympusPeer
 } from './SettingsStore';
 import { themeColor } from '../utils/ThemeUtils';
@@ -1819,6 +1820,167 @@ describe('getLspConfigForNetwork', () => {
             expect(config.defaultPubkey).toEqual(pubkey);
         }
     );
+
+    // ZEUS runs no LSP on regtest or on a signet other than Mutinynet (#5681)
+    describe('networks without an LSP', () => {
+        const defaults: any = {
+            lspMainnet: DEFAULT_LSP_MAINNET,
+            lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
+            lsps1PubkeyMainnet: DEFAULT_LSPS1_PUBKEY_MAINNET,
+            lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET
+        };
+        const empty = {
+            flowHost: '',
+            lsps1Rest: '',
+            lsps1Pubkey: '',
+            lsps1Host: '',
+            defaultPubkey: '',
+            defaultFlowHost: '',
+            defaultLsps1Rest: '',
+            defaultLsps1Host: ''
+        };
+        const flags = (network: any) => ({
+            isMutinynet: false,
+            isTestNet: false,
+            ...network
+        });
+        const networks: [string, any][] = [
+            ['the regtest string', 'regtest'],
+            ['the signet string', 'signet'],
+            ['a regtest node', flags({ isRegTest: true })],
+            ['a signet node', flags({ isSigNet: true })]
+        ];
+
+        it.each(networks)('has no defaults for %s', (_name, network) => {
+            expect(getLspConfigForNetwork(defaults, network)).toEqual(empty);
+            expect(getLspConfigForNetwork({} as any, network)).toEqual(empty);
+        });
+
+        it.each(networks)(
+            'uses mainnet settings the user changed for %s',
+            (_name, network) => {
+                const config = getLspConfigForNetwork(
+                    {
+                        lspMainnet: custom.flow,
+                        lsps1RestMainnet: custom.rest,
+                        lsps1PubkeyMainnet: 'ab'.repeat(33),
+                        lsps1HostMainnet: custom.host
+                    } as any,
+                    network
+                );
+
+                expect(config).toEqual({
+                    ...empty,
+                    flowHost: custom.flow,
+                    lsps1Rest: custom.rest,
+                    lsps1Pubkey: 'ab'.repeat(33),
+                    lsps1Host: custom.host
+                });
+            }
+        );
+
+        it('takes each changed setting on its own', () => {
+            // A stub Flow LSP on regtest, LSPS1 left at the defaults
+            const config = getLspConfigForNetwork(
+                { ...defaults, lspMainnet: custom.flow },
+                'regtest'
+            );
+
+            expect(config).toEqual({ ...empty, flowHost: custom.flow });
+        });
+
+        it('keeps the Mutinynet config for an LDK Node that also reports signet', () => {
+            const config = getLspConfigForNetwork(
+                {} as any,
+                flags({ isMutinynet: true, isSigNet: true })
+            );
+
+            expect(config.flowHost).toEqual(DEFAULT_LSP_MUTINYNET);
+            expect(config.defaultPubkey).toEqual(
+                DEFAULT_LSPS1_PUBKEY_MUTINYNET
+            );
+        });
+
+        it.each([
+            ['mainnet', DEFAULT_LSP_MAINNET],
+            ['testnet', DEFAULT_LSP_TESTNET],
+            ['mutinynet', DEFAULT_LSP_MUTINYNET]
+        ])('still has defaults for %s', (network, flow) => {
+            expect(getLspConfigForNetwork({} as any, network).flowHost).toEqual(
+                flow
+            );
+        });
+
+        it('still has the mainnet defaults before the node reports a network', () => {
+            expect(
+                getLspConfigForNetwork({} as any, {} as any).flowHost
+            ).toEqual(DEFAULT_LSP_MAINNET);
+            expect(
+                getLspConfigForNetwork(
+                    {} as any,
+                    flags({ isRegTest: false, isSigNet: false })
+                ).defaultPubkey
+            ).toEqual(DEFAULT_LSPS1_PUBKEY_MAINNET);
+        });
+
+        it('still has the testnet defaults for a testnet node', () => {
+            expect(
+                getLspConfigForNetwork({} as any, flags({ isTestNet: true }))
+                    .flowHost
+            ).toEqual(DEFAULT_LSP_TESTNET);
+        });
+
+        it('is not an Olympus peer, with or without a configured peer', () => {
+            expect(isOlympusPeer(defaults, 'regtest')).toBe(false);
+            expect(
+                isOlympusPeer(
+                    { ...defaults, lsps1PubkeyMainnet: 'ab'.repeat(33) },
+                    'regtest'
+                )
+            ).toBe(false);
+            expect(isOlympusPeer(defaults, 'mainnet')).toBe(true);
+        });
+    });
+});
+
+describe('getTrustedZeroConfPeers', () => {
+    const peers = (defaultPubkey: string, lsps1Pubkey = '', lsps1Host = '') =>
+        getTrustedZeroConfPeers({ defaultPubkey, lsps1Pubkey, lsps1Host });
+
+    it("trusts the network's Flow LSP", () => {
+        expect(peers('flow', 'flow', 'host:9735')).toEqual(['flow']);
+        expect(peers('flow')).toEqual(['flow']);
+    });
+
+    it('also trusts a configured LSPS1 peer that is another node', () => {
+        expect(peers('flow', 'other', 'host:9735')).toEqual(['flow', 'other']);
+    });
+
+    it('leaves out an LSPS1 peer with no host', () => {
+        expect(peers('flow', 'other', '')).toEqual(['flow']);
+    });
+
+    it('leaves out an LSPS1 host with no pubkey', () => {
+        expect(peers('flow', '', 'host:9735')).toEqual(['flow']);
+    });
+
+    it('trusts no one on a network with no LSP (#5681)', () => {
+        expect(peers('')).toEqual([]);
+    });
+
+    it('trusts only the configured LSPS1 peer on a network with no LSP', () => {
+        expect(peers('', 'other', 'host:9735')).toEqual(['other']);
+    });
+
+    it('builds the list from the config of each network', () => {
+        const settings: any = {};
+        expect(
+            getTrustedZeroConfPeers(getLspConfigForNetwork(settings, 'mainnet'))
+        ).toEqual([DEFAULT_LSPS1_PUBKEY_MAINNET]);
+        expect(
+            getTrustedZeroConfPeers(getLspConfigForNetwork(settings, 'regtest'))
+        ).toEqual([]);
+    });
 });
 
 describe('SettingsStore.externalInputAuthRequired', () => {

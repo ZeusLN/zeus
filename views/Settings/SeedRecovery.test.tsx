@@ -19,7 +19,8 @@ jest.mock('../../stores/SettingsStore', () => ({
     SWAP_HOST_KEYS_MAINNET: [],
     SWAP_HOST_KEYS_TESTNET: [],
     EMBEDDED_NODE_NETWORK_KEYS: [],
-    getLspConfigForNetwork: jest.fn(() => ({}))
+    getLspConfigForNetwork: jest.fn(() => ({})),
+    getTrustedZeroConfPeers: jest.fn(() => [])
 }));
 jest.mock('../../stores/ModalStore', () => ({}));
 jest.mock('../../stores/NodeInfoStore', () => ({}));

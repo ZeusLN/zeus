@@ -30,6 +30,9 @@ const deferred = <T = void>() => {
     return { promise, resolve, reject };
 };
 
+const getLspConfigForNetwork = jest.fn((): any => ({}));
+const getTrustedZeroConfPeers = jest.fn((): string[] => []);
+
 const nodes = [
     { implementation: 'ldk-node', ldkMnemonic: 'm', ldkNodeDir: 'a' },
     { implementation: 'lnd', host: 'b' },
@@ -147,7 +150,8 @@ function setup(
             BackendUtils,
             ...ldk,
             ...lnd,
-            getLspConfigForNetwork: () => ({}),
+            getLspConfigForNetwork,
+            getTrustedZeroConfPeers,
             DEFAULT_SCORER_URL: 'scorer',
             DEFAULT_VSS_SERVER: 'vss',
             localeString: (s: string) => s,
@@ -1109,6 +1113,29 @@ describe('a node left running by a wallet creation or restore', () => {
         expect(settings.connecting).toBe(false);
         return { ldk, lnd };
     };
+
+    it("starts an LDK Node wallet with its network's 0-conf peers", async () => {
+        const { settings, runner, refresh, ldk } = setup(0);
+        settings.ldkNetwork = 'regtest';
+        ldk.startLdkNodeWallet.mockResolvedValue({});
+        const lspConfig = { lsps1Pubkey: '', lsps1Host: '' };
+        getLspConfigForNetwork.mockReturnValueOnce(lspConfig);
+        getTrustedZeroConfPeers.mockReturnValueOnce(['peer-for-regtest']);
+
+        await runner.run(refresh);
+
+        expect(getLspConfigForNetwork).toHaveBeenLastCalledWith(
+            settings.settings,
+            'regtest'
+        );
+        expect(getTrustedZeroConfPeers).toHaveBeenLastCalledWith(lspConfig);
+        expect(ldk.startLdkNodeWallet).toHaveBeenCalledWith(
+            expect.objectContaining({
+                lsps1Config: undefined,
+                trustedPeers0conf: ['peer-for-regtest']
+            })
+        );
+    });
 
     it('is reused for its own LDK Node wallet', async () => {
         const { ldk } = await connect(0, 'a');
