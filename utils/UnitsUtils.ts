@@ -41,8 +41,15 @@ const getDecimalPlaceholder = (amount: string, units: string) => {
     };
 };
 
-const numberWithCommas = (x: string | number) =>
-    x?.toString()?.replace(/\B(?=(\d{3})+(?!\d))/g, ',') || '0';
+// Groups the whole part in thousands. The digits after the decimal point
+// are left as they are: 1234.5678 is 1,234.5678, not 1,234.5,678
+const numberWithCommas = (x: string | number) => {
+    const value = x?.toString() || '0';
+    const point = value.indexOf('.');
+    const whole = point === -1 ? value : value.slice(0, point);
+    const fraction = point === -1 ? '' : value.slice(point);
+    return whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + fraction;
+};
 
 const numberWithDecimals = (x: string | number) =>
     numberWithCommas(x).replace(/[,.]/g, (y: string) =>
