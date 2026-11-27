@@ -1,6 +1,7 @@
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
 import { Alert, Platform } from 'react-native';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 import {
     LEGACY_EXPORT_CLEANUP_KEY,
@@ -218,6 +219,17 @@ describe('LegacyExportUtils', () => {
                 expect(unlinkedPaths()).toEqual([stale.path]);
             }
         );
+
+        it('runs once per launch, however often getSettings calls it', async () => {
+            await checkLegacyExportFiles();
+            await checkLegacyExportFiles();
+
+            const docListings = (RNFS.readDir as jest.Mock).mock.calls.filter(
+                ([dir]) => dir === DOCS
+            );
+            expect(docListings).toHaveLength(1);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledTimes(1);
+        });
 
         it('retries next launch when Documents cannot be listed', async () => {
             (RNFS.readDir as jest.Mock).mockRejectedValue(new Error('EIO'));

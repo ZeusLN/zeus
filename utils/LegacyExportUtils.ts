@@ -61,8 +61,17 @@ const markLegacyExportCleanupDone = async () => {
     await EncryptedStorage.removeItem(LEGACY_EXPORT_PROMPT_KEY);
 };
 
+// getSettings runs its migration steps on every call (screen loads and
+// every settings write), so this check runs once per launch. Repeating it
+// would list Documents and rewrite the prompt key on each call while
+// legacy files are pending, and read the cleanup flag from the keychain on
+// each call after that.
+let checkedThisSession = false;
+
 // Startup migration step. Never deletes anything outside the share cache.
 export const checkLegacyExportFiles = async (): Promise<void> => {
+    if (checkedThisSession) return;
+    checkedThisSession = true;
     // A completed share keeps its staged copies (see SHARE_STAGING_TTL_MS)
     // and the next share may never come, so every launch sweeps the stale
     // ones. Runs before the flag check: the legacy share sets the flag.
@@ -182,6 +191,7 @@ let promptedThisSession = false;
 
 export const resetLegacyExportPromptSession = () => {
     promptedThisSession = false;
+    checkedThisSession = false;
 };
 
 // Called by Wallet at the end of its startup path and by the Lockscreen (or
