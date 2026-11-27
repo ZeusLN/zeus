@@ -6177,6 +6177,165 @@ describe('NostrWalletConnectStore activity prune', () => {
     });
 });
 
+describe('NostrWalletConnectStore pay_invoice hold release', () => {
+    const hour = 60 * 60 * 1000;
+
+    function pendingPayInvoice(
+        invoice: string,
+        overrides: Record<string, unknown> = {}
+    ) {
+        return {
+            id: invoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 10000,
+            createdAt: new Date(Date.now() - 2 * hour),
+            ...overrides
+        };
+    }
+
+    it('frees the budget held by a pay_invoice pending for over an hour', async () => {
+        const { store } = createStore();
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [pendingPayInvoice('lnbc1stuck')]
+        });
+        expect(connection.canSpend(1)).toBe(false);
+
+        expect(store.releasePayInvoiceHold(connection.id, 'lnbc1stuck')).toBe(
+            true
+        );
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.activity[0].isHoldReleased).toBe(true);
+        expect(connection.canSpend(10000)).toBe(true);
+
+        // the release is saved with the connection
+        await jest.advanceTimersByTimeAsync(1000);
+        expect(persistedConnections()[0].activity[0].isHoldReleased).toBe(true);
+    });
+
+    it('refreshes the budget limits when a hold is released, and not when it is kept', () => {
+        const { store } = createStore();
+        const refresh = jest.spyOn(store as any, 'scheduleMaxBudgetRefresh');
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [
+                pendingPayInvoice('lnbc1stuck'),
+                pendingPayInvoice('lnbc1recent', {
+                    createdAt: new Date(Date.now() - hour + 60_000)
+                })
+            ]
+        });
+
+        store.releasePayInvoiceHold(connection.id, 'lnbc1recent');
+        expect(refresh).not.toHaveBeenCalled();
+
+        store.releasePayInvoiceHold(connection.id, 'lnbc1stuck');
+        expect(refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the hold of a pay_invoice pending for less than an hour', () => {
+        const { store } = createStore();
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [
+                pendingPayInvoice('lnbc1recent', {
+                    createdAt: new Date(Date.now() - hour + 60_000)
+                })
+            ]
+        });
+
+        expect(store.releasePayInvoiceHold(connection.id, 'lnbc1recent')).toBe(
+            false
+        );
+
+        expect(connection.activity[0].isHoldReleased).toBeUndefined();
+        expect(connection.canSpend(1)).toBe(false);
+    });
+
+    it('releases nothing for an unknown connection or payment', () => {
+        const { store } = createStore();
+        const connection = addConnection(store, {
+            activity: [pendingPayInvoice('lnbc1stuck')]
+        });
+
+        expect(store.releasePayInvoiceHold('missing', 'lnbc1stuck')).toBe(
+            false
+        );
+        expect(store.releasePayInvoiceHold(connection.id, 'lnbc1missing')).toBe(
+            false
+        );
+        expect(connection.activity[0].isHoldReleased).toBeUndefined();
+    });
+
+    it('debits a released pay_invoice that the node later lists as settled, even past the budget', async () => {
+        const invoice = 'lnbc1released-settles';
+        const payments: Payment[] = [];
+        const { store } = createStore({
+            paymentsStore: {
+                payments,
+                getPayments: jest.fn(async () => payments)
+            }
+        });
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [pendingPayInvoice(invoice)]
+        });
+        store.releasePayInvoiceHold(connection.id, invoice);
+        // the freed budget is spent on another payment
+        connection.trackSpending(8000);
+
+        payments.push(
+            new Payment({
+                payment_request: invoice,
+                payment_hash: hex64('d'),
+                status: 'SUCCEEDED',
+                value_sat: 10000,
+                fee_sat: '20',
+                payment_preimage: hex64('8')
+            })
+        );
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.activity[0].isBudgetDebited).toBe(true);
+        expect(connection.totalSpendSats).toBe(18020);
+        expect(connection.budgetLimitReached).toBe(true);
+    });
+
+    it('marks a released pay_invoice failed once the node lists it as failed', async () => {
+        const invoice = 'lnbc1released-fails';
+        const payments = [
+            new Payment({
+                payment_request: invoice,
+                payment_hash: hex64('c'),
+                status: 'FAILED',
+                value_sat: 10000,
+                failure_reason: 'FAILURE_REASON_NO_ROUTE'
+            })
+        ];
+        const { store } = createStore({
+            paymentsStore: {
+                payments,
+                getPayments: jest.fn(async () => payments)
+            }
+        });
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [pendingPayInvoice(invoice)]
+        });
+        store.releasePayInvoiceHold(connection.id, invoice);
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.totalSpendSats).toBe(0);
+        expect(connection.canSpend(10000)).toBe(true);
+    });
+});
+
 describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
     function storeWithNodePayments(payments: Payment[]) {
         return createStore({
@@ -6938,6 +7097,40 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(response.result?.preimage).toBe('');
         expect(connection.activity[0].status).toBe('pending');
         expect(connection.pendingSpendSats).toBe(5000);
+    });
+
+    it('still refuses to replay pay_invoice after the hold is released', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 100000,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 5000,
+                    paymentHash,
+                    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
+                }
+            ]
+        });
+        expect(store.releasePayInvoiceHold(connection.id, invoice)).toBe(true);
+        expect(connection.pendingSpendSats).toBe(0);
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        // the node is not asked to pay the invoice a second time
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe('');
+        expect(connection.activity).toHaveLength(1);
+        expect(connection.activity[0].status).toBe('pending');
     });
 
     it('finalizes and debits when the payment errors but the node lists settlement', async () => {

@@ -2180,6 +2180,76 @@ describe('NostrConnectUtils', () => {
         });
     });
 
+    describe('canReleasePayInvoiceHold', () => {
+        const now = Date.parse('2024-06-15T12:00:00Z');
+        const minAge = NostrConnectUtils.PAY_INVOICE_HOLD_RELEASE_MIN_AGE_MS;
+        const oldPending = (): ConnectionActivity => ({
+            id: 'lnbc1stuck',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 1000,
+            createdAt: new Date(now - minAge)
+        });
+
+        // literal ages, so the one hour is pinned: minAge comes from the
+        // constant itself and moves with it
+        it('keeps the minimum age at one hour', () => {
+            expect(minAge).toBe(60 * 60 * 1000);
+        });
+
+        it.each([
+            [30, false],
+            [59, false],
+            [60, true],
+            [61, true],
+            [24 * 60, true]
+        ])(
+            'a hold pending for %p minutes can be released: %p',
+            (minutes, expected) => {
+                const activity = oldPending();
+                activity.createdAt = new Date(now - minutes * 60 * 1000);
+                expect(
+                    NostrConnectUtils.canReleasePayInvoiceHold(activity, now)
+                ).toBe(expected);
+            }
+        );
+
+        it('allows releasing a hold pending for the minimum age', () => {
+            expect(
+                NostrConnectUtils.canReleasePayInvoiceHold(oldPending(), now)
+            ).toBe(true);
+        });
+
+        it('does not allow releasing a hold younger than the minimum age', () => {
+            const activity = oldPending();
+            activity.createdAt = new Date(now - minAge + 1000);
+            expect(
+                NostrConnectUtils.canReleasePayInvoiceHold(activity, now)
+            ).toBe(false);
+        });
+
+        it('only allows releasing a pending Lightning pay_invoice hold', () => {
+            const cases: Array<Partial<ConnectionActivity>> = [
+                { status: 'success' },
+                { status: 'failed' },
+                { type: 'make_invoice' },
+                { payment_source: 'cashu' },
+                { isBudgetDebited: true },
+                { isHoldReleased: true },
+                { createdAt: undefined }
+            ];
+            for (const change of cases) {
+                expect(
+                    NostrConnectUtils.canReleasePayInvoiceHold(
+                        { ...oldPending(), ...change },
+                        now
+                    )
+                ).toBe(false);
+            }
+        });
+    });
+
     describe('hasPaymentPermissions', () => {
         it('is true when pay_invoice is granted', () => {
             expect(
