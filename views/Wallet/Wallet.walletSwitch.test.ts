@@ -779,7 +779,6 @@ describe('Cashu work on focus', () => {
             clearInvoice: jest.fn(),
             clearPayReq: jest.fn(),
             stopConnectivityMonitoring: jest.fn(),
-            disconnectNdk: jest.fn(),
             initializeWallets: jest.fn(async () => {
                 cashu.cdkInitialized = true;
             }),
