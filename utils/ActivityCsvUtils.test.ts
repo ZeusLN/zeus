@@ -594,6 +594,17 @@ describe('activityCsvUtils', () => {
                     'zeus_20250212_140719_invoice_backup.csv'
                 )
             ).toBe(false);
+            // anchored at both ends
+            expect(
+                LEGACY_CSV_EXPORT_REGEX.test(
+                    'my_zeus_20250212_140719_onchain.csv'
+                )
+            ).toBe(false);
+            expect(
+                LEGACY_CSV_EXPORT_REGEX.test(
+                    'zeus_20250212_140719_onchain.csv.bak'
+                )
+            ).toBe(false);
             expect(LEGACY_CSV_EXPORT_REGEX.test('myexport.csv')).toBe(false);
             expect(LEGACY_CSV_EXPORT_REGEX.test('notes.txt')).toBe(false);
         });
