@@ -720,6 +720,39 @@ const ALREADY_BROADCAST =
 export const isAlreadyBroadcastError = (message?: string): boolean =>
     ALREADY_BROADCAST.test(message || '');
 
+/**
+ * The submarine swap an on-chain send paid, if the send was started from the
+ * swap's pay button: a SwapDetails screen for a submarine swap sits below
+ * VerifyOnChain in the route stack, and the send went to the swap's lockup
+ * address. Returns the swap id, or undefined.
+ */
+export const submarineSwapPaidBySend = (
+    routes: Array<{ name: string; params?: any }>
+): string | undefined => {
+    let verifyIndex = -1;
+    routes.forEach((route, index) => {
+        if (route.name === 'VerifyOnChain') verifyIndex = index;
+    });
+    if (verifyIndex === -1) return undefined;
+
+    let swap: any;
+    routes.slice(0, verifyIndex).forEach((route) => {
+        if (route.name === 'SwapDetails') swap = route.params?.swapData;
+    });
+    if (swap?.type !== 'Submarine' || !swap?.id) return undefined;
+
+    const swapAddress = swap.address || swap.lockupAddress;
+    const destination = routes[verifyIndex].params?.destination;
+    if (
+        typeof swapAddress !== 'string' ||
+        typeof destination !== 'string' ||
+        swapAddress.toLowerCase() !== destination.toLowerCase()
+    ) {
+        return undefined;
+    }
+    return swap.id;
+};
+
 export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
 export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
