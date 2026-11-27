@@ -14,6 +14,10 @@ import { isReservedSigningMessage } from './LnurlAuthUtils';
 import { IN_APP_RESTART } from './InAppRestartUtils';
 import { sleep } from './SleepUtils';
 import { zipFolder, unzipFile, encryptFile, decryptFile } from './ZipUtils';
+import {
+    channelExportStagingPath,
+    purgeChannelExportStaging
+} from './ChannelExportStagingUtils';
 
 import { BACKUPS_HOST } from '../stores/ChannelBackupStore';
 import { settingsStore } from '../stores/Stores';
@@ -125,9 +129,10 @@ const removeStagingFiles = async (paths: string[]): Promise<void> => {
     }
 };
 
-// Copies of the channel database that the import, export and Olympus flows
-// stage in app cache. Matched by prefix because the Olympus and export
-// names embed a timestamp.
+// Copies of the channel database that the import and Olympus flows stage in
+// app cache, plus exports older builds staged there before the export moved
+// to its own swept dir (ChannelExportStagingUtils). Matched by prefix
+// because the Olympus and export names embed a timestamp.
 const CHANNEL_DB_STAGING_PREFIXES = [
     'zeus-import-temp',
     'zeus-olympus-backup-',
@@ -815,6 +820,7 @@ export const exportChannelDb = async (
     isTestnet: boolean,
     setStatus?: (message: string | null) => void
 ) => {
+    let handedOff = false;
     try {
         const graphDir = getGraphDir(lndDir, isTestnet);
 
@@ -844,15 +850,15 @@ export const exportChannelDb = async (
         const network = isTestnet ? 'testnet' : 'mainnet';
         const backupFileName = `zeus-lnd-${network}-${Date.now()}.zip`;
 
-        const stagingDir =
-            Platform.OS === 'android'
-                ? RNFS.CachesDirectoryPath
-                : RNFS.DocumentDirectoryPath;
+        // Stage in app-private cache on both platforms, sweeping whatever the
+        // previous attempt left behind rather than unlinking per file. iOS
+        // used to stage in the Files-visible Documents directory, where the
+        // backup was swept into iCloud/iTunes backups and outlived an
+        // interrupted export forever.
+        await purgeChannelExportStaging();
+        const stagingDir = channelExportStagingPath();
+        await RNFS.mkdir(stagingDir);
         const stagingPath = `${stagingDir}/${backupFileName}`;
-
-        if (await RNFS.exists(stagingPath)) {
-            await RNFS.unlink(stagingPath);
-        }
 
         if (setStatus)
             setStatus(
@@ -886,7 +892,9 @@ export const exportChannelDb = async (
         if (Platform.OS === 'android') {
             const downloadPath = `${RNFS.DownloadDirectoryPath}/${backupFileName}`;
             await RNFS.copyFile(stagingPath, downloadPath);
-            await RNFS.unlink(stagingPath);
+            // Not the share race: copyFile has finished reading by the time
+            // it resolves, so the staged copy is safe to drop here
+            await purgeChannelExportStaging();
             await finishExport();
             return;
         }
@@ -897,13 +905,9 @@ export const exportChannelDb = async (
         // top of the Lockscreen, so the archive must not be offered to a
         // locked app.
         if (settingsStore.loginRequired()) {
-            // A failed delete must not replace the cancellation notice
-            // with the generic export error
-            try {
-                await RNFS.unlink(stagingPath);
-            } catch (e) {
-                console.error('Failed to delete the staged export:', e);
-            }
+            // Never throws, so a failed delete cannot replace the
+            // cancellation notice with the generic export error
+            await purgeChannelExportStaging();
             if (setStatus) setStatus(null);
             Alert.alert(
                 localeString('views.Tools.migration.export.cancelled'),
@@ -919,6 +923,10 @@ export const exportChannelDb = async (
             return;
         }
 
+        // From here the file is out of our hands: a receiving app may read
+        // it after Share.open settles, so the outer catch must not sweep it
+        handedOff = true;
+
         try {
             const shareResult = await Share.open({
                 title: localeString('views.Tools.migration.export.title'),
@@ -932,7 +940,6 @@ export const exportChannelDb = async (
                 shareResult.dismissedAction || shareResult.success === false;
 
             if (isDismissed) {
-                await RNFS.unlink(stagingPath);
                 Alert.alert(
                     localeString('views.Tools.migration.export.cancelled'),
                     localeString('views.Tools.migration.export.cancelled.text'),
@@ -947,13 +954,8 @@ export const exportChannelDb = async (
                 return;
             }
 
-            await RNFS.unlink(stagingPath);
             await finishExport();
         } catch (err: any) {
-            if (await RNFS.exists(stagingPath)) {
-                await RNFS.unlink(stagingPath);
-            }
-
             const errorMsg = err?.message || String(err);
             if (
                 errorMsg.includes('User did not share') ||
@@ -977,6 +979,9 @@ export const exportChannelDb = async (
         }
     } catch (error) {
         console.error('Export Failed:', error);
+        // Covers a failed or partial zip; skipped once the file has been
+        // handed to the share sheet, where a receiver may still be reading
+        if (!handedOff) await purgeChannelExportStaging();
         if (setStatus) setStatus(null);
         Alert.alert(
             localeString('general.error'),

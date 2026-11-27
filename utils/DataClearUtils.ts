@@ -61,6 +61,11 @@ import {
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
 import {
+    CHANNEL_DB_EXPORT_REGEX,
+    purgeChannelExportStaging,
+    purgeLegacyChannelExports
+} from '../utils/ChannelExportStagingUtils';
+import {
     NWC_CONNECTIONS_KEY,
     NWC_CLIENT_KEYS,
     NWC_SERVICE_KEYS,
@@ -995,11 +1000,6 @@ async function clearOrphanedNodeDataDirectories(settings: any): Promise<void> {
     }
 }
 
-// Name exportChannelDb (utils/ChannelMigrationUtils.ts) gives the channel
-// database zip it saves to the public Downloads folder on Android. Kept
-// anchored to that exact shape so files the user named themselves stay.
-const CHANNEL_DB_EXPORT_REGEX = /^zeus-lnd-(mainnet|testnet)-\d+\.zip$/;
-
 /**
  * Deletes the unencrypted channel database exports ("Export Channels to
  * other device") that ZEUS wrote to the public Downloads folder on Android.
@@ -1137,6 +1137,13 @@ export async function clearAllData(): Promise<void> {
     // Olympus flows staged in app cache, outside the node directories
     // deleted in 2c.
     await purgeChannelDbStagingFiles();
+
+    // 2g. Delete any exported channel backups still in the export staging
+    // dir, plus the zips older builds left in the Files-visible iOS
+    // Documents directory. A panic/duress wipe must not leave a channel
+    // database - which names every peer and balance - sitting on the device.
+    await purgeChannelExportStaging();
+    await purgeLegacyChannelExports();
 
     // 3. Clear all known storage keys. The legacy settings blob goes first:
     // getSettings() loads it whenever the keychain blob is missing, and it

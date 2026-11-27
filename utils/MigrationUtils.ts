@@ -87,6 +87,12 @@ import {
 } from '../utils/SwapUtils';
 
 import {
+    CHANNEL_EXPORT_LAUNCH_GRACE_MS,
+    purgeChannelExportStaging,
+    purgeLegacyChannelExports
+} from '../utils/ChannelExportStagingUtils';
+
+import {
     TimePeriod,
     displayFromExpirySeconds,
     expirySecondsFromInput
@@ -1098,6 +1104,56 @@ class MigrationsUtils {
         await purgeLegacyRescueKeyFiles();
 
         await this.writeFlag(MOD_KEY_RESCUE_FILE);
+    }
+
+    // Channel backup export file cleanup, same two-part shape as
+    // purgeRescueKeyFiles above.
+    //
+    // Staging dir: the export hands its zip to the iOS share sheet and
+    // deliberately does not unlink it afterwards, because a receiving app may
+    // still be reading. Sweeping at the next export is not enough here the
+    // way it is for CSVs: exportChannelDb force-restarts the app on every
+    // outcome and locks the wallet, so the user has usually migrated away and
+    // never exports again. This launch sweep is what that restart runs into.
+    // It spares zips younger than CHANNEL_EXPORT_LAUNCH_GRACE_MS, because the
+    // restart can follow the share by seconds while a receiver may still be
+    // reading; a later launch, the next export or a wipe removes those.
+    // Latched to at most once per process for the same reason as the rescue
+    // key staging file: getSettings() also runs on every transition to the
+    // background, and the share sheet backgrounds the app while the staged
+    // zip still has to be readable.
+    //
+    // Legacy shared-storage files: older builds staged the zip in the
+    // Files-visible iOS Documents directory, where an export interrupted
+    // before the share settled left the channel backup indefinitely, swept
+    // into iCloud/iTunes backups. One-shot best-effort cleanup; the flag is
+    // set regardless of outcome because a failed unlink can never succeed on
+    // a later retry.
+    //
+    // Never throws: getSettings() awaits this at startup, and a keychain
+    // error reading or writing the flag must not stop settings from loading.
+    // A failed run is simply retried at the next launch.
+    private channelExportStagingPurged = false;
+
+    public async purgeChannelExportFiles() {
+        try {
+            if (!this.channelExportStagingPurged) {
+                this.channelExportStagingPurged = true;
+                await purgeChannelExportStaging(CHANNEL_EXPORT_LAUNCH_GRACE_MS);
+            }
+
+            const MOD_KEY_CHANNEL_EXPORT = 'channel-export-file-cleanup';
+            const modChannelExport = await this.readFlag(
+                MOD_KEY_CHANNEL_EXPORT
+            );
+            if (modChannelExport) return;
+
+            await purgeLegacyChannelExports();
+
+            await this.writeFlag(MOD_KEY_CHANNEL_EXPORT);
+        } catch (e) {
+            console.warn('Error purging channel export files:', e);
+        }
     }
 
     public async storageMigrationV2(settings: any) {
