@@ -12,6 +12,7 @@ import TransactionsStore from '../../stores/TransactionsStore';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
+import OnchainSendInFlightNotice from '../../components/OnchainSendInFlightNotice';
 import { WarningMessage } from '../../components/SuccessErrorMessage';
 import Header from '../../components/Header';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
@@ -50,6 +51,14 @@ interface SweepState {
 )
 @observer
 export default class Sweep extends React.Component<SweepProps, SweepState> {
+    // set by the first confirmation on each visit to this screen. The
+    // store's guard ends when the sweep answers, which a local node can do
+    // before SendingOnChain covers this screen, so a second tap would start
+    // a second sweep. Try Again comes back here, and the focus event
+    // re-arms the button.
+    private confirmed = false;
+    private focusListener: (() => void) | undefined;
+
     constructor(props: SweepProps) {
         super(props);
         const { route } = props;
@@ -60,6 +69,18 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
             isValid: true,
             fee: '2'
         };
+    }
+
+    componentDidMount() {
+        this.focusListener = this.props.navigation.addListener('focus', () => {
+            this.confirmed = false;
+        });
+    }
+
+    componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     componentDidUpdate(prevProps: SweepProps) {
@@ -75,6 +96,13 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
 
     sendCoins = () => {
         const { SettingsStore, TransactionsStore, navigation } = this.props;
+
+        // an earlier send still holds the store's guard, so sendCoins would
+        // refuse this one and SendingOnChain would show the earlier send's
+        // outcome as this one's
+        if (this.confirmed || TransactionsStore.onchainSendInFlight) return;
+        this.confirmed = true;
+
         const { destination, fee } = this.state;
         const { implementation } = SettingsStore;
 
@@ -112,7 +140,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
     };
 
     render() {
-        const { BalanceStore, navigation } = this.props;
+        const { BalanceStore, TransactionsStore, navigation } = this.props;
         const { destination, isValid, fee } = this.state;
         const { confirmedBlockchainBalance, unconfirmedBlockchainBalance } =
             BalanceStore;
@@ -232,6 +260,9 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                         </Text>
 
                         <View style={styles.button}>
+                            <OnchainSendInFlightNotice
+                                TransactionsStore={TransactionsStore}
+                            />
                             <Button
                                 title={localeString('views.Send.sendCoins')}
                                 icon={
@@ -241,7 +272,10 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                                     }
                                 }
                                 onPress={() => this.sendCoins()}
-                                disabled={disabled}
+                                disabled={
+                                    disabled ||
+                                    TransactionsStore.onchainSendInFlight
+                                }
                             />
                         </View>
                     </React.Fragment>

@@ -12,6 +12,7 @@ import KeyValue from '../components/KeyValue';
 import Amount from '../components/Amount';
 import SwipeButton from '../components/SwipeButton';
 import Button from '../components/Button';
+import OnchainSendInFlightNotice from '../components/OnchainSendInFlightNotice';
 import Text from '../components/Text';
 
 import { localeString } from '../utils/LocaleUtils';
@@ -55,12 +56,29 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
         slideToPayThreshold: 10000
     };
 
+    // set by the first confirmation on each visit to this screen. The
+    // store's guard ends when the send answers, which a local node (LDK
+    // Node, embedded LND) can do before SendingOnChain covers this
+    // screen, so a second tap would start a second send. Try Again comes
+    // back here, and the focus event re-arms the button.
+    private confirmed = false;
+    private focusListener: (() => void) | undefined;
+
     async componentDidMount() {
-        const { SettingsStore } = this.props;
+        const { navigation, SettingsStore } = this.props;
+        this.focusListener = navigation.addListener('focus', () => {
+            this.confirmed = false;
+        });
         const settings = await SettingsStore.getSettings();
         this.setState({
             slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
+    }
+
+    componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     toggleBitcoinUnits = () => {
@@ -150,6 +168,13 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
     onConfirm = () => {
         const { navigation, TransactionsStore, SettingsStore, route } =
             this.props;
+
+        // an earlier send still holds the store's guard, so sendCoins would
+        // refuse this one and SendingOnChain would show the earlier send's
+        // outcome as this one's
+        if (this.confirmed || TransactionsStore.onchainSendInFlight) return;
+        this.confirmed = true;
+
         const {
             destination,
             fee,
@@ -334,7 +359,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
     };
 
     render() {
-        const { navigation, route } = this.props;
+        const { navigation, route, TransactionsStore } = this.props;
         const { destination, fee, satAmount, amount, account, fundMax } =
             route?.params;
         const { slideToPayThreshold } = this.state;
@@ -383,9 +408,13 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                     )}
                 </ScrollView>
                 <View style={{ bottom: 10 }}>
+                    <OnchainSendInFlightNotice
+                        TransactionsStore={TransactionsStore}
+                    />
                     {shouldUseSwipeButton ? (
                         <SwipeButton
                             onSwipeSuccess={this.onConfirm}
+                            disabled={TransactionsStore.onchainSendInFlight}
                             instructionText={localeString(
                                 'views.PaymentRequest.slideToPay'
                             )}
@@ -405,6 +434,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                                     size: 25
                                 }}
                                 onPress={this.onConfirm}
+                                disabled={TransactionsStore.onchainSendInFlight}
                             />
                         </View>
                     )}
