@@ -1854,6 +1854,48 @@ describe('CashuStore single-mint melt state', () => {
         ]);
     });
 
+    it('reports an error when the invoice has no melt quote', async () => {
+        const store = payingStore();
+        store.meltQuote = undefined;
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+
+        expect(CashuDevKit.melt).not.toHaveBeenCalled();
+        expect(store.paymentError).toBe(true);
+        expect(store.paymentErrorMsg).toBe(
+            'stores.CashuStore.noMeltQuoteAvailable'
+        );
+    });
+
+    // The donation is paid after the main payment, on the same store. A
+    // donation whose quote could not be fetched (mint error, amount below
+    // the mint's minimum) must not turn the paid main payment into an error.
+    it('leaves the main payment state alone when a donation has no melt quote', async () => {
+        const store = payingStore();
+        store.meltQuote = undefined;
+        // as the main payment's success left it
+        store.paymentSuccess = true;
+        store.paymentError = false;
+        store.paymentErrorMsg = '';
+        store.paymentPreimage = 'ab'.repeat(32);
+
+        const donation = await store.payLnInvoiceFromEcash({
+            amount: '5',
+            paymentRequest: 'lnbc10n1ptestinvoice',
+            isDonationPayment: true
+        });
+
+        expect(donation).toBeUndefined();
+        expect(CashuDevKit.melt).not.toHaveBeenCalled();
+        expect(store.paymentSuccess).toBe(true);
+        expect(store.paymentPreimage).toBe('ab'.repeat(32));
+        expect(store.paymentError).toBe(false);
+        expect(store.paymentErrorMsg).toBe('');
+    });
+
     // A mint that has settled the quote without paying it is finished with
     // the melt: nothing is in flight, so nothing should be left behind
     it('leaves nothing behind when the mint settles the melt unpaid', async () => {
