@@ -56,6 +56,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { getRawAmountFromSats, isWholeSatAmount } from '../utils/AmountUtils';
 import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
+import { sleep } from '../utils/SleepUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
@@ -122,6 +123,7 @@ interface SendState {
     fundMax: boolean;
     nfcSupported: boolean;
     swipeButtonKey: number;
+    lightningReadyToSend: boolean;
 }
 
 @inject(
@@ -141,6 +143,8 @@ export default class Send extends React.Component<SendProps, SendState> {
     private appStateSubscription: NativeEventSubscription | null = null;
     private previousAmount: string = '';
     private previousSatAmount: string | number = '0';
+    private isComponentMounted: boolean = false;
+    private checkingLndReady: boolean = false;
 
     constructor(props: SendProps) {
         super(props);
@@ -193,11 +197,15 @@ export default class Send extends React.Component<SendProps, SendState> {
             additionalOutputs: [],
             fundMax: false,
             nfcSupported: false,
-            swipeButtonKey: 0
+            swipeButtonKey: 0,
+            // only embedded LND has to wait for its node to be ready to send
+            lightningReadyToSend:
+                props.SettingsStore.implementation !== 'embedded-lnd'
         };
     }
 
     async componentDidUpdate(prevProps: SendProps) {
+        this.checkIfLndReady();
         const { route, InvoicesStore } = this.props;
         const { route: prevRoute } = prevProps;
 
@@ -266,6 +274,8 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     async componentDidMount() {
+        this.isComponentMounted = true;
+        this.checkIfLndReady();
         const { SettingsStore, BalanceStore, route } = this.props;
         // balance is not refreshed elsewhere after channel changes, so
         // the no-lightning-balance warning could otherwise be stale
@@ -320,10 +330,44 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     componentWillUnmount(): void {
+        this.isComponentMounted = false;
         this.backPressSubscription?.remove();
         this.appStateSubscription?.remove();
         if (this.focusListener) this.focusListener();
     }
+
+    // keysend on embedded LND waits for the node the way PaymentRequest does.
+    // Started once the destination is a keysend one, so other sends make no
+    // readiness RPCs.
+    checkIfLndReady = async () => {
+        if (
+            this.checkingLndReady ||
+            this.state.lightningReadyToSend ||
+            this.state.transactionType !== 'Keysend'
+        ) {
+            return;
+        }
+        this.checkingLndReady = true;
+        const { BalanceStore, NodeInfoStore } = this.props;
+        // re-read the balance each pass: the refresh started on mount may
+        // land after this loop begins, so it idles (no RPCs) while it is 0
+        while (!this.state.lightningReadyToSend && this.isComponentMounted) {
+            if (BalanceStore.lightningBalance !== 0) {
+                try {
+                    const isReady =
+                        await NodeInfoStore.isLightningReadyToSend();
+                    if (isReady && this.isComponentMounted) {
+                        this.setState({ lightningReadyToSend: true });
+                    }
+                } catch (e) {
+                    // RPC can fail while LND is still starting; keep polling
+                    console.log('Embedded LND readiness check failed', e);
+                }
+            }
+            if (!this.state.lightningReadyToSend) await sleep(3000);
+        }
+        this.checkingLndReady = false;
+    };
 
     readClipboard = async () => {
         const { SettingsStore } = this.props;
@@ -747,7 +791,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             utxos,
             nfcSupported,
             timeoutSeconds,
-            fiatError
+            fiatError,
+            lightningReadyToSend
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -777,6 +822,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             (contact: Contact) => contact.isFavourite
         );
         const isSendDisabled: boolean =
+            !lightningReadyToSend ||
             TransactionsStore.paymentInFlight ||
             lightningBalance === 0 ||
             !satAmount ||
@@ -1673,6 +1719,26 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <PaymentInFlightNotice
                                         TransactionsStore={TransactionsStore}
                                     />
+                                    {!lightningReadyToSend &&
+                                        lightningBalance !== 0 && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'highlight'
+                                                        ),
+                                                        alignSelf: 'center',
+                                                        marginBottom: 10
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.PaymentRequest.lndGettingReady'
+                                                    )}
+                                                </Text>
+                                                <LoadingIndicator size={30} />
+                                            </>
+                                        )}
                                     {Number(satAmount) >=
                                     slideToPayThreshold ? (
                                         <SwipeButton
