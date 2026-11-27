@@ -33,7 +33,9 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsLSPS1native: jest.fn(() => false),
     supportsLSPS7native: jest.fn(() => false),
     lsps7GetExtendableChannels: jest.fn(),
-    requestLsps1Liquidity: jest.fn()
+    requestLsps1Liquidity: jest.fn(),
+    checkLsps1OrderStatus: jest.fn(),
+    lsps7CheckOrderStatus: jest.fn()
 }));
 jest.mock('../utils/LocaleUtils');
 jest.mock('./SettingsStore', () => ({
@@ -1020,6 +1022,211 @@ const deferred = <T>() => {
     });
     return { promise, resolve, reject };
 };
+
+describe('LSPStore.cancelGetOrder', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(false);
+        jest.useRealTimers();
+        jest.restoreAllMocks();
+    });
+
+    // stands in for the screen below with a request of its own
+    const cancel = (store: LSPStore, service: LSPService) => {
+        store.cancelGetOrder(service);
+        store.loadingLSPS1 = true;
+        store.loadingLSPS7 = true;
+    };
+
+    const expectUntouched = (store: LSPStore) => {
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe('');
+        expect(store.loadingLSPS1).toBe(true);
+        expect(store.loadingLSPS7).toBe(true);
+        expect(store.getOrderResponse).toEqual({});
+        expect(store.getExtensionOrderResponse).toEqual({});
+    };
+
+    const customMessageCases: Array<
+        [LSPService, 'getOrderId' | 'getExtensionOrderId']
+    > = [
+        [LSPService.LSPS1, 'getOrderId'],
+        [LSPService.LSPS7, 'getExtensionOrderId']
+    ];
+
+    const sendCustom = (store: LSPStore, service: LSPService) =>
+        service === LSPService.LSPS7
+            ? store.lsps7GetOrderCustomMessage('order-1', 'aa')
+            : store.lsps1GetOrderCustomMessage('order-1', 'aa');
+
+    describe.each(customMessageCases)('%s custom message', (service, idKey) => {
+        it('drops the timeout and releases the caller', async () => {
+            const store = makeStore();
+            const request = sendCustom(store, service);
+            cancel(store, service);
+            await request;
+
+            await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+
+            expectUntouched(store);
+        });
+
+        it.each([
+            ['error', { error: { message: 'late error' } }],
+            ['success', { result: { order_id: 'order-1' } }]
+        ])('drops a late %s reply', async (_label, reply) => {
+            const store = makeStore();
+            const request = sendCustom(store, service);
+            const id = store[idKey];
+            cancel(store, service);
+            await request;
+
+            expect(customReply(store, id, reply)).toBe(false);
+            expectUntouched(store);
+        });
+
+        it('drops a late error reply to a request that timed out', async () => {
+            const store = makeStore();
+            const request = sendCustom(store, service);
+            const id = store[idKey];
+            await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+            await request;
+            cancel(store, service);
+            store.error = false;
+            store.error_msg = '';
+
+            customReply(store, id, { error: { message: 'late error' } });
+
+            expectUntouched(store);
+        });
+    });
+
+    const promiseCases: Array<
+        [string, LSPService, () => jest.Mock, (store: LSPStore) => any, any]
+    > = [
+        [
+            'LSPS1 REST',
+            LSPService.LSPS1,
+            () => ReactNativeBlobUtil.fetch as jest.Mock,
+            (store) => store.lsps1GetOrderREST('order-1', 'https://lsp'),
+            { data: JSON.stringify({ order_id: 'order-1' }) }
+        ],
+        [
+            'LSPS1 LDK Node',
+            LSPService.LSPS1,
+            () => BackendUtils.checkLsps1OrderStatus as jest.Mock,
+            (store) => store.lsps1GetOrderNative('order-1'),
+            { order_id: 'order-1' }
+        ],
+        [
+            'LSPS7 LDK Node',
+            LSPService.LSPS7,
+            () => {
+                jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(
+                    true
+                );
+                return BackendUtils.lsps7CheckOrderStatus as jest.Mock;
+            },
+            (store) => store.lsps7GetOrderCustomMessage('order-1', ''),
+            { order_id: 'order-1' }
+        ]
+    ];
+
+    describe.each(promiseCases)('%s', (_label, service, getMock, send, ok) => {
+        const start = () => {
+            let resolve: (value: any) => void = () => {};
+            let reject: (error: any) => void = () => {};
+            getMock().mockReturnValueOnce(
+                new Promise((res, rej) => {
+                    resolve = res;
+                    reject = rej;
+                })
+            );
+            const store = makeStore();
+            return { store, request: send(store), resolve, reject };
+        };
+
+        it('drops a late failure', async () => {
+            const { store, request, reject } = start();
+            cancel(store, service);
+            reject(new Error('late failure'));
+            await request;
+
+            expectUntouched(store);
+        });
+
+        it('drops a late success', async () => {
+            const { store, request, resolve } = start();
+            cancel(store, service);
+            resolve(ok);
+            await request;
+
+            expectUntouched(store);
+        });
+
+        it('still reports a failure that was not cancelled', async () => {
+            const { store, request, reject } = start();
+            reject(new Error('failure'));
+            await request;
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).not.toBe('');
+        });
+
+        it('still stores a reply that was not cancelled', async () => {
+            const { store, request, resolve } = start();
+            resolve(ok);
+            await request;
+
+            const response: any =
+                service === LSPService.LSPS7
+                    ? store.getExtensionOrderResponse
+                    : store.getOrderResponse;
+            expect((response.result || response).order_id).toBe('order-1');
+        });
+    });
+
+    it('drops a late LSPS1 REST error body', async () => {
+        let resolve: (value: any) => void = () => {};
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockReturnValueOnce(
+            new Promise((res) => {
+                resolve = res;
+            })
+        );
+        const store = makeStore();
+        const request = store.lsps1GetOrderREST('order-1', 'https://lsp');
+        cancel(store, LSPService.LSPS1);
+        resolve({ data: JSON.stringify({ error: true, message: 'late' }) });
+        await request;
+
+        expectUntouched(store);
+    });
+
+    it('leaves the other data and the other service alone', async () => {
+        const store = makeStore();
+        store.lsps7GetOrderCustomMessage('order-1', 'aa');
+        const id = store.getExtensionOrderId;
+        store.getInfoData = { result: {} };
+        store.createOrderResponse = { result: { order_id: 'order-1' } };
+
+        store.cancelGetOrder(LSPService.LSPS1);
+
+        expect(store.getInfoData).toEqual({ result: {} });
+        expect(store.createOrderResponse).toEqual({
+            result: { order_id: 'order-1' }
+        });
+        expect(store.getExtensionOrderId).toBe(id);
+        expect(customReply(store, id, { result: {} })).toBe(true);
+        // let the settled request finish
+        await jest.advanceTimersByTimeAsync(0);
+    });
+});
 
 describe('LSPStore.getExtendableChannels over custom messages', () => {
     const channel = {

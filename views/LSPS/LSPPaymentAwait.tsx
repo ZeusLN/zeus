@@ -138,7 +138,9 @@ export default class LSPPaymentAwait extends React.Component<
             this.backPressSubscription.remove();
             this.backPressSubscription = null;
         }
-        const { LSPStore } = this.props;
+        const { LSPStore, route } = this.props;
+        // a get_order still in flight must not report on the screen below
+        LSPStore.cancelGetOrder(route.params.service);
         LSPStore.getOrderResponse = {};
         LSPStore.getExtensionOrderResponse = {};
         LSPStore.error = false;
