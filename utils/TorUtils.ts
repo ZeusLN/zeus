@@ -234,6 +234,29 @@ const torHttpRequest = async ({
     };
 };
 
+// torHttpRequest reduced to the status and body, for
+// NetworkUtils.networkFetch to map onto a ReactNativeBlobUtil-shaped
+// response. Like torHttpRequest it does not throw on a non-2xx status and
+// does not follow redirects; it rejects only on a transport failure.
+const doTorRequestRaw = async (
+    url: string,
+    method: RequestMethod,
+    data?: string,
+    headers?: any,
+    trustInvalidCerts: boolean = false,
+    timeoutMs: number = REQUEST_TIMEOUT_MS
+): Promise<{ status: number; body: string }> => {
+    const { statusCode, body } = await torHttpRequest({
+        url,
+        method,
+        data,
+        headers,
+        trustInvalidCerts,
+        timeoutMs
+    });
+    return { status: statusCode, body };
+};
+
 const doTorRequest = async (
     url: string,
     method: RequestMethod,
@@ -296,6 +319,7 @@ const restartTor = async () => {
 
 export {
     doTorRequest,
+    doTorRequestRaw,
     torHttpRequest,
     restartTor,
     ensureTorStarted,

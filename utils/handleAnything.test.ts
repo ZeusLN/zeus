@@ -2266,12 +2266,29 @@ describe('handleAnything', () => {
                 mockTorHttpRequest.mockResolvedValue(
                     torJson({ callback: 'https://pay.onion.example.com/cb' })
                 );
+                // With Use Tor on, the DoH lookup goes over Tor too
+                mockDoTorRequest.mockReset();
+                mockDoTorRequest.mockImplementation(async (url: string) => ({
+                    Status: 0,
+                    AD: true,
+                    Question: [
+                        {
+                            name: new URL(url).searchParams.get('name'),
+                            type: 16
+                        }
+                    ],
+                    Answer: [txt(REAL_TXT)]
+                }));
 
                 const result = await handleAnything(
                     'satoshi@pay.onion.example.com'
                 );
 
-                expect(mockDnsFetch).toHaveBeenCalledTimes(1);
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+                expect(mockDoTorRequest).toHaveBeenCalledTimes(1);
+                expect(mockDoTorRequest.mock.calls[0][0]).toContain(
+                    'name=satoshi.user._bitcoin-payment.pay.onion.example.com'
+                );
                 expect(mockTorHttpRequest).toHaveBeenCalledWith({
                     url: 'https://pay.onion.example.com/.well-known/lnurlp/satoshi',
                     method: 'GET',
@@ -2279,6 +2296,52 @@ describe('handleAnything', () => {
                 });
                 expect(mockBlobUtilFetch).not.toHaveBeenCalled();
                 expect(result[0]).toBe('ChoosePaymentMethod');
+            });
+        });
+
+        // With Tor enabled, the resolver must not see the user's IP next to
+        // the recipient's name
+        describe('DoH lookup with Tor enabled', () => {
+            let settingsStore: any;
+
+            beforeEach(() => {
+                settingsStore = require('../stores/Stores').settingsStore;
+                settingsStore.enableTor = true;
+                mockDoHResponse({});
+                mockDoTorRequest.mockReset();
+                mockDoTorRequest.mockImplementation(async (url: string) => ({
+                    Status: 0,
+                    AD: true,
+                    Question: [
+                        {
+                            name: new URL(url).searchParams.get('name'),
+                            type: 16
+                        }
+                    ],
+                    Answer: [txt(REAL_TXT)]
+                }));
+            });
+
+            afterEach(() => {
+                delete settingsStore.enableTor;
+            });
+
+            it('sends the DoH lookup over Tor', async () => {
+                const result = await handleAnything(ADDRESS);
+
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    'https://cloudflare-dns.com/dns-query?name=matt.user._bitcoin-payment.mattcorallo.com&type=TXT',
+                    'GET',
+                    undefined,
+                    { accept: 'application/dns-json' }
+                );
+                expect(result).toEqual([
+                    'ChoosePaymentMethod',
+                    expect.objectContaining({
+                        offer: 'lno1zr5qyugqgskrk70kqmuq'
+                    })
+                ]);
             });
         });
     });

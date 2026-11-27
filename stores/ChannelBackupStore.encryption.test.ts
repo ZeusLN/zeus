@@ -9,6 +9,11 @@ jest.mock('../utils/ZipUtils', () => ({
     encryptString: (...args: any[]) => mockEncryptString(...args),
     decryptString: (...args: any[]) => mockDecryptString(...args)
 }));
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequest: jest.fn(),
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+}));
 jest.mock('react-native-blob-util', () => ({
     fetch: (...args: any[]) => mockFetch(...args)
 }));

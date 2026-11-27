@@ -1,9 +1,9 @@
 import { action, computed, observable, runInAction } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
 import { SATS_PER_BTC } from '../utils/BitcoinConstants';
+import { networkFetch } from '../utils/NetworkUtils';
 import { numberWithCommas, numberWithDecimals } from '../utils/UnitsUtils';
 
 interface CurrencyDisplayRules {
@@ -754,10 +754,11 @@ export default class FiatStore {
 
     private getSelectedFiatRateFromYadio = async (code: string) => {
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `https://api.yadio.io/rate/${code}/BTC`
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `https://api.yadio.io/rate/${code}/BTC`,
+                enableTor: this.settingsStore.enableTor
+            });
             const status = response.info().status;
             if (status == 200) {
                 return {
@@ -776,10 +777,11 @@ export default class FiatStore {
 
     private getFiatRatesFromZeus = async () => {
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo'
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: 'https://pay.zeusln.app/api/rates?storeId=Fjt7gLnGpg4UeBMFccLquy3GTTEz4cHU4PZMU63zqMBo',
+                enableTor: this.settingsStore.enableTor
+            });
             const status = response.info().status;
             if (status == 200) {
                 // fiatRates is read with .find/.filter during render, so only

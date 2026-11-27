@@ -61,7 +61,13 @@ jest.mock('../stores/ChannelBackupStore', () => ({
 }));
 const mockLoginRequired = jest.fn().mockReturnValue(false);
 jest.mock('../stores/Stores', () => ({
-    settingsStore: { loginRequired: () => mockLoginRequired() }
+    settingsStore: {
+        enableTor: false,
+        loginRequired: () => mockLoginRequired()
+    }
+}));
+jest.mock('./NetworkUtils', () => ({
+    networkFetch: jest.fn()
 }));
 jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(undefined),
@@ -79,6 +85,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import Share from 'react-native-share';
 import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
+import { networkFetch } from './NetworkUtils';
 import { LNURLAUTH_CANONICAL_PHRASE } from './LnurlAuthUtils';
 import { stopLnd } from './LndMobileUtils';
 import Storage from '../storage';
@@ -110,7 +117,7 @@ const RESTORED_GRAPH_DIR = [
     dirEntry('wtclient.db', 16384)
 ];
 
-const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
+const mockFetch = networkFetch as jest.Mock;
 const mockSignNodePubkey = signMessageNodePubkey as jest.Mock;
 const mockAlert = Alert.alert as jest.Mock;
 
@@ -129,7 +136,7 @@ const signMessageMock = (BackendUtils as any).signMessage as jest.Mock;
 // every other path with a successful reply.
 const serveChallenges = (challenges: any[], statusBody: any = {}) => {
     const queue = [...challenges];
-    mockFetch.mockImplementation(async (_m: string, url: string) => {
+    mockFetch.mockImplementation(async ({ url }: { url: string }) => {
         const path = url.replace(BACKUPS, '');
         const body =
             path === '/api/auth'
@@ -144,7 +151,7 @@ const serveChallenges = (challenges: any[], statusBody: any = {}) => {
 };
 
 const fetchedPaths = () =>
-    mockFetch.mock.calls.map(([, url]) => url.replace(BACKUPS, ''));
+    mockFetch.mock.calls.map(([{ url }]) => url.replace(BACKUPS, ''));
 
 const BACKUP_ZIP = expect.stringMatching(
     /^\/cache\/zeus-olympus-backup-\d+\.zip$/
@@ -174,7 +181,7 @@ const mockOlympusServer = ({
     lastBackupAt = 1700000000000 as number | null,
     restoreStatus = 200
 } = {}) =>
-    mockFetch.mockImplementation(async (_method: string, url: string) => {
+    mockFetch.mockImplementation(async ({ url }: { url: string }) => {
         if (url.endsWith('/api/auth'))
             return httpResponse(200, {
                 success: true,
@@ -694,10 +701,9 @@ describe('ChannelMigrationUtils', () => {
 
     describe('restoreChannelBackupFromOlympus clearing the graph directory', () => {
         const { Alert } = require('react-native');
-        const ReactNativeBlobUtil = require('react-native-blob-util');
 
         beforeEach(() => {
-            ReactNativeBlobUtil.fetch.mockResolvedValue({
+            mockFetch.mockResolvedValue({
                 info: () => ({ status: 200 }),
                 json: () => ({
                     success: true,
@@ -1059,10 +1065,9 @@ describe('ChannelMigrationUtils', () => {
             expect(mockSignNodePubkey).toHaveBeenCalledTimes(1);
             expect(mockFetch).toHaveBeenCalledTimes(3);
             expect(mockFetch).not.toHaveBeenCalledWith(
-                'POST',
-                expect.stringContaining('/api/restore-channels'),
-                expect.anything(),
-                expect.anything()
+                expect.objectContaining({
+                    url: expect.stringContaining('/api/restore-channels')
+                })
             );
         });
     });

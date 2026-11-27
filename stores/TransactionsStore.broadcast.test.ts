@@ -3,6 +3,12 @@ jest.mock('react-native-randombytes', () => ({
 }));
 jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
 jest.mock('../utils/UrlUtils', () => ({ getMempoolApiUrl: jest.fn() }));
+// NetworkUtils loads TorUtils, which pulls in react-native-nitro-tor (ESM)
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequest: jest.fn(),
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+}));
 jest.mock('../utils/ErrorUtils', () => ({
     errorToUserFriendly: (e: any) => e?.message ?? String(e)
 }));
