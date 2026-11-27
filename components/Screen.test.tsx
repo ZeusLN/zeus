@@ -6,9 +6,13 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 
+// The selected theme; themeColorFor reads it when no theme is given
 const mockTheme: { [key: string]: any } = {};
+const mockThemes: { [theme: string]: { [key: string]: any } } = {};
 jest.mock('../utils/ThemeUtils', () => ({
-    themeColor: jest.fn((key: string) => mockTheme[key])
+    themeColorFor: jest.fn((theme: string | undefined, key: string) =>
+        theme === undefined ? mockTheme[key] : mockThemes[theme]?.[key]
+    )
 }));
 
 jest.mock('./LinearGradient', () => {
@@ -94,6 +98,26 @@ describe('Screen', () => {
             '#000',
             '#000'
         ]);
+    });
+
+    it("draws the given theme's background instead of the selected one", async () => {
+        setTheme({ background: '#1F242D' });
+        mockThemes.ember = {
+            background: '#000',
+            gradientBackground: ['#4D3300', '#000000'],
+            gradientLocations: [0, 1],
+            gradientRadial: { cx: 0, cy: 0, rx: 1.4, ry: 0.8 }
+        };
+        await render(
+            <Screen theme="ember">
+                <Text>content</Text>
+            </Screen>
+        );
+        expect(screen.getByTestId('radial')).toHaveProp('colors', [
+            '#4D3300',
+            '#000000'
+        ]);
+        expect(screen.queryByTestId('linear')).toBeNull();
     });
 
     describe('theme switches', () => {
