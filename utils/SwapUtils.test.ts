@@ -29,6 +29,8 @@ import {
     swapNetworkFee,
     fetchBlockHeight,
     isValidRescueKey,
+    isWalletSeed,
+    rescueKeyRestoreError,
     refundFailureAction,
     nativeSwapEndpoint,
     swapWebSocketUrl,
@@ -238,6 +240,93 @@ describe('SwapUtils', () => {
         it('should return limit as-is when in reverse mode', () => {
             const result = calculateLimit(940, 1, 50, true);
             expect(result).toBe(940);
+        });
+    });
+
+    describe('isWalletSeed', () => {
+        const ldkMnemonic =
+            'legal winner thank year wave sausage worth useful legal winner thank yellow';
+        const nodes = [
+            { implementation: 'lnd' },
+            { implementation: 'ldk-node', ldkMnemonic }
+        ];
+
+        it("matches an LDK Node wallet's mnemonic", () => {
+            expect(isWalletSeed(ldkMnemonic, nodes)).toBe(true);
+        });
+
+        it('ignores case and extra whitespace', () => {
+            expect(
+                isWalletSeed(`  ${ldkMnemonic.toUpperCase()}  `, nodes)
+            ).toBe(true);
+            expect(isWalletSeed(ldkMnemonic.replace(/ /g, '   '), nodes)).toBe(
+                true
+            );
+        });
+
+        it('does not match an independent rescue key', () => {
+            expect(
+                isWalletSeed(
+                    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+                    nodes
+                )
+            ).toBe(false);
+        });
+
+        it('is false without a mnemonic or wallets', () => {
+            expect(isWalletSeed(false, nodes)).toBe(false);
+            expect(isWalletSeed('', nodes)).toBe(false);
+            expect(isWalletSeed(ldkMnemonic, undefined)).toBe(false);
+            expect(isWalletSeed(ldkMnemonic, [])).toBe(false);
+        });
+
+        it('ignores wallets with an empty mnemonic', () => {
+            expect(
+                isWalletSeed(' ', [
+                    { implementation: 'ldk-node', ldkMnemonic: '' } as any
+                ])
+            ).toBe(false);
+        });
+    });
+
+    describe('rescueKeyRestoreError', () => {
+        const ldkMnemonic =
+            'legal winner thank year wave sausage worth useful legal winner thank yellow';
+        const independentKey =
+            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+        const nodes = [
+            { implementation: 'lnd' },
+            { implementation: 'ldk-node', ldkMnemonic }
+        ];
+
+        it("refuses a configured wallet's seed", () => {
+            expect(rescueKeyRestoreError(ldkMnemonic, nodes)).toBe(
+                'views.Swaps.rescueKey.walletSeed'
+            );
+            expect(
+                rescueKeyRestoreError(
+                    ` ${ldkMnemonic.replace(/ /g, '  ')} `,
+                    nodes
+                )
+            ).toBe('views.Swaps.rescueKey.walletSeed');
+        });
+
+        it('accepts an independent rescue key', () => {
+            expect(rescueKeyRestoreError(independentKey, nodes)).toBeNull();
+        });
+
+        it('accepts the seed when that wallet is not configured', () => {
+            expect(rescueKeyRestoreError(ldkMnemonic, [])).toBeNull();
+            expect(rescueKeyRestoreError(ldkMnemonic, undefined)).toBeNull();
+        });
+
+        it('reports a bad checksum before the wallet seed check', () => {
+            const badChecksum = independentKey.replace(/about$/, 'abandon');
+            expect(
+                rescueKeyRestoreError(badChecksum, [
+                    { ldkMnemonic: badChecksum }
+                ])
+            ).toBe('views.Settings.SeedRecovery.invalidChecksum');
         });
     });
 

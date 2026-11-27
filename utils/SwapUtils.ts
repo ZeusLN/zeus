@@ -724,6 +724,9 @@ export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
 export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
 export const SWAPS_LAST_USED_KEY = 'swaps-last-used-key';
+// AsyncStorage flag: the stored rescue key was a wallet seed and has been
+// removed, so the Swaps screen explains why it asks for a new one
+export const RESCUE_KEY_REPLACED_KEY = 'swaps-rescue-key-replaced';
 
 export const RESCUE_KEY_WORD_COUNT = 12;
 
@@ -809,6 +812,42 @@ export const isValidRescueKey = (mnemonic: string): boolean => {
     const words = mnemonic?.trim().split(/\s+/) || [];
     if (words.length !== RESCUE_KEY_WORD_COUNT) return false;
     return validateMnemonic(words.join(' '), BIP39_WORD_LIST);
+};
+
+const normalizeMnemonic = (mnemonic: string): string =>
+    mnemonic.trim().toLowerCase().split(/\s+/).join(' ');
+
+// v13.0.0 to v13.1.3 stored an LDK Node wallet's own mnemonic as the swap
+// rescue key. True when `mnemonic` is the mnemonic of one of `nodes`.
+export const isWalletSeed = (
+    mnemonic: string | false | null | undefined,
+    nodes?: Array<{ ldkMnemonic?: string }>
+): boolean => {
+    if (!mnemonic || !Array.isArray(nodes)) return false;
+    const key = normalizeMnemonic(mnemonic);
+    return nodes.some(
+        (node) =>
+            typeof node?.ldkMnemonic === 'string' &&
+            node.ldkMnemonic.trim() !== '' &&
+            normalizeMnemonic(node.ldkMnemonic) === key
+    );
+};
+
+// Locale key of the error for a mnemonic entered under "Restore rescue
+// key", or null when it can be stored. A configured wallet's seed is
+// refused: the retirement migration removed it as the rescue key together
+// with its key index, so storing it again would bring back the xpub
+// exposure and restart key derivation at index 0, reusing the keys and
+// preimages of the swaps made with it.
+export const rescueKeyRestoreError = (
+    mnemonic: string,
+    nodes?: Array<{ ldkMnemonic?: string }>
+): string | null => {
+    if (!isValidRescueKey(mnemonic))
+        return 'views.Settings.SeedRecovery.invalidChecksum';
+    if (isWalletSeed(mnemonic, nodes))
+        return 'views.Swaps.rescueKey.walletSeed';
+    return null;
 };
 
 export const calculateReceiveAmount = (
