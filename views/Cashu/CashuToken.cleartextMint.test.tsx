@@ -27,7 +27,10 @@ jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));
-jest.mock('../../components/Amount', () => 'Amount');
+jest.mock('../../components/Amount', () => {
+    const { Text } = require('react-native');
+    return ({ sats }: any) => <Text testID="amount">{String(sats)}</Text>;
+});
 jest.mock('../../components/AnimatedQRDisplay', () => 'AnimatedQRDisplay');
 jest.mock('../../components/Button', () => {
     const { Pressable, Text } = require('react-native');
@@ -66,7 +69,11 @@ import { confirmAction } from '../../utils/ActionUtils';
 const ADD_MINT = 'views.Cashu.AddMint.title';
 const SELF_CUSTODY = 'views.Cashu.CashuToken.meltTokenSelfCustody';
 
-const renderToken = async (mint: string, mintUrls: string[] = []) => {
+const renderToken = async (
+    mint: string,
+    mintUrls: string[] = [],
+    claimResult: Record<string, unknown> = { success: true }
+) => {
     const CashuStore = {
         mintUrls,
         cashuWallets: {},
@@ -78,7 +85,7 @@ const renderToken = async (mint: string, mintUrls: string[] = []) => {
         markTokenSpent: jest.fn(),
         setLoading: jest.fn(),
         addMint: jest.fn().mockResolvedValue(undefined),
-        claimToken: jest.fn().mockResolvedValue({ success: true })
+        claimToken: jest.fn().mockResolvedValue(claimResult)
     };
     await render(
         <CashuTokenView
@@ -172,5 +179,48 @@ describe('CashuToken cleartext http:// mint', () => {
 
         expect(confirmAction).not.toHaveBeenCalled();
         expect(store.claimToken).toHaveBeenCalledTimes(1);
+    });
+});
+
+// The token is worth 21 sats. A self-custody claim swept to the node
+// receives less, after the mint's fee.
+describe('CashuToken amount shown', () => {
+    const MINT = 'https://mint.example.com';
+    const shownSats = () => screen.getByTestId('amount').props.children;
+
+    const claim = async (claimResult: Record<string, unknown>) => {
+        await renderToken(MINT, [MINT], claimResult);
+        await fireEvent.press(screen.getByText(SELF_CUSTODY));
+    };
+
+    it('is the token amount before the claim', async () => {
+        await renderToken(MINT, [MINT]);
+
+        expect(shownSats()).toBe('21');
+    });
+
+    it('is what the node received after a swept claim', async () => {
+        await claim({ success: true, receivedAmtSat: 18 });
+
+        expect(shownSats()).toBe('18');
+    });
+
+    it('stays the token amount when the token was claimed but not swept', async () => {
+        await claim({
+            success: true,
+            warningMessage: 'stores.CashuStore.claimedButNotSwept'
+        });
+
+        expect(shownSats()).toBe('21');
+    });
+
+    it('stays the token amount when the claim fails', async () => {
+        await claim({
+            success: false,
+            errorMessage: 'stores.CashuStore.sweepFeeTooHigh',
+            receivedAmtSat: 18
+        });
+
+        expect(shownSats()).toBe('21');
     });
 });

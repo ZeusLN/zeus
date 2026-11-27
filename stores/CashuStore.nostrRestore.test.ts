@@ -37,6 +37,10 @@ jest.mock('../utils/MigrationUtils', () => ({
         migrateCashuSeedVersion: jest.fn().mockResolvedValue(undefined)
     }
 }));
+jest.mock('../utils/BackendUtils', () => ({
+    __esModule: true,
+    default: {}
+}));
 jest.mock('../utils/ThemeUtils', () => ({}));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../NavigationService', () => ({}));

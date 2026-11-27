@@ -220,8 +220,12 @@ describe('CashuStore.claimToken toSelfCustody', () => {
 
         expect(store.receiveTokenCDK).toHaveBeenCalledTimes(1);
         expect(invoicesStore.createInvoice).toHaveBeenCalledTimes(1);
-        expect(store.meltCDK).toHaveBeenCalledWith(MINT_URL, 'lnbc1invoice');
-        expect(result).toEqual({ success: true, errorMessage: '' });
+        expect(store.meltCDK).toHaveBeenCalledWith(MINT_URL, 'lnbc1invoice', 0);
+        expect(result).toEqual({
+            success: true,
+            errorMessage: '',
+            receivedAmtSat: TOKEN_AMT
+        });
     });
 
     it('sizes the sweep from the actually received amount, not token face value', async () => {
@@ -243,7 +247,11 @@ describe('CashuStore.claimToken toSelfCustody', () => {
 
         expect(invoicesStore.createInvoice).toHaveBeenCalledTimes(2);
         expect(invoicesStore.createInvoice.mock.calls[1][0].value).toBe('988');
-        expect(store.meltCDK).toHaveBeenCalledWith(MINT_URL, 'lnbc2adjusted');
+        expect(store.meltCDK).toHaveBeenCalledWith(
+            MINT_URL,
+            'lnbc2adjusted',
+            2
+        );
         expect(result.success).toBe(true);
     });
 
@@ -333,8 +341,16 @@ describe('CashuStore.claimToken toSelfCustody on a mint with input fees', () => 
         // InsufficientFunds.
         expect(sweepAmt).toBe(994 - feeReserve - 16);
         expect(sweepAmt + feeReserve + 16).toBeLessThanOrEqual(994);
-        expect(store.meltCDK).toHaveBeenCalledWith(MINT_URL, 'lnbc2adjusted');
-        expect(result).toEqual({ success: true, errorMessage: '' });
+        expect(store.meltCDK).toHaveBeenCalledWith(
+            MINT_URL,
+            'lnbc2adjusted',
+            feeReserve
+        );
+        expect(result).toEqual({
+            success: true,
+            errorMessage: '',
+            receivedAmtSat: sweepAmt
+        });
     });
 
     it('warns instead of melting when input fees eat the whole received amount', async () => {
