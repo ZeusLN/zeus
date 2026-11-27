@@ -566,6 +566,16 @@ export default class CLNRest {
         return formatted;
     };
 
+    // pay and keysend answer status 'pending' when retry_for ends while
+    // parts are still out. Map it to LND's IN_FLIGHT, as lookupPayment
+    // does, so TransactionsStore holds the send guard and tracks the
+    // payment instead of showing it as failed: a retry of a keysend sends
+    // a second payment.
+    private formatLegacyPayResult = (result: any) =>
+        result?.status === 'pending'
+            ? { ...result, status: 'IN_FLIGHT' }
+            : result;
+
     // cln blocks on /v1/pay, /v1/xpay, /v1/keysend, and /v1/xkeysend for
     // up to retry_for seconds, so the request timeout needs headroom past
     // that deadline or the definitive response is discarded as a generic
@@ -628,7 +638,12 @@ export default class CLNRest {
             } else if (data.max_fee_percent) {
                 legacyRequest.maxfeepercent = data.max_fee_percent;
             }
-            return this.payWithTimeout('/v1/pay', legacyRequest, data);
+            return this.payWithTimeout(
+                '/v1/pay',
+                legacyRequest,
+                data,
+                this.formatLegacyPayResult
+            );
         }
 
         const request: any = {
@@ -687,7 +702,12 @@ export default class CLNRest {
             if (legacyRequest.maxfeepercent !== undefined) {
                 legacyRequest.exemptfee = 0;
             }
-            return this.payWithTimeout('/v1/keysend', legacyRequest, data);
+            return this.payWithTimeout(
+                '/v1/keysend',
+                legacyRequest,
+                data,
+                this.formatLegacyPayResult
+            );
         }
 
         const request: any = {

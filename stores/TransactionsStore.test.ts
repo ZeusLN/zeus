@@ -1000,6 +1000,47 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(store.paymentInFlight).toBe(false);
     });
 
+    // CLNRest reports a legacy keysend that is still pending when
+    // retry_for ends as IN_FLIGHT, with the hash of the preimage CLN
+    // picked. A retry would send a second payment.
+    it("holds the guard on a pending CLN keysend and tracks it by the node's hash", async () => {
+        const nodeHash = 'cd'.repeat(32);
+        isLNDBased.mockReturnValue(false);
+        sendKeysend.mockResolvedValue({
+            status: 'IN_FLIGHT',
+            payment_hash: nodeHash,
+            amount_msat: 1000000,
+            parts: 1
+        });
+        (BackendUtils.lookupPayment as jest.Mock)
+            .mockResolvedValueOnce({
+                status: 'IN_FLIGHT',
+                payment_hash: nodeHash
+            })
+            .mockResolvedValueOnce({
+                status: 'SUCCEEDED',
+                payment_hash: nodeHash,
+                preimage: 'deadbeef'
+            });
+
+        const store = newStore('cln-rest');
+        store.sendPayment({ pubkey: '02' + 'ab'.repeat(32), amount: '1000' });
+        await flush();
+
+        expect(store.paymentInFlight).toBe(true);
+        expect(store.error).toBe(false);
+        expect(store.payment_error).toBeNull();
+        expect(store.status).toBe('IN_FLIGHT');
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ payment_hash: nodeHash })
+        );
+
+        await advancePoll();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.error).toBe(false);
+    });
+
     it("tracks an in-flight LDK Node keysend by the node's hash", async () => {
         const nodeHash = 'cd'.repeat(32);
         isLNDBased.mockReturnValue(false);
