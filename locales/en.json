@@ -1884,6 +1884,7 @@
     "stores.NostrWalletConnectStore.error.makeInvoiceRateLimited": "Too many invoice requests from this connection. Please wait before trying again.",
     "stores.NostrWalletConnectStore.error.descriptionHashNotSupported": "make_invoice with a description_hash is not supported",
     "stores.NostrWalletConnectStore.error.invalidDescriptionHash": "description_hash must be 64 hexadecimal characters",
+    "stores.NostrWalletConnectStore.error.descriptionHashNeedsDescription": "This wallet can only make a description_hash invoice from the description the hash was made from",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "Failed to Connect {{relayUrl}}",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "Failed to load connections",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "Failed to save connections",

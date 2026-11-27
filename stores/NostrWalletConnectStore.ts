@@ -34,6 +34,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { v4 as uuidv4 } from 'uuid';
 
 import BackendUtils from '../utils/BackendUtils';
+import { sha256StringToHex } from '../utils/HashingUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { mayHaveBeenSent } from '../utils/OnchainSendUtils';
@@ -3322,6 +3323,22 @@ export default class NostrWalletConnectStore {
                         'stores.NostrWalletConnectStore.error.invalidDescriptionHash'
                     ),
                     Nip47ErrorCode.OTHER
+                );
+            }
+            // A backend that hashes the description itself (CLN) can only
+            // make the invoice from the text the hash was made from. Refuse
+            // the rest here, as unsupported, rather than as a failed invoice
+            if (
+                !BackendUtils.supportsDescriptionHashOnlyInvoices() &&
+                (!request.description ||
+                    sha256StringToHex(request.description) !==
+                        descriptionHash.toLowerCase())
+            ) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.descriptionHashNeedsDescription'
+                    ),
+                    Nip47ErrorCode.NOT_IMPLEMENTED
                 );
             }
         }
