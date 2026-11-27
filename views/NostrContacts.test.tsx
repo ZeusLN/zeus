@@ -56,6 +56,18 @@ jest.mock('../stores/ContactStore', () => ({ CONTACTS_KEY: 'contacts' }));
 
 const mockQueryProfile = jest.fn();
 const mockQuerySync = jest.fn();
+const mockResolveNamecoinProfile = jest.fn();
+const mockFetchNameValue = jest.fn();
+jest.mock('../utils/NamecoinNip05', () => ({
+    ...jest.requireActual('../utils/NamecoinNip05'),
+    resolveNamecoinProfile: (...args: any[]) =>
+        mockResolveNamecoinProfile(...args)
+}));
+jest.mock('../utils/NamecoinElectrumX', () => ({
+    NamecoinElectrumXClient: jest.fn().mockImplementation(() => ({
+        fetchNameValue: mockFetchNameValue
+    }))
+}));
 jest.mock('nostr-tools', () => ({
     SimplePool: class {
         querySync = (...args: any[]) => mockQuerySync(...args);
@@ -108,6 +120,8 @@ const lookUp = async (account: string, enableTor: boolean = false) => {
 describe('NostrContacts NIP-05 lookup', () => {
     beforeEach(() => {
         mockQueryProfile.mockReset();
+        mockResolveNamecoinProfile.mockReset();
+        mockFetchNameValue.mockReset();
         mockDoTorRequest.mockReset();
         mockQuerySync.mockReset();
         mockQuerySync.mockResolvedValue([]);
@@ -145,6 +159,28 @@ describe('NostrContacts NIP-05 lookup', () => {
             { authors: [PUBKEY], kinds: [3] }
         );
     });
+
+    it.each(['d/mstrofnone', 'm@testls.bit'])(
+        'accepts and resolves Namecoin identifier %s',
+        async (identifier) => {
+            mockResolveNamecoinProfile.mockResolvedValue({
+                pubkey: PUBKEY
+            });
+
+            await lookUp(identifier);
+            await new Promise(setImmediate);
+
+            expect(mockResolveNamecoinProfile).toHaveBeenCalledWith(
+                identifier,
+                mockFetchNameValue
+            );
+            expect(mockQueryProfile).not.toHaveBeenCalled();
+            expect(mockQuerySync).toHaveBeenCalledWith(
+                ['wss://relay.example.com'],
+                { authors: [PUBKEY], kinds: [3] }
+            );
+        }
+    );
 
     it('sends the NIP-05 lookup through Tor when Tor is enabled', async () => {
         mockDoTorRequest.mockResolvedValue({ names: { satoshi: PUBKEY } });

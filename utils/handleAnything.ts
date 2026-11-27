@@ -18,6 +18,7 @@ import { getLnurlParams as getlnurlParams } from './LnurlResolveUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
+import { isNamecoinIdentifier } from './NamecoinNip05';
 
 import CashuToken from '../models/CashuToken';
 import { normalizeContactData } from '../models/Contact';
@@ -423,7 +424,12 @@ const handleAnything = async (
         } catch (e) {}
     }
 
-    if (!hasAt && hasMultiple) {
+    if (isNamecoinIdentifier(value)) {
+        // Namecoin identifiers never use DNS, BOLT 12, or LNURL. Clipboard
+        // classification stays local; resolution only runs on user action.
+        if (isClipboardValue) return true;
+        return await attemptNip05Lookup(value);
+    } else if (!hasAt && hasMultiple) {
         if (isClipboardValue) return true;
         // ChoosePaymentMethod offers on-chain for any value it receives, so
         // leave out an address that is not valid on this node's network

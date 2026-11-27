@@ -29,6 +29,7 @@ import ContactUtils from '../utils/ContactUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { isImageSourceAllowed } from '../utils/LnurlPayUtils';
 import NostrUtils from '../utils/NostrUtils';
+import { isNamecoinIdentifier } from '../utils/NamecoinNip05';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Storage from '../storage';
@@ -514,7 +515,9 @@ export default class NostrContacts extends React.Component<
 
     handleNostrValidation = (text: string) => {
         const isValidNpub = AddressUtils.isValidNpub(text);
-        const isValidNip05 = AddressUtils.isValidLightningAddress(text);
+        const isValidNip05 =
+            AddressUtils.isValidLightningAddress(text) ||
+            isNamecoinIdentifier(text);
         const isValid = isValidNpub || isValidNip05;
         this.setState({ isValid, isValidNpub, isValidNip05 });
     };

@@ -65,6 +65,8 @@ let mockBlobUtilFetch = jest.fn();
 const mockSimplePool = jest.fn();
 const mockNip19Decode = jest.fn();
 const mockQuerySync = jest.fn();
+const mockResolveNamecoinProfile = jest.fn();
+const mockFetchNameValue = jest.fn();
 
 const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
 // The connected node is on regtest unless a test says otherwise
@@ -201,6 +203,16 @@ jest.mock('nostr-tools', () => ({
         npubEncode: jest.requireActual('nostr-tools').nip19.npubEncode
     }
 }));
+jest.mock('./NamecoinNip05', () => ({
+    ...jest.requireActual('./NamecoinNip05'),
+    resolveNamecoinProfile: (...args: any[]) =>
+        mockResolveNamecoinProfile(...args)
+}));
+jest.mock('./NamecoinElectrumX', () => ({
+    NamecoinElectrumXClient: jest.fn().mockImplementation(() => ({
+        fetchNameValue: mockFetchNameValue
+    }))
+}));
 jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.example.com']
 }));
@@ -220,6 +232,8 @@ describe('handleAnything', () => {
         mockSimplePool.mockReset();
         mockNip19Decode.mockReset();
         mockQuerySync.mockReset();
+        mockResolveNamecoinProfile.mockReset();
+        mockFetchNameValue.mockReset();
         mockQuerySync.mockResolvedValue([]);
         mockIsValidNpub = false;
         mockIsValidBitcoinAddress = false;
@@ -1473,6 +1487,49 @@ describe('handleAnything', () => {
 
         afterEach(() => {
             global.fetch = originalFetch;
+        });
+
+        it.each(['d/mstrofnone', 'm@testls.bit'])(
+            'resolves Namecoin identifier %s before DNS and LNURL',
+            async (identifier) => {
+                mockIsValidLightningAddress = false;
+                mockProcessBIP21Uri.mockReturnValue({ value: identifier });
+                mockResolveNamecoinProfile.mockResolvedValue({
+                    pubkey: PUBKEY
+                });
+                mockQuerySync.mockResolvedValue([
+                    {
+                        id: 'event',
+                        created_at: 1,
+                        content: JSON.stringify({ name: 'Namecoin user' })
+                    }
+                ]);
+
+                const result = await handleAnything(identifier);
+
+                expect(mockResolveNamecoinProfile).toHaveBeenCalledWith(
+                    identifier,
+                    mockFetchNameValue
+                );
+                expect(global.fetch).not.toHaveBeenCalled();
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                expect(mockQueryProfile).not.toHaveBeenCalled();
+                expect(result[0]).toBe('ContactDetails');
+                expect(result[1].nostrContact.name).toBe('Namecoin user');
+            }
+        );
+
+        it('classifies Namecoin input from the clipboard without resolving it', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'd/mstrofnone'
+            });
+
+            await expect(
+                handleAnything('d/mstrofnone', undefined, true)
+            ).resolves.toBe(true);
+            expect(mockResolveNamecoinProfile).not.toHaveBeenCalled();
+            expect(global.fetch).not.toHaveBeenCalled();
+            expect(mockBlobUtilFetch).not.toHaveBeenCalled();
         });
 
         it('lowercases an uppercase identifier before the lookup', async () => {
