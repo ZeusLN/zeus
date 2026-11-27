@@ -74,6 +74,7 @@ import Storage from '../storage';
 import Swap from '../models/Swap';
 import {
     SWAPS_KEY,
+    SWAPS_LAST_USED_KEY,
     SWAPS_RESCUE_KEY,
     MAX_SUBMARINE_SWAP_TIMEOUT_BLOCKS,
     buildSubmarineSwapLeaves,
@@ -204,6 +205,7 @@ beforeEach(() => {
 describe('SwapStore.createSubmarineSwap response verification', () => {
     const create = async (responseOverrides: any = {}, tip: any = TIP) => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        storageBacking[SWAPS_LAST_USED_KEY] = '0';
         mockHttp(
             {
                 id: 'submarine-swap',
@@ -278,6 +280,7 @@ describe('SwapStore.createSubmarineSwap response verification', () => {
         'aborts before saving or opening when the response body is %j',
         async (body) => {
             storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+            storageBacking[SWAPS_LAST_USED_KEY] = '0';
             mockHttp(body);
             const store = newStore();
             const navigation = { navigate: jest.fn() };
@@ -296,6 +299,7 @@ describe('SwapStore.createSubmarineSwap response verification', () => {
 
     it('omits the pair hash when the quote has none', async () => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        storageBacking[SWAPS_LAST_USED_KEY] = '0';
         mockHttp({ id: 'submarine-swap', expectedAmount: 424, ...VALID });
         const store = newStore();
         store.subInfo = { fees: SUB_INFO.fees };
@@ -411,6 +415,7 @@ describe('SwapStore.createSubmarineSwap response verification', () => {
 
     it('compares the amount with the fees shown when the swap was started', async () => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        storageBacking[SWAPS_LAST_USED_KEY] = '0';
         const store = newStore();
         mockHttp(
             { id: 'submarine-swap', ...VALID, expectedAmount: 100000 },
@@ -430,6 +435,7 @@ describe('SwapStore.createSubmarineSwap response verification', () => {
 
     it('does not ask the host for a swap when no fee quote was loaded', async () => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        storageBacking[SWAPS_LAST_USED_KEY] = '0';
         mockHttp({
             id: 'submarine-swap',
             expectedAmount: EXPECTED_AMOUNT,

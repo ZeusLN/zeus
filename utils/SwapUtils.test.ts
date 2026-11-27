@@ -40,6 +40,7 @@ import {
     deriveSwapPreimage,
     aggregateMusigKeys,
     rescuedLockupFloor,
+    keyIndexAfter,
     swapNetworkName,
     isAlreadyBroadcastError,
     buildReverseSwapLeaves,
@@ -1667,5 +1668,59 @@ describe('SwapUtils', () => {
                 reason
             });
         });
+    });
+});
+
+describe('keyIndexAfter', () => {
+    it('is 0 when no swap has an index', () => {
+        expect(keyIndexAfter([])).toBe(0);
+        expect(keyIndexAfter([{ id: 'local' }])).toBe(0);
+        expect(keyIndexAfter(undefined as any)).toBe(0);
+    });
+
+    it('is one past the highest index of stored and listed swaps', () => {
+        expect(
+            keyIndexAfter([
+                { keyIndex: 3 },
+                { claimDetails: { keyIndex: 0 } },
+                { refundDetails: { keyIndex: 7 } }
+            ])
+        ).toBe(8);
+    });
+
+    it.each([[-1], [1.5], ['-1'], ['1.5'], ['0x4'], [''], [null]])(
+        'ignores the index %p',
+        (keyIndex) => {
+            expect(keyIndexAfter([{ keyIndex }, { keyIndex: 2 }])).toBe(3);
+        }
+    );
+
+    it.each([[2147483647], ['2147483647'], [2147483648]])(
+        'ignores the index %p, whose successor cannot be derived',
+        (keyIndex) => {
+            expect(keyIndexAfter([{ keyIndex }, { keyIndex: 2 }])).toBe(3);
+        }
+    );
+
+    it('counts the last index that leaves one to derive', () => {
+        expect(keyIndexAfter([{ keyIndex: 2147483646 }])).toBe(2147483647);
+    });
+
+    it('ignores an index past the safe integer range', () => {
+        expect(
+            keyIndexAfter([{ keyIndex: Number.MAX_VALUE }, { keyIndex: 2 }])
+        ).toBe(3);
+        expect(
+            keyIndexAfter([{ keyIndex: '9007199254740993' }, { keyIndex: 2 }])
+        ).toBe(3);
+    });
+
+    it('counts an index sent as a string of digits', () => {
+        expect(
+            keyIndexAfter([
+                { claimDetails: { keyIndex: '4' } },
+                { keyIndex: 2 }
+            ])
+        ).toBe(5);
     });
 });
