@@ -1,4 +1,4 @@
-import { lnrpc } from '../proto/lightning';
+import { lnrpc, walletrpc } from '../proto/lightning';
 
 // ListChannelsResponse.channels is field 11, length-delimited
 const CHANNELS_TAG = (11 << 3) | 2;
@@ -53,6 +53,31 @@ describe('generated lnrpc bindings', () => {
 
         expect(() => lnrpc.ListChannelsResponse.decode(bytes)).toThrow(
             RangeError
+        );
+    });
+});
+
+describe('generated walletrpc bindings', () => {
+    // lndmobile's publishTransaction puts the tx_hex string it gets from
+    // EmbeddedLND straight into walletrpc.Transaction, as sendCommand does
+    const encodedTxHex = (tx_hex: string) => {
+        const encoded = walletrpc.Transaction.encode(
+            walletrpc.Transaction.create({ tx_hex } as any)
+        ).finish();
+        return Buffer.from(
+            walletrpc.Transaction.decode(encoded).tx_hex
+        ).toString('hex');
+    };
+
+    it('base64-decodes a string tx_hex into the raw transaction', () => {
+        expect(encodedTxHex('AgAAAAABAf8=')).toBe('02000000000101ff');
+    });
+
+    // So EmbeddedLND must convert hex to base64 first: a hex string is
+    // also valid base64, and lnd would get the wrong bytes with no error
+    it('encodes a hex string tx_hex as different bytes without an error', () => {
+        expect(encodedTxHex('02000000000101ff')).toBe(
+            'd36d34d34d34d34d35d357df'
         );
     });
 });
