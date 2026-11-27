@@ -61,7 +61,7 @@ jest.mock('../components/NodeIdenticon', () => 'NodeIdenticon');
 jest.mock('./ToggleButton', () => 'ToggleButton');
 
 import * as React from 'react';
-import { AppState } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import WalletHeader, { networkBadgeLabel } from './WalletHeader';
@@ -130,10 +130,17 @@ const clipboardBadge = () =>
     screen.container.queryAll((n) => n.type === 'ClipboardIcon')[0];
 
 describe('WalletHeader clipboard badge', () => {
+    let alertSpy: jest.SpyInstance | undefined;
+
     beforeEach(() => {
         jest.clearAllMocks();
         (Clipboard.getString as jest.Mock).mockResolvedValue(INVOICE);
         (isClipboardValue as jest.Mock).mockResolvedValue(true);
+    });
+
+    afterEach(() => {
+        alertSpy?.mockRestore();
+        alertSpy = undefined;
     });
 
     it('does not read the clipboard while connecting', async () => {
@@ -189,6 +196,46 @@ describe('WalletHeader clipboard badge', () => {
         expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {
             invoice: INVOICE
         });
+    });
+
+    // handleAnything shows its own alert and returns a falsy value when it
+    // cannot route one: nothing for an LNURL tag this backend can't handle,
+    // false for a declined BTCPay config. Destructuring that threw an
+    // unhandled TypeError.
+    it.each([undefined, false])(
+        'does not navigate when the copied value cannot be routed (%s)',
+        async (result) => {
+            alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
+            (handleAnything as unknown as jest.Mock).mockResolvedValueOnce(
+                result
+            );
+            const { navigation } = await renderHeader({ clipboard: true });
+
+            await fireEvent.press(clipboardBadge());
+
+            expect(handleAnything).toHaveBeenCalledWith(INVOICE);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            // handleAnything has already alerted; a second one would stack
+            expect(alertSpy).not.toHaveBeenCalled();
+        }
+    );
+
+    it('shows an alert when the copied value cannot be read', async () => {
+        alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
+        (handleAnything as unknown as jest.Mock).mockRejectedValueOnce(
+            new Error('Could not parse lnurl params')
+        );
+        const { navigation } = await renderHeader({ clipboard: true });
+
+        await fireEvent.press(clipboardBadge());
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'Could not parse lnurl params',
+            expect.any(Array),
+            { cancelable: false }
+        );
+        expect(navigation.navigate).not.toHaveBeenCalled();
     });
 
     it('reads the clipboard again when the screen regains focus', async () => {
