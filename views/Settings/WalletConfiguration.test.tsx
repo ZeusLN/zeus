@@ -99,7 +99,10 @@ import { confirmAction } from '../../utils/ActionUtils';
 import { createLdkNodeWallet } from '../../utils/LdkNodeUtils';
 import Storage from '../../storage';
 import { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
-import { clearNodeKeychainData } from '../../utils/DataClearUtils';
+import {
+    clearNodeKeychainData,
+    deleteNodeDataDirectoryWithRetry
+} from '../../utils/DataClearUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 
@@ -1092,7 +1095,8 @@ describe('WalletConfiguration', () => {
         const deleteWallet = async (
             nodes: any[],
             active: boolean,
-            nwcOverrides: Record<string, jest.Mock> = {}
+            nwcOverrides: Record<string, jest.Mock> = {},
+            refuseWrite = false
         ) => {
             const calls: string[] = [];
             const settings = { nodes, selectedNode: 0, privacy: {} };
@@ -1100,12 +1104,14 @@ describe('WalletConfiguration', () => {
                 settings,
                 updateSettings: jest.fn(async (update: any) => {
                     calls.push('updateSettings');
-                    return {
-                        ...settings,
-                        ...(typeof update === 'function'
+                    const resolved =
+                        typeof update === 'function'
                             ? update(settings)
-                            : update)
-                    };
+                            : update;
+                    // A refused write resolves with the unchanged
+                    // settings, as SettingsStore.applySettingsUpdate does
+                    if (refuseWrite) return settings;
+                    return { ...settings, ...resolved };
                 }),
                 setConnectingStatus: jest.fn(),
                 invalidateConnection: jest.fn()
@@ -1242,6 +1248,49 @@ describe('WalletConfiguration', () => {
                 expect.objectContaining({ host: LND_NODE.host, port: '9090' }),
                 [OTHER_NODE]
             );
+        });
+
+        it('keeps the data directory when the settings write is refused', async () => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            (deleteNodeDataDirectoryWithRetry as jest.Mock).mockClear();
+            const { navigation } = await deleteWallet(
+                [LND_NODE, OTHER_NODE],
+                true,
+                {},
+                true
+            );
+
+            expect(deleteNodeDataDirectoryWithRetry).not.toHaveBeenCalled();
+            expect(navigation.popTo).not.toHaveBeenCalled();
+            expect(navigation.reset).not.toHaveBeenCalled();
+            consoleError.mockRestore();
+        });
+
+        it('keeps the data directory when the write deleting the last wallet is refused', async () => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            (deleteNodeDataDirectoryWithRetry as jest.Mock).mockClear();
+            const { calls, navigation } = await deleteWallet(
+                [LND_NODE],
+                true,
+                {},
+                true
+            );
+
+            expect(deleteNodeDataDirectoryWithRetry).not.toHaveBeenCalled();
+            expect(calls).not.toContain('deleteAllConnectionData');
+            expect(navigation.reset).not.toHaveBeenCalled();
+            consoleError.mockRestore();
+        });
+
+        it('deletes the data directory once the config is removed', async () => {
+            (deleteNodeDataDirectoryWithRetry as jest.Mock).mockClear();
+            await deleteWallet([LND_NODE, OTHER_NODE], true);
+
+            expect(deleteNodeDataDirectoryWithRetry).toHaveBeenCalledTimes(1);
         });
 
         it('still deletes an inactive wallet when its NWC connections cannot be deleted', async () => {
