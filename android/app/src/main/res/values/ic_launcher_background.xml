@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#000000</color>
+    <color name="ic_launcher_gradient_background">#000000</color>
+    <color name="ic_launcher_yellow_background">#FFA900</color>
+    <color name="ic_launcher_gradient_inverse_background">#E69406</color>
+    <color name="ic_launcher_red_background">#6D0F0B</color>
+    <color name="ic_launcher_gradient_red_background">#FFFFFF</color>
+    <color name="ic_launcher_bw_background">#000000</color>
 </resources>
