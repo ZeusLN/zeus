@@ -24,8 +24,14 @@ jest.mock('../../utils/BackendUtils', () => ({
     supportsFlowLSP: () => false,
     supportsOnchainSends: () => true
 }));
+// every address passes unless a test turns on the real network check
+let mockCheckAddresses = false;
 jest.mock('../../utils/AddressUtils', () => ({
-    isValidBitcoinAddressForNode: () => true,
+    isAddressForNodeNetwork: (address: string) =>
+        !mockCheckAddresses ||
+        jest
+            .requireActual('../../utils/AddressUtils')
+            .default.isAddressForNodeNetwork(address),
     isValidLightningPaymentRequest: () => true
 }));
 jest.mock('../../components/Screen', () => {
@@ -64,6 +70,7 @@ import * as React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import Swaps from './index';
 import { reverseClaimMinerFee } from '../../utils/FeeUtils';
+import { nodeInfoStore } from '../../stores/Stores';
 
 // the navigator's listeners and the props of the last render, so tests
 // can blur the screen and render it again with new route params
@@ -248,6 +255,49 @@ describe('Swaps reverse amounts and the claim fee rate', () => {
 
         expect(receiveInput().props.amount).toBe('');
         expect(initiate().props.disabled).toBe(true);
+    });
+});
+
+describe('Swaps reverse claim address', () => {
+    const MAINNET = 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu';
+    // MAINNET with the last character changed
+    const BAD_CHECKSUM = 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwv';
+    const TESTNET = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
+
+    const initiateDisabledFor = async (nodeInfo: any, claimAddress: string) => {
+        (nodeInfoStore as any).nodeInfo = nodeInfo;
+        await renderView(mempool(1));
+        await enterAddress(claimAddress);
+        await enter(sendInput(), '5000');
+        return initiate().props.disabled;
+    };
+
+    beforeEach(() => {
+        mockCheckAddresses = true;
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
+    afterEach(() => {
+        mockCheckAddresses = false;
+        (nodeInfoStore as any).nodeInfo = {};
+        jest.restoreAllMocks();
+    });
+
+    it('enables Initiate for a mainnet address on a mainnet node', async () => {
+        expect(await initiateDisabledFor({}, MAINNET)).toBe(false);
+    });
+
+    it('keeps Initiate disabled for a bc1 address with a bad checksum', async () => {
+        expect(await initiateDisabledFor({}, BAD_CHECKSUM)).toBe(true);
+    });
+
+    it('keeps Initiate disabled for a testnet address on a mainnet node', async () => {
+        expect(await initiateDisabledFor({}, TESTNET)).toBe(true);
+    });
+
+    it('keeps Initiate disabled for a testnet address on a regtest node', async () => {
+        expect(await initiateDisabledFor({ isRegTest: true }, TESTNET)).toBe(
+            true
+        );
     });
 });
 

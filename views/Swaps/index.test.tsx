@@ -8,7 +8,7 @@ jest.mock('ecpair', () => ({ ECPairFactory: jest.fn() }));
 jest.mock('@bitcoinerlab/secp256k1', () => ({}));
 jest.mock('../../storage', () => ({ getItem: jest.fn() }));
 jest.mock('../../utils/AddressUtils', () => ({
-    isValidBitcoinAddressForNode: (value: string) => value.startsWith('bc1'),
+    isAddressForNodeNetwork: (value: string) => value.startsWith('bc1'),
     isValidLightningPaymentRequest: (value: string) => value.startsWith('lnbc')
 }));
 jest.mock('../../utils/BackendUtils', () => ({

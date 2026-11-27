@@ -2556,6 +2556,7 @@
     "views.Swaps.generateOnchainAddressFailed": "Failed to generate on-chain address",
     "views.Swaps.noUpdates": "No updates found!",
     "views.Swaps.setClaimFeeRate": "Set on-chain fee rate",
+    "views.Swaps.invalidClaimAddress": "The on-chain address is not valid for this wallet's network.",
     "views.Swaps.reverseClaimFeeRateRequired": "Enter a valid on-chain fee rate to start this swap.",
     "views.Swaps.reverseClaimFeeExceedsAmount": "The on-chain fee at this rate is more than this swap would receive. Raise the amount or lower the fee rate.",
     "views.Swaps.SwapsPane.noSwaps": "No swaps have been made yet",

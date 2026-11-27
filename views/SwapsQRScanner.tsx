@@ -15,7 +15,7 @@ export default class SwapsQRScanner extends BaseQRScanner {
         const { value, satAmount } = AddressUtils.processBIP21Uri(data);
 
         // Reverse Swap - Bitcoin address
-        if (AddressUtils.isValidBitcoinAddressForNode(value)) {
+        if (AddressUtils.isAddressForNodeNetwork(value)) {
             navigation.goBack();
             navigation.navigate({
                 name: 'Swaps',
