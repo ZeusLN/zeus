@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -8,7 +9,6 @@ import BalanceStore from '../../stores/BalanceStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import ModalStore from '../../stores/ModalStore';
 import SettingsStore from '../../stores/SettingsStore';
-import TransactionsStore from '../../stores/TransactionsStore';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -19,10 +19,9 @@ import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
 import AddressUtils from '../../utils/AddressUtils';
+import { isPlausibleSatPerVbyte } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-
-import TransactionRequest from '../../models/TransactionRequest';
 
 interface SweepProps {
     exitSetup: any;
@@ -30,7 +29,6 @@ interface SweepProps {
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     ModalStore: ModalStore;
-    TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     route: Route<'Sweep', { destination: string }>;
 }
@@ -41,13 +39,7 @@ interface SweepState {
     fee: string;
 }
 
-@inject(
-    'InvoicesStore',
-    'ModalStore',
-    'TransactionsStore',
-    'BalanceStore',
-    'SettingsStore'
-)
+@inject('InvoicesStore', 'ModalStore', 'BalanceStore', 'SettingsStore')
 @observer
 export default class Sweep extends React.Component<SweepProps, SweepState> {
     constructor(props: SweepProps) {
@@ -73,28 +65,35 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
         }
     }
 
-    sendCoins = () => {
-        const { SettingsStore, TransactionsStore, navigation } = this.props;
-        const { destination, fee } = this.state;
-        const { implementation } = SettingsStore;
+    // What a sweep can spend. CLN's withdraw spends confirmed outputs only
+    // (minconf defaults to 1, and CLNRest.sendCoins does not pass
+    // spend_unconfirmed on)
+    sweepableSats = (): BigNumber => {
+        const { BalanceStore, SettingsStore } = this.props;
+        return new BigNumber(BalanceStore.confirmedBlockchainBalance || 0).plus(
+            SettingsStore.implementation === 'cln-rest'
+                ? 0
+                : BalanceStore.unconfirmedBlockchainBalance || 0
+        );
+    };
 
-        let request: TransactionRequest;
-        request =
-            implementation === 'cln-rest'
-                ? {
-                      addr: destination,
-                      sat_per_vbyte: fee,
-                      amount: 'all',
-                      spend_unconfirmed: true
-                  }
-                : {
-                      addr: destination,
-                      sat_per_vbyte: fee,
-                      send_all: true,
-                      spend_unconfirmed: true
-                  };
-        TransactionsStore.sendCoins(request);
-        navigation.navigate('SendingOnChain');
+    // A sweep spends the whole balance at the fee rate in the input, which
+    // starts at a default the user may not have changed. As with Send's
+    // on-chain flow, VerifyOnChain shows amount, destination and rate, and
+    // its send max request (send_all, or amount 'all' on CLNRest) is sent
+    // only once the user confirms there. The amount shown is the balance
+    // when Proceed is tapped: if the balance changes while VerifyOnChain is
+    // open, the request still sweeps the balance at the time it is sent,
+    // as with send max in Send
+    proceed = () => {
+        const { navigation } = this.props;
+        const { destination, fee } = this.state;
+        navigation.navigate('VerifyOnChain', {
+            destination,
+            fee,
+            satAmount: this.sweepableSats().toString(),
+            fundMax: true
+        });
     };
 
     handleOnNavigateBack = (fee: string) => {
@@ -121,7 +120,19 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
             confirmedBlockchainBalance === 0 &&
             unconfirmedBlockchainBalance === 0;
 
-        const disabled = !destination || !isValid || noOnchainBalance;
+        // On CLNRest a balance that is all unconfirmed cannot be swept yet
+        const nothingToSweep = !this.sweepableSats().gt(0);
+
+        // Proceed stays off while the fee field shows an error. With an
+        // empty or 0 rate the node picks its own fee, so the rate the user
+        // confirms would not be the one used. VerifyOnChain shows the rate
+        // as typed, and LND takes whole sat/vB, so only digits
+        const disabled =
+            !destination ||
+            !isValid ||
+            nothingToSweep ||
+            !/^\d+$/.test(fee) ||
+            !isPlausibleSatPerVbyte(fee);
 
         return (
             <Screen>
@@ -233,14 +244,14 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
 
                         <View style={styles.button}>
                             <Button
-                                title={localeString('views.Send.sendCoins')}
+                                title={localeString('general.proceed')}
                                 icon={
                                     !disabled && {
                                         name: 'send',
                                         size: 25
                                     }
                                 }
-                                onPress={() => this.sendCoins()}
+                                onPress={this.proceed}
                                 disabled={disabled}
                             />
                         </View>
