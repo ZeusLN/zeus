@@ -738,10 +738,9 @@ describe('CashuStore sweepOfflinePendingTokens', () => {
         );
         jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(undefined);
         jest.spyOn(store, 'deriveCashuSecretKey').mockReturnValue(secretKey);
-        const receiveTokenCDK = jest
-            .spyOn(store, 'receiveTokenCDK')
-            .mockResolvedValue(21000);
-        return { store, receiveTokenCDK };
+        // receiveTokenCDK is not stubbed: the key has to reach CDK
+        (CashuDevKit.receive as jest.Mock).mockReset().mockResolvedValue(21000);
+        return store;
     };
 
     beforeEach(() => {
@@ -753,43 +752,38 @@ describe('CashuStore sweepOfflinePendingTokens', () => {
     afterEach(() => jest.restoreAllMocks());
 
     it('offers CDK our key for a token decoded before its mint was added', async () => {
-        const { store, receiveTokenCDK } = storeWithQueuedToken([]);
+        const store = storeWithQueuedToken([]);
 
         await store.sweepOfflinePendingTokens();
 
-        expect(receiveTokenCDK).toHaveBeenCalledWith(
-            'cashuBtoken',
-            secretKey,
-            mint
-        );
+        expect((CashuDevKit.receive as jest.Mock).mock.calls).toStrictEqual([
+            ['cashuBtoken', { p2pk_signing_keys: [secretKey] }]
+        ]);
+        expect((store as any).ensureMintAdded).toHaveBeenCalledWith(mint);
         expect(store.offlinePendingTokens).toEqual([]);
     });
 
     it('offers CDK our key for a token with unlocked proofs', async () => {
-        const { store, receiveTokenCDK } = storeWithQueuedToken([
+        const store = storeWithQueuedToken([
             { amount: 21000, secret: 'plain-secret', C: '02ab', id: '00ff' }
         ]);
 
         await store.sweepOfflinePendingTokens();
 
-        expect(receiveTokenCDK).toHaveBeenCalledWith(
-            'cashuBtoken',
-            secretKey,
-            mint
-        );
+        expect((CashuDevKit.receive as jest.Mock).mock.calls).toStrictEqual([
+            ['cashuBtoken', { p2pk_signing_keys: [secretKey] }]
+        ]);
     });
 
     it('still receives a token when there is no seed to derive a key from', async () => {
-        const { store, receiveTokenCDK } = storeWithQueuedToken([]);
+        const store = storeWithQueuedToken([]);
         (store.deriveCashuSecretKey as jest.Mock).mockReturnValue(null);
 
         await store.sweepOfflinePendingTokens();
 
-        expect(receiveTokenCDK).toHaveBeenCalledWith(
-            'cashuBtoken',
-            undefined,
-            mint
-        );
+        expect((CashuDevKit.receive as jest.Mock).mock.calls).toStrictEqual([
+            ['cashuBtoken', { p2pk_signing_keys: [] }]
+        ]);
         expect(store.offlinePendingTokens).toEqual([]);
     });
 });
@@ -808,12 +802,13 @@ describe('CashuStore receiveTokenCDK', () => {
 
     afterEach(() => jest.restoreAllMocks());
 
-    it('passes the offered key to CDK as a P2PK signing key', async () => {
+    it('passes our key to CDK as a P2PK signing key', async () => {
         const store = newInitializedStore();
+        jest.spyOn(store, 'deriveCashuSecretKey').mockReturnValue(
+            'aa'.repeat(32)
+        );
 
-        await expect(
-            store.receiveTokenCDK('cashuBtoken', 'aa'.repeat(32))
-        ).resolves.toBe(21);
+        await expect(store.receiveTokenCDK('cashuBtoken')).resolves.toBe(21);
 
         // toStrictEqual: toHaveBeenCalledWith would also accept a trailing
         // undefined in the key list.
@@ -822,8 +817,9 @@ describe('CashuStore receiveTokenCDK', () => {
         ]);
     });
 
-    it('passes no signing keys when no key is offered', async () => {
+    it('passes no signing keys when no key can be derived', async () => {
         const store = newInitializedStore();
+        jest.spyOn(store, 'deriveCashuSecretKey').mockReturnValue(null);
 
         await store.receiveTokenCDK('cashuBtoken');
 
