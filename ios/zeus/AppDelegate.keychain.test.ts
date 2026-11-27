@@ -32,15 +32,37 @@ const extractCheck = () => {
 //   unlock        applicationProtectedDataDidBecomeAvailable:
 //   active:<0|1>  UIApplicationDidBecomeActiveNotification, with protected data
 //                 unavailable/available at that moment
+//   write         JS of this install writes a device-local keychain item
+//   ask           KeychainAudit asks whether the reinstall flag is still
+//                 pending; the answers are reported as "asked"
+//   read          KeychainAudit reads the reinstall flag; the answers are
+//                 reported as "read"
+// LOCAL_ITEMS=1 starts with device-local items an earlier install left, and
+// FIRST_UNLOCK_PENDING=1 makes keychain reads fail until unlock or active:1,
+// as before the first unlock after a reboot
 const HARNESS = (check: string) => `#import <Foundation/Foundation.h>
 #import <Security/Security.h>
 
 static NSMutableArray *gDeleted;
+static BOOL gLocalItems;
+static BOOL gKeychainLocked;
 static OSStatus FakeSecItemDelete(CFDictionaryRef query) {
   [gDeleted addObject:((__bridge NSDictionary *)query)[(__bridge id)kSecClass]];
+  gLocalItems = NO;
   return errSecSuccess;
 }
 #define SecItemDelete FakeSecItemDelete
+
+static OSStatus FakeSecItemCopyMatching(CFDictionaryRef query, CFTypeRef *result) {
+  if (gKeychainLocked) return errSecInteractionNotAllowed;
+  return gLocalItems ? errSecSuccess : errSecItemNotFound;
+}
+#define SecItemCopyMatching FakeSecItemCopyMatching
+
+static BOOL EnvFlag(const char *name) {
+  const char *value = getenv(name);
+  return value && atoi(value);
+}
 
 // In-memory stand-in for standardUserDefaults, so runs share no state and
 // write nothing to the developer's ~/Library/Preferences
@@ -74,30 +96,47 @@ int main(int argc, const char *argv[]) {
     if (atoi(argv[1])) [defaults setBool:YES forKey:kHasRunBeforeKey];
     NSString *path = @(argv[2]);
     gDeleted = [NSMutableArray array];
+    gLocalItems = EnvFlag("LOCAL_ITEMS");
+    gKeychainLocked = EnvFlag("FIRST_UNLOCK_PENDING");
 
     BOOL pending = NO;
+    LocalKeychainItems itemsAtLaunch = LocalKeychainItemsUnknown;
     int checks = 0;
+    NSMutableArray *asked = [NSMutableArray array];
+    NSMutableArray *read = [NSMutableArray array];
     for (int i = 3; i < argc; i++) {
       NSString *event = @(argv[i]);
       if ([event hasPrefix:@"launch:"]) {
-        pending = !ClearKeychainIfNecessary([event hasSuffix:@"1"], path);
+        itemsAtLaunch = ReadLocalKeychainItems();
+        pending = !ClearKeychainIfNecessary([event hasSuffix:@"1"], path, itemsAtLaunch);
         if (!pending) checks++;
       } else if ([event isEqualToString:@"unlock"]) {
-        if (RunPendingKeychainCheck(&pending, YES, path)) checks++;
+        gKeychainLocked = NO;
+        if (RunPendingKeychainCheck(&pending, YES, path, itemsAtLaunch)) checks++;
       } else if ([event hasPrefix:@"active:"]) {
-        if (RunPendingKeychainCheck(&pending, [event hasSuffix:@"1"], path)) checks++;
+        if ([event hasSuffix:@"1"]) gKeychainLocked = NO;
+        if (RunPendingKeychainCheck(&pending, [event hasSuffix:@"1"], path, itemsAtLaunch)) checks++;
+      } else if ([event isEqualToString:@"write"]) {
+        if (!gKeychainLocked) gLocalItems = YES;
+      } else if ([event isEqualToString:@"ask"]) {
+        [asked addObject:@(ReinstallFlagPending(pending, path))];
+      } else if ([event isEqualToString:@"read"]) {
+        [read addObject:@(KeychainSurvivedReinstall(path))];
       } else {
         fprintf(stderr, "unknown event %s\\n", argv[i]);
         return 1;
       }
     }
 
-    NSDictionary *report = @{
+    NSMutableDictionary *report = [@{
       @"checks": @(checks),
       @"pending": @(pending),
       @"deleted": @(gDeleted.count),
-      @"flag": @([defaults boolForKey:kHasRunBeforeKey])
-    };
+      @"flag": @([defaults boolForKey:kHasRunBeforeKey]),
+      @"reinstalled": @([defaults boolForKey:kKeychainSurvivedReinstallKey])
+    } mutableCopy];
+    if (asked.count) report[@"asked"] = asked;
+    if (read.count) report[@"read"] = read;
     NSData *json = [NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
     printf("%s\\n", [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding].UTF8String);
   }
@@ -113,6 +152,7 @@ int main(int argc, const char *argv[]) {
         let withFlag: string;
         let withoutFlag: string;
         let missing: string;
+        let withReinstallFlag: string;
 
         beforeAll(() => {
             dir = fs.mkdtempSync(path.join(os.tmpdir(), 'keychain-first-run-'));
@@ -148,13 +188,21 @@ int main(int argc, const char *argv[]) {
                 plist('<key>HAS_RUN_BEFORE</key><true/>')
             );
             fs.writeFileSync(withoutFlag, plist('<key>other</key><true/>'));
+            withReinstallFlag = path.join(dir, 'with-reinstall-flag.plist');
+            fs.writeFileSync(
+                withReinstallFlag,
+                plist(
+                    '<key>HAS_RUN_BEFORE</key><true/><key>KEYCHAIN_SURVIVED_REINSTALL</key><true/>'
+                )
+            );
         }, 60000);
 
         afterAll(() => {
             if (dir) fs.rmSync(dir, { recursive: true, force: true });
         });
 
-        const run = (
+        const runIn = (
+            env: { localItems: boolean; firstUnlockPending?: boolean },
             defaultsFlag: boolean,
             defaultsFile: string,
             ...events: string[]
@@ -163,9 +211,29 @@ int main(int argc, const char *argv[]) {
                 execFileSync(
                     binary,
                     [defaultsFlag ? '1' : '0', defaultsFile, ...events],
-                    { encoding: 'utf8' }
+                    {
+                        encoding: 'utf8',
+                        env: {
+                            ...process.env,
+                            LOCAL_ITEMS: env.localItems ? '1' : '0',
+                            FIRST_UNLOCK_PENDING: env.firstUnlockPending
+                                ? '1'
+                                : '0'
+                        }
+                    }
                 )
             );
+        const runWith = (
+            localItems: boolean,
+            defaultsFlag: boolean,
+            defaultsFile: string,
+            ...events: string[]
+        ) => runIn({ localItems }, defaultsFlag, defaultsFile, ...events);
+        const run = (
+            defaultsFlag: boolean,
+            defaultsFile: string,
+            ...events: string[]
+        ) => runWith(false, defaultsFlag, defaultsFile, ...events);
 
         // Before the first unlock after a reboot, a background launch on an
         // install that has run before reads empty defaults
@@ -175,7 +243,8 @@ int main(int argc, const char *argv[]) {
                     checks: 0,
                     pending: true,
                     deleted: 0,
-                    flag: false
+                    flag: false,
+                    reinstalled: false
                 });
             }
         });
@@ -186,7 +255,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
             }
         });
@@ -196,7 +266,8 @@ int main(int argc, const char *argv[]) {
                 checks: 1,
                 pending: false,
                 deleted: 0,
-                flag: true
+                flag: true,
+                reinstalled: false
             });
         });
 
@@ -205,7 +276,109 @@ int main(int argc, const char *argv[]) {
                 checks: 1,
                 pending: false,
                 deleted: 0,
-                flag: false
+                flag: false,
+                reinstalled: false
+            });
+        });
+
+        describe('reinstall on the same device', () => {
+            it('marks a fresh install that finds device-local items as a reinstall', () => {
+                expect(runWith(true, false, missing, 'launch:1')).toEqual({
+                    checks: 1,
+                    pending: false,
+                    deleted: 5,
+                    flag: true,
+                    reinstalled: true
+                });
+            });
+
+            it('does not mark a first install on a new device', () => {
+                expect(
+                    runWith(false, false, missing, 'launch:1')
+                ).toMatchObject({ deleted: 5, reinstalled: false });
+            });
+
+            it('does not mark an install that has run before', () => {
+                expect(runWith(true, true, withFlag, 'launch:1')).toMatchObject(
+                    { deleted: 0, reinstalled: false }
+                );
+                expect(
+                    runWith(true, false, withFlag, 'launch:1')
+                ).toMatchObject({ deleted: 0, reinstalled: false });
+            });
+
+            it('marks the reinstall when the check was deferred to unlock', () => {
+                expect(
+                    runWith(true, false, missing, 'launch:0', 'unlock')
+                ).toMatchObject({ checks: 1, deleted: 5, reinstalled: true });
+            });
+
+            // Locked after the first unlock: the keychain is readable, so
+            // JS can write items before the deferred check runs
+            it('does not count items this install wrote before a deferred check as a reinstall', () => {
+                expect(
+                    runWith(
+                        false,
+                        false,
+                        missing,
+                        'launch:0',
+                        'write',
+                        'unlock'
+                    )
+                ).toMatchObject({ checks: 1, reinstalled: false });
+                expect(
+                    runWith(
+                        false,
+                        false,
+                        missing,
+                        'launch:0',
+                        'write',
+                        'active:1'
+                    )
+                ).toMatchObject({ checks: 1, reinstalled: false });
+            });
+
+            it('still marks a reinstall when this install also wrote items before a deferred check', () => {
+                expect(
+                    runWith(true, false, missing, 'launch:0', 'write', 'unlock')
+                ).toMatchObject({ checks: 1, deleted: 5, reinstalled: true });
+            });
+
+            // Before the first unlock after a reboot launch cannot read the
+            // keychain, and JS cannot write to it either
+            it('reads the keychain at the deferred check when launch could not', () => {
+                expect(
+                    runIn(
+                        { localItems: true, firstUnlockPending: true },
+                        false,
+                        missing,
+                        'launch:0',
+                        'write',
+                        'unlock'
+                    )
+                ).toMatchObject({ checks: 1, deleted: 5, reinstalled: true });
+                expect(
+                    runIn(
+                        { localItems: false, firstUnlockPending: true },
+                        false,
+                        missing,
+                        'launch:0',
+                        'write',
+                        'unlock'
+                    )
+                ).toMatchObject({ checks: 1, reinstalled: false });
+            });
+
+            it('does not mark an install that has run before when launch could not read the keychain', () => {
+                expect(
+                    runIn(
+                        { localItems: true, firstUnlockPending: true },
+                        false,
+                        withFlag,
+                        'launch:0',
+                        'unlock'
+                    )
+                ).toMatchObject({ deleted: 0, reinstalled: false });
             });
         });
 
@@ -215,13 +388,15 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
                 expect(run(false, withFlag, 'launch:0', 'unlock')).toEqual({
                     checks: 1,
                     pending: false,
                     deleted: 0,
-                    flag: false
+                    flag: false,
+                    reinstalled: false
                 });
             });
 
@@ -230,7 +405,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
             });
 
@@ -239,7 +415,8 @@ int main(int argc, const char *argv[]) {
                     checks: 0,
                     pending: true,
                     deleted: 0,
-                    flag: false
+                    flag: false,
+                    reinstalled: false
                 });
                 expect(
                     run(false, missing, 'launch:0', 'active:0', 'active:1')
@@ -247,7 +424,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
             });
 
@@ -266,7 +444,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
                 expect(
                     run(
@@ -281,7 +460,78 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
+                });
+            });
+
+            describe('pending reinstall flag', () => {
+                it('is pending on a fresh install until the deferred check runs', () => {
+                    expect(
+                        run(false, missing, 'launch:0', 'ask', 'unlock', 'ask')
+                    ).toMatchObject({ asked: [true, false], flag: true });
+                    expect(
+                        runWith(
+                            true,
+                            false,
+                            missing,
+                            'launch:0',
+                            'ask',
+                            'unlock',
+                            'ask'
+                        )
+                    ).toMatchObject({
+                        asked: [true, false],
+                        reinstalled: true
+                    });
+                });
+
+                it('is not pending for an install that has run before', () => {
+                    expect(
+                        run(true, withFlag, 'launch:0', 'ask', 'unlock', 'ask')
+                    ).toMatchObject({ asked: [false, false], pending: false });
+                    // defaults alone are enough, before the file is written
+                    expect(run(true, missing, 'launch:0', 'ask')).toMatchObject(
+                        {
+                            asked: [false],
+                            pending: true
+                        }
+                    );
+                });
+
+                it('is not pending when defaults read empty but the file has the flag', () => {
+                    expect(
+                        run(false, withFlag, 'launch:0', 'ask')
+                    ).toMatchObject({ asked: [false], pending: true });
+                });
+
+                it('is not pending after a launch with protected data', () => {
+                    expect(
+                        run(false, missing, 'launch:1', 'ask')
+                    ).toMatchObject({ asked: [false] });
+                });
+            });
+
+            describe('reinstall flag read', () => {
+                it('reads the flag the check just set, before the file has it', () => {
+                    expect(
+                        runWith(true, false, missing, 'launch:1', 'read')
+                    ).toMatchObject({ reinstalled: true, read: [true] });
+                });
+
+                it('reads the flag from the file when defaults read empty', () => {
+                    expect(
+                        run(false, withReinstallFlag, 'launch:1', 'read')
+                    ).toMatchObject({ reinstalled: false, read: [true] });
+                });
+
+                it('reads no flag when neither has it', () => {
+                    expect(
+                        run(true, withFlag, 'launch:1', 'read')
+                    ).toMatchObject({ read: [false] });
+                    expect(
+                        run(false, missing, 'launch:1', 'read')
+                    ).toMatchObject({ read: [false] });
                 });
             });
 
@@ -292,7 +542,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
             });
         });
@@ -314,8 +565,12 @@ describe('AppDelegate deferred keychain check wiring', () => {
             '- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:'
         );
 
+        // Local items are read at launch, before the check that may defer
         expect(launch).toContain(
-            '_keychainCheckPending = !ClearKeychainIfNecessary(application.isProtectedDataAvailable, StandardDefaultsPath());'
+            '_localKeychainItemsAtLaunch = ReadLocalKeychainItems();'
+        );
+        expect(launch).toContain(
+            '_keychainCheckPending = !ClearKeychainIfNecessary(application.isProtectedDataAvailable, StandardDefaultsPath(), _localKeychainItemsAtLaunch);'
         );
         // Retried on becoming active, not only on the protected-data callback
         const pending = launch.slice(
@@ -334,7 +589,40 @@ describe('AppDelegate deferred keychain check wiring', () => {
         expect(run).toContain(
             '[UIApplication sharedApplication].isProtectedDataAvailable'
         );
+        expect(run).toContain('_localKeychainItemsAtLaunch');
         expect(run).toContain('removeObserver:self');
+        // Releases keychainSurvivedReinstall calls waiting in KeychainAudit.m
+        expect(run).toContain(
+            'postNotificationName:kFirstRunKeychainCheckDidRunNotification'
+        );
+    });
+
+    it('exposes the pending state and notification name KeychainAudit.m waits on', () => {
+        expect(source).toContain(
+            'kFirstRunKeychainCheckDidRunNotification = @"ZeusFirstRunKeychainCheckDidRun"'
+        );
+        // Pending only while the deferred check can still set the flag
+        expect(method('- (BOOL)firstRunKeychainCheckPending')).toContain(
+            'return ReinstallFlagPending(_keychainCheckPending, StandardDefaultsPath());'
+        );
+
+        const audit = fs.readFileSync(
+            path.join(__dirname, '..', 'KeychainAudit.m'),
+            'utf8'
+        );
+        const survived = audit.slice(
+            audit.indexOf('RCT_EXPORT_METHOD(keychainSurvivedReinstall:')
+        );
+        expect(survived).toContain('@"firstRunKeychainCheckPending"');
+        // The answer comes from AppDelegate, which also reads the file
+        expect(method('- (BOOL)keychainSurvivedReinstallFlag')).toContain(
+            'return KeychainSurvivedReinstall(StandardDefaultsPath());'
+        );
+        expect(audit).toContain('@"keychainSurvivedReinstallFlag"');
+        expect(
+            survived.match(/resolve\(SurvivedReinstall\(delegate\)\)/g)
+        ).toHaveLength(2);
+        expect(survived).toContain('@"ZeusFirstRunKeychainCheckDidRun"');
     });
 
     it('also runs the pending check when protected data becomes available', () => {

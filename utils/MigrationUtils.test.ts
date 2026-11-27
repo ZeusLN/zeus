@@ -1,4 +1,8 @@
 jest.mock('react-native-blob-util', () => ({}));
+const mockKeychainSurvivedReinstall = jest.fn(async () => false);
+jest.mock('./KeychainReinstallUtils', () => ({
+    keychainSurvivedReinstall: () => mockKeychainSurvivedReinstall()
+}));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
 }));
@@ -1914,6 +1918,80 @@ describe('MigrationUtils', () => {
 
         afterEach(() => {
             consoleErrorSpy.mockRestore();
+            mockKeychainSurvivedReinstall.mockResolvedValue(false);
+        });
+
+        it('leaves both partitions alone after a reinstall on the same device', async () => {
+            mockKeychainSurvivedReinstall.mockResolvedValue(true);
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:zeus-settings-v2'
+            ]);
+            StorageModule.getRawItem.mockImplementation(
+                async (_server: string, cloudSync: boolean) =>
+                    cloudSync ? '{"nodes":[{"nickname":"old"}]}' : null
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
+            expect(StorageModule.setRawLocalItem).not.toHaveBeenCalled();
+            // the flag stays unset, so autoPurgeLegacyKeychain does not run
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('reads no keychain partition until the first-run check answers', async () => {
+            // KeychainAudit holds the answer while the check waits for
+            // protected data after a locked launch
+            let answer: (reinstalled: boolean) => void = () => {};
+            mockKeychainSurvivedReinstall.mockImplementation(
+                () => new Promise<boolean>((resolve) => (answer = resolve))
+            );
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:zeus-settings-v2'
+            ]);
+
+            const migration = MigrationUtils.keychainDesyncMigration();
+            await new Promise((resolve) => setImmediate(resolve));
+
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
+            expect(StorageModule.getRawItem).not.toHaveBeenCalled();
+
+            answer(true);
+            await migration;
+
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
+            expect(StorageModule.setRawLocalItem).not.toHaveBeenCalled();
+        });
+
+        it('does not wait for the first-run check once the migration has run', async () => {
+            // A launch while the device is locked defers the first-run check
+            // until unlock. An existing install must still load its settings
+            // then, so the flag check comes before the reinstall question.
+            mockKeychainSurvivedReinstall.mockClear();
+            mockKeychainSurvivedReinstall.mockImplementation(
+                () => new Promise<boolean>(() => {})
+            );
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            const outcome = await Promise.race([
+                MigrationUtils.keychainDesyncMigration().then(() => 'done'),
+                new Promise((resolve) => setImmediate(() => resolve('waiting')))
+            ]);
+
+            expect(outcome).toEqual('done');
+            expect(mockKeychainSurvivedReinstall).not.toHaveBeenCalled();
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
+            mockKeychainSurvivedReinstall.mockImplementation(async () => false);
         });
 
         it('is a no-op off iOS', async () => {
@@ -2209,6 +2287,47 @@ describe('MigrationUtils', () => {
         afterEach(() => {
             consoleErrorSpy.mockRestore();
             consoleLogSpy.mockRestore();
+            mockKeychainSurvivedReinstall.mockResolvedValue(false);
+        });
+
+        describe('legacy entries only in the iCloud partition', () => {
+            beforeEach(() => {
+                // Absent locally, present in the synchronizable partition
+                Keychain.getInternetCredentials.mockImplementation(
+                    async (server: string, options?: any) =>
+                        options?.cloudSync && LEGACY[server]
+                            ? { username: server, password: LEGACY[server] }
+                            : false
+                );
+                StorageModule.getItem.mockResolvedValue(false);
+            });
+
+            const cloudReads = () =>
+                Keychain.getInternetCredentials.mock.calls.filter(
+                    (c: any[]) => c[1]?.cloudSync
+                );
+
+            it('migrates them on an install that is not a reinstall', async () => {
+                await MigrationUtils.keychainCloudSyncMigration();
+
+                expect(cloudReads().length).toBeGreaterThan(0);
+                expect(StorageModule.setItem).toHaveBeenCalledWith(
+                    STORAGE_KEY,
+                    SETTINGS
+                );
+            });
+
+            it('does not read or restore them after a reinstall on the same device', async () => {
+                mockKeychainSurvivedReinstall.mockResolvedValue(true);
+
+                await MigrationUtils.keychainCloudSyncMigration();
+
+                expect(cloudReads()).toEqual([]);
+                expect(StorageModule.setItem).not.toHaveBeenCalledWith(
+                    STORAGE_KEY,
+                    SETTINGS
+                );
+            });
         });
 
         const migratedFlagSet = () =>
