@@ -141,10 +141,16 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
     render() {
         const { ChannelsStore, NodeInfoStore, TransactionsStore, navigation } =
             this.props;
-        const { testnet } = NodeInfoStore;
+        const { testnet, regtest } = NodeInfoStore;
         const { loading } = TransactionsStore;
         const { infoIndex, txHex, txDecoded } = this.state;
         const pending_chan_ids = ChannelsStore.pendingChanIdsFor({ txHex });
+
+        const network = regtest
+            ? bitcoin.networks.regtest
+            : testnet
+            ? bitcoin.networks.testnet
+            : bitcoin.networks.bitcoin;
 
         const qrButton = () => (
             <Text
@@ -430,13 +436,17 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                     output: any,
                                                     index: number
                                                 ) => {
-                                                    // const decodedOutputScript = bitcoin.script.toASM(output.script);
-
-                                                    // Extract address from the output script
-                                                    const address =
-                                                        bitcoin.address.fromOutputScript(
-                                                            output.script
-                                                        );
+                                                    // Extract address from the output script;
+                                                    // non-standard scripts (e.g. OP_RETURN)
+                                                    // have no address form
+                                                    let address;
+                                                    try {
+                                                        address =
+                                                            bitcoin.address.fromOutputScript(
+                                                                output.script,
+                                                                network
+                                                            );
+                                                    } catch (e) {}
                                                     return (
                                                         <View
                                                             key={`output-${index}`}
@@ -478,6 +488,17 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                                             </Text>
                                                                         </TouchableOpacity>
                                                                     }
+                                                                    sensitive
+                                                                />
+                                                            )}
+                                                            {!address && (
+                                                                <KeyValue
+                                                                    keyValue={localeString(
+                                                                        'views.PSBT.script'
+                                                                    )}
+                                                                    value={output.script.toString(
+                                                                        'hex'
+                                                                    )}
                                                                     sensitive
                                                                 />
                                                             )}
