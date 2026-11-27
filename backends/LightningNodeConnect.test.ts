@@ -1784,6 +1784,40 @@ describe('LightningNodeConnect.fundingStateStep', () => {
     });
 });
 
+describe('LightningNodeConnect.publishTransaction', () => {
+    const sentFor = async (data: any) => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        // TransactionsStore shows lnd's publish_error to the user
+        const publishTransaction = jest.fn(async () => ({
+            publishError: 'insufficient fee'
+        }));
+        (lnc.lnd as any).walletKit = { publishTransaction };
+
+        await expect(backend.publishTransaction(data)).resolves.toEqual({
+            publish_error: 'insufficient fee'
+        });
+
+        expect(publishTransaction).toHaveBeenCalledTimes(1);
+        return (publishTransaction.mock.calls as any)[0][0];
+    };
+
+    // lnd reads the tx_hex bytes field as base64
+    it('sends a hex tx_hex as base64', async () => {
+        expect(await sentFor({ tx_hex: '02000000000101ff' })).toEqual({
+            tx_hex: 'AgAAAAABAf8='
+        });
+    });
+
+    it('sends the other fields unchanged', async () => {
+        expect(
+            await sentFor({ tx_hex: '02000000000101ff', label: 'ZEUS send' })
+        ).toEqual({ tx_hex: 'AgAAAAABAf8=', label: 'ZEUS send' });
+    });
+});
+
 describe('LightningNodeConnect.releaseOutput', () => {
     it('releases a leased output through the wallet kit', async () => {
         mockSettings.implementation = 'lightning-node-connect';
