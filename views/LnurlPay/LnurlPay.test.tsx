@@ -280,6 +280,20 @@ describe('LnurlPay fixed and variable requests', () => {
     });
 });
 
+describe('LnurlPay comment', () => {
+    it('limits the comment input to commentAllowed characters', async () => {
+        await renderView({
+            lnurlParams: { ...lnurlParams(1, 100000), commentAllowed: 600 }
+        });
+        expect(hostOfType('TextInput').props.maxLength).toBe(600);
+    });
+
+    it('shows no comment input when commentAllowed is 0', async () => {
+        await renderView({ lnurlParams: lnurlParams(1, 100000) });
+        expect(hostOfType('TextInput')).toBeUndefined();
+    });
+});
+
 describe('LnurlPay with invalid lnurlParams', () => {
     let alertSpy: jest.SpyInstance;
 

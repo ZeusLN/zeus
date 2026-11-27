@@ -749,6 +749,9 @@ export default class LnurlPay extends React.Component<
                                         this.setState({ comment: text });
                                     }}
                                     locked={loading}
+                                    // LUD-12: the service refuses a longer
+                                    // comment
+                                    maxLength={lnurl.commentAllowed}
                                 />
                             </>
                         ) : null}
