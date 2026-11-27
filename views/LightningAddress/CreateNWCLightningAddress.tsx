@@ -49,11 +49,49 @@ export default class CreateNWCLightningAddress extends React.Component<
     CreateNWCLightningAddressState
 > {
     isInitialFocus = true;
+    focusListener: any = null;
+    leaveOnFocus = false;
 
     state = {
         nwcConnectionString: '',
         tested: false,
         loading: false
+    };
+
+    componentDidMount() {
+        this.focusListener = this.props.navigation.addListener(
+            'focus',
+            this.handleFocus
+        );
+    }
+
+    componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
+        }
+    }
+
+    handleFocus = () => {
+        if (this.leaveOnFocus) {
+            // the address was saved while the screen was covered.
+            // onSaved() waits for another focus if it still is
+            this.leaveOnFocus = false;
+            this.onSaved();
+        }
+    };
+
+    // After a successful save. While the Lockscreen is up, lockRouteGuard
+    // drops a popTo(), so leave only while this screen is on top. When
+    // another screen covers it, leave on the next focus. Returns true if
+    // the screen left now
+    onSaved = () => {
+        const { navigation } = this.props;
+        if (!navigation.isFocused()) {
+            this.leaveOnFocus = true;
+            return false;
+        }
+        navigation.popTo('LightningAddress');
+        return true;
     };
 
     render() {
@@ -225,12 +263,13 @@ export default class CreateNWCLightningAddress extends React.Component<
                                                                 address_type:
                                                                     'nwc'
                                                             });
-                                                        if (response.success) {
-                                                            navigation.popTo(
-                                                                'LightningAddress'
-                                                            );
+                                                        if (
+                                                            response.success &&
+                                                            this.onSaved()
+                                                        ) {
                                                             return;
                                                         }
+                                                        // covered: turn the spinner off below
                                                     } catch (e) {
                                                         console.error(e);
                                                     }
@@ -245,9 +284,7 @@ export default class CreateNWCLightningAddress extends React.Component<
                                                             if (
                                                                 response.success
                                                             ) {
-                                                                navigation.popTo(
-                                                                    'LightningAddress'
-                                                                );
+                                                                this.onSaved();
                                                             }
                                                         })
                                                         .catch((e) =>
