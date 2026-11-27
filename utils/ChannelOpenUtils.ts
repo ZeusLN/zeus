@@ -1,6 +1,6 @@
 import * as bitcoin from 'bitcoinjs-lib';
-import { randomBytes } from 'react-native-randombytes';
 
+import { randomBytes } from './RandomUtils';
 import { LookupOptions, lookUpWithRetries } from './RequestTimeoutUtils';
 
 // Like an on-chain send, an OpenChannelSync request that timed out may
