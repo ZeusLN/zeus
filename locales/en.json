@@ -1184,6 +1184,7 @@
     "views.Tools.migration.export.failedToStopLnd": "Failed to stop LND. Please restart the app and try again.",
     "views.Tools.migration.import.noBackupFoundOlympus": "No channel backup was found on Olympus for this wallet.",
     "views.Tools.migration.import.backupFoundMessage": "A channel backup from {{date}} was found. Would you like to restore it?",
+    "views.Tools.migration.import.backupFoundMessageUnverified": "Olympus reports a channel backup from {{date}}. This backup was made by an older version of ZEUS and does not record when it was made, so the date could not be verified from the backup. Restoring a channel state older than your latest one can lose funds in a channel. Would you like to restore it?",
     "views.Tools.migration.import.waitingForLnd": "Waiting for LND to start...",
     "views.Tools.migration.import.downloadingFromOlympus": "Downloading channel backup from Olympus...",
     "views.Tools.migration.status.startingLnd": "Starting LND...",
