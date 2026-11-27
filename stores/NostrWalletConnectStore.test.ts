@@ -5595,6 +5595,37 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
             expect(connection.activity).toHaveLength(1);
         });
 
+        // An LSP would wrap the invoice in its own, which does not carry
+        // the hash
+        it('makes the invoice without an LSP', async () => {
+            const { store, connection, invoicesStore } = setup();
+            const createUnifiedInvoice = jest.spyOn(
+                invoicesStore,
+                'createUnifiedInvoice'
+            );
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-hash',
+                r_hash: 'dd'
+            });
+
+            const response = await (store as any).handleMakeInvoice(
+                connection,
+                {
+                    amount: 21_000,
+                    description: 'zap',
+                    description_hash: HASH
+                }
+            );
+
+            expect(response.error).toBeUndefined();
+            expect(createUnifiedInvoice).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    descriptionHash: HASH,
+                    noLsp: true
+                })
+            );
+        });
+
         it('accepts the hash in uppercase hex', async () => {
             const { store, connection } = setup();
             (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
