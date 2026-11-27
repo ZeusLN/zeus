@@ -84,8 +84,20 @@ export default class CashuSendingLightning extends React.Component<
     // later payments made while this screen stays mounted.
     private donationAttempted = false;
 
+    // The invoice this screen pays, read before anything else can replace
+    // CashuStore.payReq: the donation's getPayReq sets it to the donation
+    // invoice, paid or not. Left undefined when the store holds a different
+    // invoice than the route's, which payLnInvoiceFromEcash refuses to pay.
+    private readonly paidPayReq: CashuStore['payReq'];
+
     constructor(props: CashuSendingLightningProps) {
         super(props);
+        const { CashuStore, route } = props;
+        const paymentRequest = route.params?.paymentRequest;
+        this.paidPayReq =
+            paymentRequest && CashuStore.paymentRequest === paymentRequest
+                ? CashuStore.payReq
+                : undefined;
         this.state = {
             storedNotes: '',
             payingDonation: false,
@@ -256,13 +268,13 @@ export default class CashuSendingLightning extends React.Component<
             paymentError,
             paymentSuccess,
             error_msg,
-            payReq,
             paymentPreimage,
             paymentErrorMsg,
             noteKey,
             paymentDuration,
             paymentFee
         } = CashuStore;
+        const payReq = this.paidPayReq;
         const payment_hash = payReq && payReq.payment_hash;
         const paymentAmount =
             amountFromRoute > 0 ? amountFromRoute : payReq?.getRequestAmount;
