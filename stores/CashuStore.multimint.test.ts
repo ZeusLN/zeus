@@ -426,6 +426,71 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         expect(cdk.createMeltQuote).not.toHaveBeenCalled();
     });
 
+    it('skips a mint that quotes a negative fee instead of spending more than it holds', async () => {
+        const store = newStore({
+            balances: { [A]: 900, [B]: 800 },
+            selected: [A, B]
+        });
+        mintApi({
+            [A]: () => ({ fee: -100 }),
+            [B]: () => ({ fee: 1 })
+        });
+
+        await store.getPayReq(INVOICE);
+
+        // Counting -100 would make A's usable capacity 1000, plan 1000 sats
+        // from a mint holding 900, and take 100 off the fee shown
+        expect(store.multiMintPlannerSkips).toEqual([
+            { mintUrl: A, reason: 'invalidQuote' }
+        ]);
+        expect(planOf(store)).toEqual([{ mintUrl: B, amount: 799, fee: 1 }]);
+        expect(store.feeEstimate).toBe(1);
+        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+    });
+
+    it.each([
+        ['fractional', 1.5],
+        ['missing', undefined],
+        ['a string', '1'],
+        ['unsafe', Number.MAX_SAFE_INTEGER + 1]
+    ])('skips a mint whose probe fee is %s', async (_label, fee) => {
+        const store = newStore({
+            balances: { [A]: 900, [B]: 800 },
+            selected: [A, B]
+        });
+        mintApi({
+            [A]: () => ({ fee: fee as any }),
+            [B]: () => ({ fee: 1 })
+        });
+
+        await store.getPayReq(INVOICE);
+
+        expect(store.multiMintPlannerSkips).toEqual([
+            { mintUrl: A, reason: 'invalidQuote' }
+        ]);
+        expect(planOf(store)).toEqual([{ mintUrl: B, amount: 799, fee: 1 }]);
+    });
+
+    it('skips a mint whose re-quote for its share has a negative fee', async () => {
+        const store = newStore({
+            balances: { [A]: 600, [B]: 500 },
+            selected: [A, B]
+        });
+        mintApi({
+            [A]: (_amount, call) => (call === 0 ? { fee: 1 } : { fee: -5 }),
+            [B]: () => ({ fee: 1 })
+        });
+
+        await store.getPayReq(INVOICE);
+
+        // A drops out of the plan (re-quote skips are not copied into
+        // multiMintPlannerSkips, see the test further down) and B keeps
+        // the share it was given
+        expect(planOf(store)).toEqual([{ mintUrl: B, amount: 455, fee: 1 }]);
+        expect(store.feeEstimate).toBe(1);
+        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+    });
+
     it('shrinks a share when the re-quoted fee would overdraw the mint', async () => {
         const store = newStore({
             balances: { [A]: 600, [B]: 500 },
@@ -589,12 +654,13 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
 
 describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     const plannedStore = async (
-        balances: Record<string, number> = { [A]: 600, [B]: 500 }
+        balances: Record<string, number> = { [A]: 600, [B]: 500 },
+        fee = 1
     ) => {
         const store = newStore({ balances, selected: Object.keys(balances) });
         mintApi(
             Object.fromEntries(
-                Object.keys(balances).map((m) => [m, () => ({ fee: 1 })])
+                Object.keys(balances).map((m) => [m, () => ({ fee })])
             )
         );
         await store.getPayReq(INVOICE);
@@ -1557,12 +1623,12 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('records each MPP part with the quote CDK created for it', async () => {
-        const store = await plannedStore();
+        const store = await plannedStore(undefined, 3);
         cdk.createMeltQuote.mockImplementation(
             async (mintUrl: string, _r: string, options: any) => ({
                 id: `paid-${mintUrl}`,
                 amount: options.mpp.amount / 1000,
-                fee_reserve: mintUrl === A ? 3 : 0,
+                fee_reserve: mintUrl === A ? 2 : 0,
                 state: 'UNPAID',
                 expiry: 1234567890,
                 unit: 'sat',
@@ -1576,8 +1642,8 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
         // The planner's probe quote was never paid, so it is not recorded.
-        // The planner quoted fee 1 and expiry 9999999999 for both parts, so
-        // a falsy fallback would record B's fee reserve as 1.
+        // The planner quoted fee 3 and expiry 9999999999 for both parts, so
+        // a falsy fallback would record B's fee reserve as 3.
         expect(store.meltQuotes[0].meltQuote).toMatchObject({
             quote: `mpp-${A}-546`
         });
@@ -1588,7 +1654,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
                 expiry: p.meltResponse.quote!.expiry
             }))
         ).toEqual([
-            { quote: `paid-${A}`, fee_reserve: 3, expiry: 1234567890 },
+            { quote: `paid-${A}`, fee_reserve: 2, expiry: 1234567890 },
             { quote: `paid-${B}`, fee_reserve: 0, expiry: 1234567890 }
         ]);
     });
@@ -1619,6 +1685,76 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(
             onProgress.mock.calls.at(-1)[0].mints.map((m: any) => m.status)
         ).toEqual([MintPaymentStatus.FAILED, MintPaymentStatus.SUCCESS]);
+    });
+
+    it.each([
+        ['higher than planned', 2],
+        ['negative', -1],
+        ['fractional', 0.5],
+        ['missing', undefined]
+    ])(
+        'refuses to melt an MPP part whose CDK fee reserve is %s',
+        async (_label, feeReserve) => {
+            const store = await plannedStore();
+            const mppQuote = cdk.createMeltQuote.getMockImplementation()!;
+            cdk.createMeltQuote.mockImplementation(
+                async (mintUrl: string, request: string, options: any) =>
+                    mintUrl === A
+                        ? {
+                              ...(await mppQuote(mintUrl, request, options)),
+                              fee_reserve: feeReserve
+                          }
+                        : mppQuote(mintUrl, request, options)
+            );
+            cdk.melt.mockResolvedValue(paid(454, 0));
+            const onProgress = jest.fn();
+
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                onProgress
+            });
+
+            // The user approved a fee of 1 for A's part
+            expect(cdk.melt).not.toHaveBeenCalledWith(A, expect.anything());
+            expect(cdk.melt).toHaveBeenCalledWith(B, `cdk-mpp-${B}`);
+            expect(localeString).toHaveBeenCalledWith(
+                'stores.CashuStore.meltFeeAboveQuote',
+                {
+                    mintName: 'Mint A',
+                    quoted: String(feeReserve),
+                    approved: '1'
+                }
+            );
+            const final = onProgress.mock.calls.at(-1)[0];
+            expect(final.mints.map((m: any) => [m.status, m.error])).toEqual([
+                [
+                    MintPaymentStatus.FAILED,
+                    'stores.CashuStore.meltFeeAboveQuote'
+                ],
+                [MintPaymentStatus.SUCCESS, undefined]
+            ]);
+            expect(pendingQuotes(store)).not.toContain(`cdk-mpp-${A}`);
+        }
+    );
+
+    it('melts an MPP part whose CDK fee reserve is below the planned fee', async () => {
+        const store = await plannedStore();
+        const mppQuote = cdk.createMeltQuote.getMockImplementation()!;
+        cdk.createMeltQuote.mockImplementation(
+            async (mintUrl: string, request: string, options: any) => ({
+                ...(await mppQuote(mintUrl, request, options)),
+                fee_reserve: 0
+            })
+        );
+        cdk.melt.mockImplementation(async (mintUrl: string) =>
+            paid(mintUrl === A ? 546 : 454, 0)
+        );
+
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+
+        expect(cdk.melt).toHaveBeenCalledWith(A, `cdk-mpp-${A}`);
+        expect(cdk.melt).toHaveBeenCalledWith(B, `cdk-mpp-${B}`);
+        expect(store.paymentSuccess).toBe(true);
     });
 });
 
