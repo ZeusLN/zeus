@@ -1428,6 +1428,17 @@ export default class Receive extends React.Component<
         const belowDustLimit: boolean =
             Number(satAmount) !== 0 && Number(satAmount) < 546;
 
+        const showOnChainQR: boolean =
+            selectedIndex === 2 &&
+            !belowDustLimit &&
+            !!btcAddress &&
+            !creatingInvoice;
+
+        // Neutrino does not see mempool transactions, so embedded LND only
+        // learns of an incoming on-chain payment once it is mined
+        const showUnconfirmedReceiveWarning: boolean =
+            showOnChainQR && implementation === 'embedded-lnd';
+
         const windowSize = Dimensions.get('window');
 
         const tenMButton = () => (
@@ -2027,36 +2038,37 @@ export default class Receive extends React.Component<
                                                     displayAmount
                                                 />
                                             )}
-                                        {selectedIndex == 2 &&
-                                            !belowDustLimit &&
-                                            btcAddress &&
-                                            !creatingInvoice && (
-                                                <CollapsedQR
-                                                    value={btcAddress}
-                                                    copyValue={
-                                                        btcAddressCopyValue
-                                                    }
-                                                    expanded
-                                                    textBottom
-                                                    truncateLongValue
-                                                    logo={
-                                                        themeColor(
-                                                            'invertQrIcons'
-                                                        )
-                                                            ? OnChainIconWhite
-                                                            : OnChainIcon
-                                                    }
-                                                    nfcSupported={nfcSupported}
-                                                    satAmount={
-                                                        Number(satAmount) > 0
-                                                            ? roundUpToWholeSats(
-                                                                  satAmount
-                                                              )
-                                                            : undefined
-                                                    }
-                                                    displayAmount
-                                                />
-                                            )}
+                                        {showUnconfirmedReceiveWarning && (
+                                            <WarningMessage
+                                                message={localeString(
+                                                    'views.Receive.warningEmbeddedLndUnconfirmed'
+                                                )}
+                                                fontSize={15}
+                                            />
+                                        )}
+                                        {showOnChainQR && (
+                                            <CollapsedQR
+                                                value={btcAddress || ''}
+                                                copyValue={btcAddressCopyValue}
+                                                expanded
+                                                textBottom
+                                                truncateLongValue
+                                                logo={
+                                                    themeColor('invertQrIcons')
+                                                        ? OnChainIconWhite
+                                                        : OnChainIcon
+                                                }
+                                                nfcSupported={nfcSupported}
+                                                satAmount={
+                                                    Number(satAmount) > 0
+                                                        ? roundUpToWholeSats(
+                                                              satAmount
+                                                          )
+                                                        : undefined
+                                                }
+                                                displayAmount
+                                            />
+                                        )}
 
                                         {selectedIndex == 3 &&
                                             !lightningAddressLoading &&
