@@ -11,7 +11,7 @@ class LegacyKeychainStoreTest {
     private val prefs = MemoryPrefs()
     private val legacy = LegacyKeychainStore(prefs, keys)
 
-    // An entry laid out as react-native-keychain 10 writes it
+    // An entry laid out as react-native-keychain 10 writes it (11 adds :k)
     private fun writeAsLibrary(server: String, value: String) {
         val key = keys.getOrCreate(server)
         prefs.values["$server:u"] =
@@ -54,6 +54,7 @@ class LegacyKeychainStoreTest {
         legacy.write("zeus:a", "value")
 
         assertEquals("KeystoreAESGCM_NoAuth", prefs.values["zeus:a:c"])
+        assertEquals("internet", prefs.values["zeus:a:k"])
         assertEquals("zeus:a", String(AesGcm.decrypt(keys.get("zeus:a")!!, LegacyKeychainStore.decode(prefs.values["zeus:a:u"]!!))))
         assertEquals("value", String(AesGcm.decrypt(keys.get("zeus:a")!!, LegacyKeychainStore.decode(prefs.values["zeus:a:p"]!!))))
     }
@@ -67,6 +68,25 @@ class LegacyKeychainStoreTest {
 
         assertEquals(listOf(76, 4, 0), lines.map { it.length })
         assertTrue(encoded.endsWith("\n"))
+    }
+
+    @Test
+    fun readsAnEntryWithTheMarkersVersion11Writes() {
+        writeAsLibrary("zeus:a", "value")
+        prefs.values["zeus:a:k"] = "internet"
+
+        assertEquals("value", legacy.read("zeus:a"))
+    }
+
+    @Test
+    fun deleteRemovesTheMarkersVersion11Writes() {
+        writeAsLibrary("zeus:a", "value")
+        prefs.values["zeus:a:k"] = "internet"
+        prefs.values["zeus:a:a"] = "15"
+
+        legacy.delete("zeus:a")
+
+        assertTrue(prefs.values.isEmpty())
     }
 
     @Test

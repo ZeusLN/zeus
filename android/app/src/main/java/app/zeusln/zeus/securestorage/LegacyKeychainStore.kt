@@ -14,19 +14,24 @@ interface PrefsBackend {
 }
 
 /**
- * Reads and writes entries in react-native-keychain 10's Android format, so
- * existing data stays readable after the library is removed and an older
- * build still sees what this one writes (#4471, release K).
+ * Reads and writes entries in react-native-keychain's Android format (10.0.0
+ * and 11.0.0 store them the same way), so existing data stays readable after
+ * the library is removed and an older build still sees what this one writes
+ * (#4471, release K).
  *
  * Per entry (the library calls the server its service):
  * - `<server>:u` username, `<server>:p` password, `<server>:c` cipher name
  * - values are android.util.Base64.DEFAULT of AES-GCM output (12-byte IV,
  *   ciphertext, 128-bit tag), no authenticated data
  * - one Keystore key per entry, under the server name
+ * - from 11.0.0, `<server>:k` is "internet" for entries written through
+ *   setInternetCredentials, and `<server>:a` (an int) holds the
+ *   authenticators of entries that need user authentication. Reads ignore
+ *   both. Writes set `:k` as 11.0.0 does, and deletes remove both.
  *
- * Every ZEUS entry was written by react-native-keychain 9.2.2 or 10.0.0
- * with KeystoreAESGCM_NoAuth. Any other cipher name is reported as an error
- * rather than guessed at.
+ * Every ZEUS entry was written by react-native-keychain 9.2.2, 10.0.0 or
+ * 11.0.0 with KeystoreAESGCM_NoAuth, which never sets `:a`. Any other cipher
+ * name is reported as an error rather than guessed at.
  */
 class LegacyKeychainStore(private val prefs: PrefsBackend, private val keys: KeyProvider) {
 
@@ -49,13 +54,22 @@ class LegacyKeychainStore(private val prefs: PrefsBackend, private val keys: Key
             mapOf(
                 usernameName(server) to encode(AesGcm.encrypt(key, server.toByteArray(Charsets.UTF_8))),
                 passwordName(server) to encode(AesGcm.encrypt(key, value.toByteArray(Charsets.UTF_8))),
-                cipherName(server) to CIPHER_NAME
+                cipherName(server) to CIPHER_NAME,
+                kindName(server) to KIND_INTERNET
             )
         )
     }
 
     fun delete(server: String) {
-        prefs.removeAll(listOf(usernameName(server), passwordName(server), cipherName(server)))
+        prefs.removeAll(
+            listOf(
+                usernameName(server),
+                passwordName(server),
+                cipherName(server),
+                authenticatorsName(server),
+                kindName(server)
+            )
+        )
         keys.delete(server)
     }
 
@@ -70,10 +84,16 @@ class LegacyKeychainStore(private val prefs: PrefsBackend, private val keys: Key
     companion object {
         const val CIPHER_NAME = "KeystoreAESGCM_NoAuth"
         const val DATASTORE_NAME = "RN_KEYCHAIN"
+        const val KIND_INTERNET = "internet"
 
         fun usernameName(server: String) = "$server:u"
         fun passwordName(server: String) = "$server:p"
         fun cipherName(server: String) = "$server:c"
+        fun kindName(server: String) = "$server:k"
+
+        // An int preference in the library. DataStore keys compare by name,
+        // so removing it through a string key works.
+        fun authenticatorsName(server: String) = "$server:a"
 
         // android.util.Base64.DEFAULT: 76-character lines ending in "\n".
         // The MIME decoder ignores the line breaks.
