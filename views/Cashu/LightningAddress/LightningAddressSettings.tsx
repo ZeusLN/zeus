@@ -134,7 +134,8 @@ export default class CashuLightningAddressSettings extends React.Component<
             mintList
         } = this.state;
         const { updateSettingsGroup } = SettingsStore;
-        const { loading, update, error_msg } = LightningAddressStore;
+        const { loading, update, setMintUrl, error_msg } =
+            LightningAddressStore;
 
         const mintsNotConfigured = mintList.length === 0;
 
@@ -369,7 +370,9 @@ export default class CashuLightningAddressSettings extends React.Component<
                         ) : (
                             <View style={{ marginTop: 10 }}>
                                 <DropdownSetting
-                                    title={localeString('cashu.mint')}
+                                    title={localeString(
+                                        'views.Cashu.LightningAddress.receivingMint'
+                                    )}
                                     titleColor={themeColor('text')}
                                     selectedValue={
                                         CashuStore?.mintInfos[mintUrl]?.name ||
@@ -381,20 +384,24 @@ export default class CashuLightningAddressSettings extends React.Component<
                                         const prev = mintUrl;
                                         this.setState({ mintUrl: value });
                                         try {
-                                            await update({
-                                                mint_url: value
-                                            });
-                                            await updateSettingsGroup(
-                                                'lightningAddress',
-                                                {
-                                                    mintUrl: value
-                                                }
-                                            );
+                                            await setMintUrl(value);
                                         } catch (e) {
                                             this.setState({ mintUrl: prev });
                                         }
                                     }}
                                 />
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize: 14,
+                                        marginTop: 5
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.LightningAddress.receivingMintExplainer'
+                                    )}
+                                </Text>
                             </View>
                         )}
                         <ZeusPayPlusSettings navigation={navigation} />

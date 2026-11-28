@@ -31,6 +31,7 @@ import AmountInput, { getSatAmount } from '../../components/AmountInput';
 import Button from '../../components/Button';
 import CollapsedQR from '../../components/CollapsedQR';
 import EcashMintPicker from '../../components/EcashMintPicker';
+import LightningAddressMintPicker from '../../components/LightningAddressMintPicker';
 import Header from '../../components/Header';
 import HopPicker from '../../components/HopPicker';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -784,6 +785,15 @@ export default class ReceiveEcash extends React.Component<
                                                             }
                                                         />
                                                     </View>
+                                                )}
+
+                                            {posStatus !== 'active' &&
+                                                selectedIndex == 1 &&
+                                                !lightningAddressLoading &&
+                                                lightningAddress && (
+                                                    <LightningAddressMintPicker
+                                                        navigation={navigation}
+                                                    />
                                                 )}
 
                                             {selectedIndex == 1 &&
