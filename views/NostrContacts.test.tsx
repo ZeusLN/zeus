@@ -43,6 +43,8 @@ jest.mock('../utils/AddressUtils', () => ({
 }));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({ themeColor: () => '#ffffff' }));
+// ContactUtils downloads profile images with it
+jest.mock('react-native-blob-util', () => ({}));
 const mockGetItem = jest.fn();
 const mockSetItem = jest.fn();
 jest.mock('../storage', () => ({

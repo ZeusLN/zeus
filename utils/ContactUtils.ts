@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import RNFS from 'react-native-fs';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { isRemoteImageAllowed } from './LnurlPayUtils';
 
@@ -13,6 +14,52 @@ const sanitizeNostrProfile = (profile: any): any => {
     return Object.fromEntries(
         Object.entries(profile).filter(([, value]) => typeof value === 'string')
     );
+};
+
+// Largest profile picture or banner saved for a contact. A URL that keeps
+// sending data is cut off here instead of filling the app's storage.
+const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
+
+// Saves a profile image whose URL passed isRemoteImageAllowed. That check
+// saw only this URL, so a redirect, which could lead to a loopback or LAN
+// host or to plain http, is not followed. Returns whether a file was
+// saved; anything written for a refused or failed download is deleted.
+const downloadProfileImage = async (
+    fromUrl: string,
+    toFile: string
+): Promise<boolean> => {
+    let tooLarge = false;
+    try {
+        const task = ReactNativeBlobUtil.config({
+            path: toFile,
+            followRedirect: false
+        }).fetch('GET', fromUrl);
+        task.progress((received: number, total: number) => {
+            if (
+                Number(received) > MAX_PROFILE_IMAGE_BYTES ||
+                Number(total) > MAX_PROFILE_IMAGE_BYTES
+            ) {
+                tooLarge = true;
+                task.cancel();
+            }
+        });
+        const response = await task;
+        const status = Number(response.info().status);
+        // Progress is reported every 250 ms, so a fast response can end
+        // before it is checked
+        if (!tooLarge && status >= 200 && status < 300) {
+            const { size } = await RNFS.stat(toFile);
+            if (Number(size) <= MAX_PROFILE_IMAGE_BYTES) return true;
+        }
+    } catch (error) {
+        console.error('Error downloading profile image:', error);
+    }
+    try {
+        await RNFS.unlink(toFile);
+    } catch {
+        // nothing was written
+    }
+    return false;
 };
 
 const transformContactData = async (profile: any, npub?: string | null) => {
@@ -47,17 +94,9 @@ const transformContactData = async (profile: any, npub?: string | null) => {
             const bannerFilePath =
                 RNFS.DocumentDirectoryPath + '/' + bannerFileName;
 
-            try {
-                // Download the banner and save it locally
-                await RNFS.downloadFile({
-                    fromUrl: contact?.banner,
-                    toFile: bannerFilePath
-                }).promise;
-
+            if (await downloadProfileImage(contact.banner, bannerFilePath)) {
                 console.log('Banner download successful!');
                 transformedContact.banner = 'rnfs://' + bannerFileName;
-            } catch (bannerError) {
-                console.error('Error downloading banner:', bannerError);
             }
         }
 
@@ -67,17 +106,9 @@ const transformContactData = async (profile: any, npub?: string | null) => {
                 'nostrContactPhoto_' + transformedContact.contactId + '.png';
             const filePath = RNFS.DocumentDirectoryPath + '/' + fileName;
 
-            try {
-                // Download the image and save it locally
-                await RNFS.downloadFile({
-                    fromUrl: contact?.picture,
-                    toFile: filePath
-                }).promise;
-
+            if (await downloadProfileImage(contact.picture, filePath)) {
                 console.log('Download successful!');
                 transformedContact.photo = 'rnfs://' + fileName;
-            } catch (photoError) {
-                console.error('Error downloading photo:', photoError);
             }
         }
 
@@ -121,6 +152,7 @@ const toCardContact = (contact: any) => ({
 });
 
 export default {
+    MAX_PROFILE_IMAGE_BYTES,
     sanitizeNostrProfile,
     transformContactData,
     findContactByLightningAddress,
