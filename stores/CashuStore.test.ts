@@ -75,7 +75,7 @@ import InvoicesStore from './InvoicesStore';
 import BackendUtils from '../utils/BackendUtils';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
-import { connectivityStore, nodeInfoStore } from './Stores';
+import { activityStore, connectivityStore, nodeInfoStore } from './Stores';
 import Storage, { getRawItem } from '../storage';
 import CashuDevKit from '../cashu-cdk';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
@@ -2405,6 +2405,9 @@ describe('CashuStore single-mint melt state', () => {
         it('settles the in-flight record when the melt then returns Paid', async () => {
             const store = timedOutStore();
             await payUntilTimeout(store);
+            // the pay path synced and refreshed the activity at the timeout
+            const syncCalls = store.syncCDKBalances.mock.calls.length;
+            (activityStore.getSortedActivity as jest.Mock).mockClear();
 
             finishMelt({
                 state: 'Paid',
@@ -2421,7 +2424,9 @@ describe('CashuStore single-mint melt state', () => {
             // the melt result has the fee, unlike a quote reconcile settles
             expect(store.payments[0].getFee).toBe('3');
             expect(store.pendingMelts).toEqual([]);
+            expect(store.syncCDKBalances).toHaveBeenCalledTimes(syncCalls + 1);
             expect(store.syncCDKBalances).toHaveBeenLastCalledWith(true);
+            expect(activityStore.getSortedActivity).toHaveBeenCalled();
             expectReleased(store);
         });
 
@@ -2430,12 +2435,18 @@ describe('CashuStore single-mint melt state', () => {
             async (state) => {
                 const store = timedOutStore();
                 await payUntilTimeout(store);
+                const syncCalls = store.syncCDKBalances.mock.calls.length;
+                (activityStore.getSortedActivity as jest.Mock).mockClear();
 
                 finishMelt({ state, amount: 1000, fee_paid: 0 });
                 await settle();
 
                 expect(store.payments).toEqual([]);
                 expect(store.pendingMelts).toEqual([]);
+                expect(store.syncCDKBalances).toHaveBeenCalledTimes(
+                    syncCalls + 1
+                );
+                expect(activityStore.getSortedActivity).toHaveBeenCalled();
                 expectReleased(store);
             }
         );
@@ -2540,6 +2551,65 @@ describe('CashuStore single-mint melt state', () => {
             expect(store.payments).toEqual([]);
             expect(Storage.setItem).not.toHaveBeenCalled();
             expectReleased(store);
+        });
+
+        // The Sending screen does not block back, so the user can switch
+        // wallets before the timeout
+        it('records nothing when another wallet is loaded before the timeout', async () => {
+            const store = timedOutStore();
+            const paying = pay(store);
+            await jest.advanceTimersByTimeAsync(30_000);
+            store.walletSession++;
+            store.getNodeDir = () => 'walletB';
+            store.payments = [];
+            (Storage.setItem as jest.Mock).mockClear();
+            await jest.advanceTimersByTimeAsync(30_000);
+            await paying;
+
+            finishMelt({
+                state: 'Paid',
+                amount: 1000,
+                fee_paid: 3,
+                preimage: 'b'.repeat(64)
+            });
+            await settle();
+
+            const paymentWrites = (
+                Storage.setItem as jest.Mock
+            ).mock.calls.filter(([key]) => key.endsWith('-cashu-payments'));
+            expect(paymentWrites).toEqual([]);
+            expect(store.payments).toEqual([]);
+            expectReleased(store);
+        });
+
+        it('does not ask the mint about the melt from another wallet', async () => {
+            const store = timedOutStore();
+            await payUntilTimeout(store);
+            store.walletSession++;
+
+            failMelt(new Error('Subscription closed'));
+            await settle();
+
+            expect(CashuDevKit.checkMeltQuote).not.toHaveBeenCalled();
+            expectReleased(store);
+        });
+
+        it('logs a reconcile pass that fails after the melt throws', async () => {
+            const store = timedOutStore();
+            await payUntilTimeout(store);
+            const failure = new Error('disk full');
+            store.reconcilePendingMelts = jest.fn(() =>
+                Promise.reject(failure)
+            );
+
+            failMelt(new Error('Subscription closed'));
+            await settle();
+
+            expect(store.reconcilePendingMelts).toHaveBeenCalledTimes(1);
+            expect(console.error).toHaveBeenCalledWith(
+                'CashuStore: Error reconciling pending melts:',
+                failure
+            );
         });
     });
 });

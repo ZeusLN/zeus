@@ -4027,15 +4027,17 @@ export default class CashuStore {
      * returned; settled unpaid drops it. A melt that throws or returns
      * another state is left to reconcilePendingMelts, which asks the mint:
      * CDK also throws when it stops waiting while its saga still holds the
-     * quote, so a throw does not mean the payment failed.
+     * quote, so a throw does not mean the payment failed. Nothing is
+     * recorded once another wallet is loaded than the one the melt started
+     * in (session and nodeDir from before the melt).
      */
     private settleAbandonedMelt = async (
         melting: Promise<CDKMelted>,
         melt: PendingMelt,
+        session: number,
+        nodeDir: string,
         paymentHash?: string
     ) => {
-        const session = this.walletSession;
-        const nodeDir = this.getNodeDir();
         let reconcile = false;
         try {
             let result: CDKMelted;
@@ -4074,7 +4076,12 @@ export default class CashuStore {
             if (paymentHash) this.paymentHashesInFlight.delete(paymentHash);
             this.meltsInProgress.delete(melt.quote);
             if (reconcile && !this.walletChangedSince(session, nodeDir)) {
-                this.reconcilePendingMelts();
+                this.reconcilePendingMelts().catch((e) =>
+                    console.error(
+                        'CashuStore: Error reconciling pending melts:',
+                        e
+                    )
+                );
             }
         }
     };
@@ -5832,6 +5839,11 @@ export default class CashuStore {
                 fee_paid?: number;
             };
             heldQuote = pendingMelt.quote;
+            // The wallet this melt is for. The Sending screen does not
+            // block back, so another wallet can be loaded before the melt
+            // call returns or times out
+            const meltSession = this.walletSession;
+            const meltNodeDir = this.getNodeDir();
             const melting = this.trackAndMelt(pendingMelt, true);
             try {
                 meltResult = await this.meltInTime(melting);
@@ -5844,10 +5856,20 @@ export default class CashuStore {
                     // before the record is written, so the hold is released
                     // even if writing fails, and still finds the record:
                     // recordInFlightPayment adds it before its first await.
-                    this.settleAbandonedMelt(melting, pendingMelt, paymentHash);
+                    this.settleAbandonedMelt(
+                        melting,
+                        pendingMelt,
+                        meltSession,
+                        meltNodeDir,
+                        paymentHash
+                    );
                     heldQuote = undefined;
                     paymentHash = undefined;
-                    await this.recordInFlightPayment(pendingMelt, payReq);
+                    // Another wallet's payments are loaded. This melt is
+                    // still tracked in its own wallet's storage
+                    if (!this.walletChangedSince(meltSession, meltNodeDir)) {
+                        await this.recordInFlightPayment(pendingMelt, payReq);
+                    }
                     throw new Error(
                         localeString('stores.CashuStore.paymentInFlight')
                     );
