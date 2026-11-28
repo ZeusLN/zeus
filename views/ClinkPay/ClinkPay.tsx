@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { observer } from 'mobx-react';
+import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { nip19 } from 'nostr-tools';
@@ -25,9 +25,12 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getRawAmountFromSats } from '../../utils/AmountUtils';
 
+import SettingsStore from '../../stores/SettingsStore';
+
 interface ClinkPayProps {
     navigation: NativeStackNavigationProp<any, any>;
     route: Route<'ClinkPay', { noffer: string }>;
+    SettingsStore?: SettingsStore;
 }
 
 interface ClinkPayState {
@@ -63,6 +66,14 @@ const localizeRequestError = (e: any): string => {
                           'views.ClinkPay.errorOnionNotSupported'
                       )} (${e.detail})`
                     : localeString('views.ClinkPay.errorOnionNotSupported');
+            case 'TOR_NOT_SUPPORTED':
+                return localeString('views.ClinkPay.errorTorNotSupported');
+            case 'RELAY_NOT_ALLOWED':
+                return e.detail
+                    ? `${localeString(
+                          'views.ClinkPay.errorRelayNotAllowed'
+                      )} (${e.detail})`
+                    : localeString('views.ClinkPay.errorRelayNotAllowed');
             case 'RELAY_CONNECT_FAILED':
                 return e.detail
                     ? `${localeString(
@@ -99,6 +110,7 @@ const errorCodeToLocaleKey = (code?: NofferErrorCode): string | null => {
     }
 };
 
+@inject('SettingsStore')
 @observer
 export default class ClinkPay extends React.Component<
     ClinkPayProps,
@@ -176,9 +188,11 @@ export default class ClinkPay extends React.Component<
                 priceType === NofferPriceType.Fixed
                     ? undefined
                     : Number(satAmount);
-            res = await ClinkUtils.requestInvoiceFromNoffer(nofferData, {
-                amountSats
-            });
+            res = await ClinkUtils.requestInvoiceFromNoffer(
+                nofferData,
+                { amountSats },
+                { enableTor: !!this.props.SettingsStore?.enableTor }
+            );
         } catch (e: any) {
             this.setState({ loading: false });
             Alert.alert(

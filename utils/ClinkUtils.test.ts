@@ -11,6 +11,7 @@ import ClinkUtils, {
     verifyBolt11MatchesOffer,
     isOnionHostname,
     isOnionRelay,
+    isRelayAllowed,
     requestInvoiceFromNoffer,
     CLINK_KIND,
     CLINK_VERSION
@@ -580,7 +581,113 @@ describe('ClinkUtils', () => {
         });
     });
 
+    describe('isRelayAllowed', () => {
+        it('allows public wss:// relays, as Relay would dial them', () => {
+            [
+                'wss://relay.example',
+                'wss://relay.example:7777/nostr',
+                'wss://RELAY.example/',
+                // Relay dials these as wss://
+                'https://relay.example',
+                'relay.example',
+                'wss://8.8.8.8'
+            ].forEach((r) => expect(isRelayAllowed(r)).toBe(true));
+        });
+
+        it.each([
+            ['cleartext ws://', 'ws://relay.example'],
+            ['http://, which Relay dials as ws://', 'http://relay.example'],
+            ['loopback', 'wss://127.0.0.1:4869'],
+            ['localhost', 'wss://localhost'],
+            ['a private address', 'wss://192.168.1.1'],
+            ['a private address in another notation', 'wss://0xc0a80101'],
+            ['a fullwidth private address', 'wss://１９２.１６８.１.１'],
+            ['a link-local address', 'wss://169.254.169.254'],
+            ['the IPv6 loopback', 'wss://[::1]'],
+            ['an IPv6 unique local address', 'wss://[fd00::1]'],
+            ['credentials', 'wss://user:pass@relay.example'],
+            ['another scheme', 'ftp://relay.example'],
+            ['no host', 'wss://'],
+            ['an unparseable URL', 'wss://exa mple.com']
+        ])('refuses a relay with %s', (_label, r) => {
+            expect(isRelayAllowed(r)).toBe(false);
+        });
+    });
+
     describe('requestInvoiceFromNoffer', () => {
+        const offer = (relayUrl: string) => ({
+            pubkey,
+            relay: relayUrl,
+            offer: offerId,
+            priceType: NofferPriceType.Spontaneous
+        });
+
+        beforeEach(() => {
+            (Relay as unknown as jest.Mock).mockReset();
+            jest.spyOn(console, 'log').mockImplementation(() => {});
+            jest.spyOn(console, 'warn').mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('refuses to dial any relay with Use Tor on', async () => {
+            await expect(
+                requestInvoiceFromNoffer(offer(relay), {}, { enableTor: true })
+            ).rejects.toMatchObject({ code: 'TOR_NOT_SUPPORTED' });
+            expect(Relay).not.toHaveBeenCalled();
+        });
+
+        it('still names an onion relay with Use Tor on', async () => {
+            await expect(
+                requestInvoiceFromNoffer(
+                    offer('wss://abcdefg.onion'),
+                    {},
+                    { enableTor: true }
+                )
+            ).rejects.toMatchObject({ code: 'ONION_NOT_SUPPORTED' });
+        });
+
+        it.each([
+            'ws://relay.example',
+            'wss://127.0.0.1:4869',
+            'wss://192.168.1.1',
+            'wss://user:pass@relay.example'
+        ])('refuses the offer relay %p without dialling it', async (r) => {
+            await expect(
+                requestInvoiceFromNoffer(offer(r))
+            ).rejects.toMatchObject({ code: 'RELAY_NOT_ALLOWED', detail: r });
+            expect(Relay).not.toHaveBeenCalled();
+        });
+
+        it('refuses a bad extra relay before dialling the good one', async () => {
+            await expect(
+                requestInvoiceFromNoffer(
+                    offer(relay),
+                    {},
+                    { extraRelays: ['ws://10.0.0.2:7000'] }
+                )
+            ).rejects.toMatchObject({
+                code: 'RELAY_NOT_ALLOWED',
+                detail: 'ws://10.0.0.2:7000'
+            });
+            expect(Relay).not.toHaveBeenCalled();
+        });
+
+        it('dials a public wss:// relay with Use Tor off', async () => {
+            // The stub relay has no connect(), so the request fails after
+            // the relay is created
+            await expect(
+                requestInvoiceFromNoffer(
+                    offer(relay),
+                    { amountSats: 100 },
+                    { enableTor: false }
+                )
+            ).rejects.toThrow();
+            expect(Relay).toHaveBeenCalledWith(relay);
+        });
+
         it('refuses onion relays, however spelled, without dialling them', async () => {
             for (const onionRelay of [
                 'wss://abcdefg.onion',
