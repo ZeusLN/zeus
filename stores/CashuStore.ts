@@ -72,7 +72,10 @@ import CashuUtils, {
     selectUntrackedCdkMelts
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
-import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
+import {
+    isLnurlCallbackAllowed,
+    isRemoteImageAllowed
+} from '../utils/LnurlPayUtils';
 import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
@@ -213,6 +216,16 @@ interface ClaimTokenResponse {
     errorMessage: string;
     warningMessage?: string;
 }
+
+// A mint URL from a public Nostr mint recommendation (NIP-87). Mint
+// Discovery fetches /v1/info from the top recommendations before the user
+// picks a mint, so only public https hosts are accepted: the policy for
+// third-party URLs fetched without Tor (no loopback, private, link-local
+// or .onion hosts).
+const isDiscoverableMintUrl = (mintUrl: unknown): mintUrl is string =>
+    typeof mintUrl === 'string' &&
+    mintUrl.startsWith('https://') &&
+    isRemoteImageAllowed(mintUrl).ok;
 
 // Reason a mint was excluded by the multi-mint planner. 'selfSend' marks
 // the mint as the destination of the invoice (e.g. Nutshell's "internal
@@ -358,6 +371,9 @@ export default class CashuStore {
     @observable public reviewerProfiles: Map<string, ReviewerProfile> =
         new Map();
     @observable public mintInfoCache: Map<string, any> = new Map();
+    // Mint URLs fetchMintInfoBatch is fetching, so a render that runs
+    // before the answer does not send the request again
+    private mintInfoBatchInFlight = new Set<string>();
     @observable public loadingTrustedMints = false;
     @observable public loadingReviews = false;
     @observable public submittingReview = false;
@@ -2594,10 +2610,7 @@ export default class CashuStore {
         for (const event of events) {
             if (event.tagValue('k') === '38172' && event.tagValue('u')) {
                 const mintUrl = event.tagValue('u');
-                if (
-                    typeof mintUrl === 'string' &&
-                    mintUrl.startsWith('https://')
-                ) {
+                if (isDiscoverableMintUrl(mintUrl)) {
                     const count = (mintCounts.get(mintUrl) || 0) + 1;
                     mintCounts.set(mintUrl, count);
 
@@ -2705,31 +2718,43 @@ export default class CashuStore {
     };
 
     /**
-     * Fetches mint info (name, icon_url, etc.) for a list of mint URLs.
-     * Results are cached in mintInfoCache. Skips already-cached URLs.
+     * Fetches mint info (name, icon_url, etc.) for a list of recommended
+     * mint URLs. Results are cached in mintInfoCache. Skips URLs that are
+     * cached, already being fetched, or not public https hosts. The
+     * onboarding screens call this on every render until the info arrives.
      */
     @action
     public fetchMintInfoBatch = async (mintUrls: string[]) => {
-        const uncached = mintUrls.filter((url) => !this.mintInfoCache.has(url));
+        const uncached = Array.from(new Set(mintUrls)).filter(
+            (url) =>
+                isDiscoverableMintUrl(url) &&
+                !this.mintInfoCache.has(url) &&
+                !this.mintInfoBatchInFlight.has(url)
+        );
         if (uncached.length === 0) return;
 
-        const results = await Promise.allSettled(
-            uncached.map(async (mintUrl) => {
-                const info = await this.fetchMintInfo(mintUrl);
-                return { mintUrl, info };
-            })
-        );
+        uncached.forEach((url) => this.mintInfoBatchInFlight.add(url));
+        try {
+            const results = await Promise.allSettled(
+                uncached.map(async (mintUrl) => {
+                    const info = await this.fetchMintInfo(mintUrl);
+                    return { mintUrl, info };
+                })
+            );
 
-        runInAction(() => {
-            for (const result of results) {
-                if (result.status === 'fulfilled' && result.value.info) {
-                    this.mintInfoCache.set(
-                        result.value.mintUrl,
-                        result.value.info
-                    );
+            runInAction(() => {
+                for (const result of results) {
+                    if (result.status === 'fulfilled' && result.value.info) {
+                        this.mintInfoCache.set(
+                            result.value.mintUrl,
+                            result.value.info
+                        );
+                    }
                 }
-            }
-        });
+            });
+        } finally {
+            uncached.forEach((url) => this.mintInfoBatchInFlight.delete(url));
+        }
     };
 
     @action
