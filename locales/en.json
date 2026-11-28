@@ -982,6 +982,8 @@
     "views.ClinkPay.invoiceAmountMismatch": "Invoice amount does not match the offer",
     "views.ClinkPay.errorNoRelays": "No relay available for this CLINK offer",
     "views.ClinkPay.errorOnionNotSupported": "CLINK over .onion relays is not yet supported",
+    "views.ClinkPay.errorTorNotSupported": "CLINK payments are not available with Use Tor on yet. The relay connection would go over clearnet and show your IP address to the relay.",
+    "views.ClinkPay.errorRelayNotAllowed": "This offer's relay is not a public wss:// address",
     "views.ClinkPay.errorRelayConnectFailed": "Could not connect to the CLINK relay",
     "views.ClinkPay.errorRelayRejectedPublish": "Relay rejected the CLINK request",
     "views.ClinkPay.errorTimeout": "CLINK request timed out",

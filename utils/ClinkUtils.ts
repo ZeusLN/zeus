@@ -2,6 +2,7 @@ import { bech32 } from '@scure/base';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import BigNumber from 'bignumber.js';
 import Bolt11Utils from './Bolt11Utils';
+import { isLnurlCallbackAllowed } from './LnurlPayUtils';
 import {
     generateSecretKey,
     getPublicKey,
@@ -77,6 +78,8 @@ export const isNofferSuccess = (r: NofferResponse): r is NofferSuccess =>
 export type ClinkRequestErrorCode =
     | 'NO_RELAYS'
     | 'ONION_NOT_SUPPORTED'
+    | 'TOR_NOT_SUPPORTED'
+    | 'RELAY_NOT_ALLOWED'
     | 'RELAY_CONNECT_FAILED'
     | 'RELAY_REJECTED_PUBLISH'
     | 'TIMEOUT';
@@ -520,6 +523,24 @@ export const isOnionRelay = (relay: string): boolean => {
     return isOnionHostname(hostname);
 };
 
+// Whether the relay layer may dial a relay named in an offer. The offer's
+// author picks it, so it gets the policy for third-party callbacks: TLS
+// (wss://), no credentials, and no loopback, private, link-local or
+// reserved host, so an offer cannot send the phone to its own network.
+// Judged on the URL Relay opens its socket to, as for isOnionRelay.
+export const isRelayAllowed = (relay: string): boolean => {
+    let parsed: URL;
+    try {
+        parsed = new URL(nostrUtils.normalizeURL(relay));
+    } catch {
+        return false;
+    }
+    if (parsed.protocol !== 'wss:' || parsed.username || parsed.password) {
+        return false;
+    }
+    return isLnurlCallbackAllowed(`https://${parsed.host}/`).ok;
+};
+
 // Resolves to a CLINK response: either a success containing a bolt11
 // invoice, or an error containing a code and human-readable message.
 // Throws only on transport failure (no relay reachable / timeout).
@@ -529,6 +550,9 @@ export const requestInvoiceFromNoffer = async (
     options: {
         extraRelays?: string[];
         timeoutMs?: number;
+        // Use Tor: relays are not dialled, since the relay layer has no
+        // Tor transport
+        enableTor?: boolean;
     } = {}
 ): Promise<NofferResponse> => {
     const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -543,6 +567,15 @@ export const requestInvoiceFromNoffer = async (
     const onion = relays.find(isOnionRelay);
     if (onion) {
         throw new ClinkRequestError('ONION_NOT_SUPPORTED', onion);
+    }
+    // For the same reason, with Use Tor on a clearnet relay would see the
+    // device's IP address next to the offer being paid
+    if (options.enableTor) {
+        throw new ClinkRequestError('TOR_NOT_SUPPORTED');
+    }
+    const refused = relays.find((r) => !isRelayAllowed(r));
+    if (refused) {
+        throw new ClinkRequestError('RELAY_NOT_ALLOWED', refused);
     }
 
     const payload = buildClinkRequestPayload(noffer, params);
@@ -593,6 +626,7 @@ const ClinkUtils = {
     buildClinkRequestPayload,
     isValidClinkResponseEvent,
     requestInvoiceFromNoffer,
+    isRelayAllowed,
     isNofferSuccess,
     verifyBolt11MatchesOffer,
     ClinkRequestError,
