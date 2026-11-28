@@ -48,7 +48,6 @@ export default class CreateNWCLightningAddress extends React.Component<
     CreateNWCLightningAddressProps,
     CreateNWCLightningAddressState
 > {
-    isInitialFocus = true;
     focusListener: any = null;
     leaveOnFocus = false;
 

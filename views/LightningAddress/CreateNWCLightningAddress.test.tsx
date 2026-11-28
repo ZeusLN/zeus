@@ -294,6 +294,59 @@ describe('CreateNWCLightningAddress after a save while covered', () => {
             expect(navigation.popTo).not.toHaveBeenCalled();
         }
     );
+
+    // createNWC and update throw when ZEUS Pay answers with an error
+    it.each([
+        ['create', {}, CREATE, 'createNWC' as const],
+        ['switch', { switchTo: true }, SWITCH, 'update' as const]
+    ])(
+        'does not leave on the next focus after a rejected %s',
+        async (
+            _name: string,
+            params: any,
+            button: string,
+            call: 'createNWC' | 'update'
+        ) => {
+            jest.spyOn(console, 'log').mockImplementation(() => {});
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+            const { navigation, LightningAddressStore } = await renderCreate(
+                params
+            );
+            const handleFocus = focusHandler(navigation);
+            await act(async () => handleFocus());
+            await enterAndTest();
+            LightningAddressStore[call].mockRejectedValue(
+                new Error('ZEUS Pay error')
+            );
+
+            navigation.isFocused.mockReturnValue(false);
+            await startSave(button);
+            await act(flush);
+            expect(spinners()).toHaveLength(0);
+            navigation.isFocused.mockReturnValue(true);
+            await act(async () => handleFocus());
+
+            expect(navigation.popTo).not.toHaveBeenCalled();
+            jest.restoreAllMocks();
+        }
+    );
+});
+
+describe('CreateNWCLightningAddress connection test', () => {
+    it('does not offer to save after the test is rejected', async () => {
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        const { LightningAddressStore } = await renderCreate();
+        LightningAddressStore.testNWCConnectionString.mockRejectedValue(
+            new Error('NWC test failed')
+        );
+
+        await enterAndTest();
+
+        expect(findButton(TEST)).toBeDefined();
+        expect(findButton(CREATE)).toBeUndefined();
+        expect(LightningAddressStore.createNWC).not.toHaveBeenCalled();
+        jest.restoreAllMocks();
+    });
 });
 
 describe('CreateNWCLightningAddress focus listener', () => {
