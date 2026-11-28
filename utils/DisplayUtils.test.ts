@@ -14,6 +14,13 @@ describe('DisplayUtils', () => {
             expect(getAvatarInitials('   ')).toBe('');
         });
 
+        it('returns empty string for a name that is not a string', () => {
+            expect(getAvatarInitials(1 as any)).toBe('');
+            expect(getAvatarInitials(true as any)).toBe('');
+            expect(getAvatarInitials(['Mint'] as any)).toBe('');
+            expect(getAvatarInitials({ name: 'Mint' } as any)).toBe('');
+        });
+
         it('returns single initial for one word', () => {
             expect(getAvatarInitials('John')).toBe('J');
             expect(getAvatarInitials('Kaloudis')).toBe('K');
