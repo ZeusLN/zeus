@@ -45,7 +45,7 @@ class ZeusSecureStorageModule(context: ReactApplicationContext) :
         run(promise) { storage.get(server) }
 
     @ReactMethod
-    fun set(server: String, value: String, promise: Promise) =
+    fun set(server: String, value: String, cloudSync: Boolean, promise: Promise) =
         run(promise) { storage.set(server, value); true }
 
     @ReactMethod
