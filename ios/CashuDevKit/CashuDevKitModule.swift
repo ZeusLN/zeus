@@ -7,8 +7,9 @@ import ZeusCashuRestore
 
 /// Refuses every HTTP redirect, so the task completes with the 3xx
 /// response itself. checkExternalMintQuote checks the mint URL's scheme
-/// and host once, before the request. A followed redirect would go to a
-/// destination that check never saw: a loopback or LAN address, or plain
+/// and host once, before the request, and Mint Discovery checks the URLs
+/// it passes to fetchMintInfo. A followed redirect would go to a
+/// destination those checks never saw: a loopback or LAN address, or plain
 /// HTTP, which ATS allows here (NSAllowsArbitraryLoads). CDK's own mint
 /// transport does not follow redirects either.
 final class CashuNoRedirectSessionDelegate: NSObject, URLSessionTaskDelegate {
@@ -816,7 +817,8 @@ class CashuDevKitModule: RCTEventEmitter {
                     return
                 }
 
-                let (data, response) = try await URLSession.shared.data(from: requestUrl)
+                // A 3xx is returned as is and fails the 2xx check below
+                let (data, response) = try await CashuExternalQuoteFetch.data(from: requestUrl)
 
                 // Check HTTP response status
                 if let httpResponse = response as? HTTPURLResponse {

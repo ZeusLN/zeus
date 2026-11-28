@@ -886,6 +886,12 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 30000
                 connection.readTimeout = 30000
+                // Mint Discovery fetches this for mints from public Nostr
+                // recommendations, checked only as URLs. A followed redirect
+                // could send the GET to a loopback or LAN host. CDK's own
+                // mint transport does not follow redirects either, so a 3xx
+                // takes the non-2xx rejection below.
+                connection.instanceFollowRedirects = false
 
                 val responseCode = connection.responseCode
                 if (responseCode !in 200..299) {

@@ -42,14 +42,16 @@ const extractFetchHelper = (): string => {
     return source.slice(start, end);
 };
 
-// Body of checkExternalMintQuote, up to the next exported method
-const checkExternalMintQuoteBody = (): string => {
-    const start = source.indexOf('func checkExternalMintQuote(');
+// Body of a method, up to the next exported method
+const methodBody = (name: string): string => {
+    const start = source.indexOf(`func ${name}(`);
     expect(start).toBeGreaterThanOrEqual(0);
     const end = source.indexOf('@objc(', start);
     expect(end).toBeGreaterThan(start);
     return source.slice(start, end);
 };
+
+const checkExternalMintQuoteBody = () => methodBody('checkExternalMintQuote');
 
 // Runs one GET and prints the status, or the error, as JSON. "fixed" uses
 // the module's helper, "shared" uses URLSession.shared as master did.
@@ -79,6 +81,19 @@ describe('iOS checkExternalMintQuote redirects', () => {
         const body = checkExternalMintQuoteBody();
         expect(body).toContain('CashuExternalQuoteFetch.data(from: quoteUrl)');
         expect(body).not.toContain('URLSession.shared');
+    });
+
+    // Mint Discovery calls fetchMintInfo for mints from public Nostr
+    // recommendations, checked only as URLs
+    it('fetches mint info through the same helper', () => {
+        const body = methodBody('fetchMintInfo');
+        expect(body).toContain(
+            'CashuExternalQuoteFetch.data(from: requestUrl)'
+        );
+        expect(body).not.toContain('URLSession.shared');
+        expect(body).toMatch(
+            /guard \(200\.\.\.299\)\.contains\(httpResponse\.statusCode\) else \{\s*reject\("HTTP_ERROR"/
+        );
     });
 
     it('builds the helper session with a delegate that refuses every redirect', () => {
