@@ -214,6 +214,11 @@ interface ClaimTokenResponse {
     warningMessage?: string;
 }
 
+// A melt quote's fee_reserve: a whole number of sats, sent as a JSON number
+// (NUT-05)
+const isWholeSats = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+
 // Reason a mint was excluded by the multi-mint planner. 'selfSend' marks
 // the mint as the destination of the invoice (e.g. Nutshell's "internal
 // mpp not allowed") — the user can act on this by selecting a different
@@ -225,6 +230,7 @@ type MultimintSkipReason =
     | 'addFailed'
     | 'feeOverBalance'
     | 'requoteFailed'
+    | 'invalidQuote'
     | 'networkError';
 
 export default class CashuStore {
@@ -1552,6 +1558,13 @@ export default class CashuStore {
                 };
             }
             const json = await response.json();
+            // The planner adds this fee to the total the user approves and
+            // subtracts it from the mint's balance. A negative fee would
+            // hide another mint's fee in that total and let the planner
+            // give this mint more than it holds.
+            if (!isWholeSats(json?.fee_reserve)) {
+                return { ok: false, reason: 'invalidQuote' };
+            }
             return { ok: true, quote: json };
         } catch {
             return { ok: false, reason: 'networkError' };
@@ -6139,6 +6152,28 @@ export default class CashuStore {
                             throw new Error(
                                 localeString(
                                     'stores.CashuStore.errorPayingInvoice'
+                                )
+                            );
+                        }
+                        // The fee the user approved is the planner's quote
+                        // for this part. CDK's quote is a new one, so the
+                        // mint could now ask for a higher fee reserve.
+                        const plannedFee = Number(meltQuote.fee_reserve) || 0;
+                        if (
+                            !useRegularMelt &&
+                            !(
+                                isWholeSats(quote.fee_reserve) &&
+                                quote.fee_reserve <= plannedFee
+                            )
+                        ) {
+                            throw new Error(
+                                localeString(
+                                    'stores.CashuStore.meltFeeAboveQuote',
+                                    {
+                                        mintName: this.getMintName(mintUrl),
+                                        quoted: String(quote.fee_reserve),
+                                        approved: String(plannedFee)
+                                    }
                                 )
                             );
                         }
