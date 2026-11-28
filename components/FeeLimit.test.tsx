@@ -306,9 +306,64 @@ describe('FeeLimit fee estimate warning', () => {
         expect(screen.queryByText(warning)).not.toBeOnTheScreen();
     });
 
+    // an empty fixed field is no limit to compare with, not a 0 sat cap
+    it('does not warn when the fixed limit is cleared', async () => {
+        await renderFeeLimit({
+            feeEstimate: '150',
+            displayFeeRecommendation: true
+        });
+        expect(screen.getByText(warning)).toBeOnTheScreen();
+
+        await fireEvent.changeText(fixedField(), '');
+
+        expect(screen.queryByText(warning)).not.toBeOnTheScreen();
+    });
+
     it('does not warn unless asked to', async () => {
         await renderFeeLimit({ feeEstimate: '150' });
 
         expect(screen.queryByText(warning)).not.toBeOnTheScreen();
+    });
+
+    // the warning checks the limit that is sent: the percent amount in
+    // percent mode, as onFeeLimitSatChange reports it
+    it('warns when the estimate is over the percent limit', async () => {
+        await renderFeeLimit({
+            satAmount: 5_000,
+            feeOption: 'percent',
+            payments: { defaultFeeFixed: '1000', defaultFeePercentage: '2' },
+            feeEstimate: '200',
+            displayFeeRecommendation: true
+        });
+
+        expect(percentShown()).toBe('100');
+        expect(screen.getByText(warning)).toBeOnTheScreen();
+    });
+
+    it('does not warn when the estimate fits the percent limit but not the fixed one', async () => {
+        await renderFeeLimit({
+            satAmount: 10_000,
+            feeOption: 'percent',
+            feeEstimate: '200',
+            displayFeeRecommendation: true
+        });
+
+        expect(percentShown()).toBe('500');
+        expect(screen.queryByText(warning)).not.toBeOnTheScreen();
+    });
+
+    it('updates the warning when the fee option is switched', async () => {
+        await renderFeeLimit({
+            satAmount: 10_000,
+            feeEstimate: '200',
+            displayFeeRecommendation: true
+        });
+        expect(screen.getByText(warning)).toBeOnTheScreen();
+
+        await fireEvent(percentField(), 'pressIn');
+        expect(screen.queryByText(warning)).not.toBeOnTheScreen();
+
+        await fireEvent(fixedField(), 'pressIn');
+        expect(screen.getByText(warning)).toBeOnTheScreen();
     });
 });
