@@ -38,6 +38,18 @@ interface FeeLimitState {
     satAmount: string;
 }
 
+// The fee limit that is sent: the percent amount in percent mode on a
+// backend with a custom fee limit, otherwise the fixed limit. Both the
+// reported limit and the fee estimate warning use it, so they stay the same.
+const activeFeeLimit = (
+    feeOption: string,
+    percentAmount: string,
+    feeLimitSat: string
+) =>
+    BackendUtils.supportsCustomFeeLimit() && feeOption === 'percent'
+        ? percentAmount
+        : feeLimitSat;
+
 @inject('SettingsStore', 'InvoicesStore')
 @observer
 export default class FeeLimit extends React.Component<
@@ -84,19 +96,21 @@ export default class FeeLimit extends React.Component<
                         },
                         () => {
                             onFeeLimitSatChange(
-                                BackendUtils.supportsCustomFeeLimit() &&
-                                    this.state.feeOption === 'percent'
-                                    ? percentAmount
-                                    : feeLimitSat
+                                activeFeeLimit(
+                                    this.state.feeOption,
+                                    percentAmount,
+                                    feeLimitSat
+                                )
                             );
                         }
                     );
                 } else {
                     onFeeLimitSatChange(
-                        BackendUtils.supportsCustomFeeLimit() &&
-                            this.state.feeOption === 'percent'
-                            ? percentAmount
-                            : feeLimitSat
+                        activeFeeLimit(
+                            this.state.feeOption,
+                            percentAmount,
+                            feeLimitSat
+                        )
                     );
                 }
             }
@@ -128,10 +142,7 @@ export default class FeeLimit extends React.Component<
 
             if (percentUpdated || satAmountUpdated) {
                 onFeeLimitSatChange(
-                    BackendUtils.supportsCustomFeeLimit() &&
-                        feeOption === 'percent'
-                        ? percentAmount
-                        : feeLimitSat
+                    activeFeeLimit(feeOption, percentAmount, feeLimitSat)
                 );
             }
         }
@@ -150,12 +161,7 @@ export default class FeeLimit extends React.Component<
 
     feeRecommendation = () => {
         const { feeLimitSat, feeOption, percentAmount } = this.state;
-        // the limit onFeeLimitSatChange reports, so the warning checks
-        // what is sent
-        const limit =
-            BackendUtils.supportsCustomFeeLimit() && feeOption === 'percent'
-                ? percentAmount
-                : feeLimitSat;
+        const limit = activeFeeLimit(feeOption, percentAmount, feeLimitSat);
         const { InvoicesStore } = this.props;
         const { feeEstimate } = InvoicesStore!;
 

@@ -306,6 +306,19 @@ describe('FeeLimit fee estimate warning', () => {
         expect(screen.queryByText(warning)).not.toBeOnTheScreen();
     });
 
+    // an empty fixed field is no limit to compare with, not a 0 sat cap
+    it('does not warn when the fixed limit is cleared', async () => {
+        await renderFeeLimit({
+            feeEstimate: '150',
+            displayFeeRecommendation: true
+        });
+        expect(screen.getByText(warning)).toBeOnTheScreen();
+
+        await fireEvent.changeText(fixedField(), '');
+
+        expect(screen.queryByText(warning)).not.toBeOnTheScreen();
+    });
+
     it('does not warn unless asked to', async () => {
         await renderFeeLimit({ feeEstimate: '150' });
 
