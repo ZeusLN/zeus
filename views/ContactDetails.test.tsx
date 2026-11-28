@@ -67,6 +67,14 @@ const iconsOfType = (type: string) =>
     screen.container.queryAll((n) => n.type === type);
 
 describe('ContactDetails', () => {
+    // the jest config does not reset mocks between tests
+    beforeEach(() => {
+        (Storage.getItem as jest.Mock).mockImplementation(() =>
+            Promise.resolve(null)
+        );
+        (Storage.setItem as jest.Mock).mockClear();
+    });
+
     it('shows NIP-05 with the Nostrich icon in the same yellow as the other address icons', async () => {
         await renderNostrContact({
             photo: '',
