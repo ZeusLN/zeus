@@ -5,12 +5,58 @@ import ContactUtils from './ContactUtils';
 // Mocking the dependencies
 jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: '/mocked/document/directory',
-    downloadFile: jest.fn(() => ({ promise: Promise.resolve() }))
+    stat: jest.fn(),
+    unlink: jest.fn()
+}));
+
+// A react-native-blob-util fetch task: reports `progress` events, then
+// resolves with `status` unless it was cancelled first
+const fakeTask = ({
+    status = 200,
+    progress = [] as [number, number][]
+} = {}) => {
+    let reject!: (error: any) => void;
+    let onProgress: (received: number, total: number) => void = () => {};
+    const task: any = new Promise((resolve, rej) => {
+        reject = rej;
+        setImmediate(() => {
+            progress.forEach(([received, total]) =>
+                onProgress(received, total)
+            );
+            resolve({ info: () => ({ status }) });
+        });
+    });
+    task.progress = jest.fn((fn) => {
+        onProgress = fn;
+        return task;
+    });
+    task.cancel = jest.fn(() => reject(new Error('canceled')));
+    return task;
+};
+
+const mockFetch = jest.fn();
+const mockConfig = jest.fn();
+jest.mock('react-native-blob-util', () => ({
+    __esModule: true,
+    default: { config: (options: any) => mockConfig(options) }
 }));
 
 jest.mock('uuid', () => ({
     v4: jest.fn(() => 'mocked-uuid')
 }));
+
+beforeEach(() => {
+    mockFetch.mockReset().mockImplementation(() => fakeTask());
+    mockConfig.mockReset().mockImplementation(() => ({ fetch: mockFetch }));
+    (RNFS.stat as jest.Mock).mockReset().mockResolvedValue({ size: '2048' });
+    (RNFS.unlink as jest.Mock).mockReset().mockResolvedValue(undefined);
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+afterEach(() => {
+    jest.restoreAllMocks();
+});
 
 describe('ContactUtils', () => {
     describe('transformContactData', () => {
@@ -146,9 +192,7 @@ describe('ContactUtils', () => {
             expect(second.banner).toBe('rnfs://nostrContactBanner_uuid-2.png');
         });
 
-        it('downloads the picture and banner from public https hosts', async () => {
-            (RNFS.downloadFile as jest.Mock).mockClear();
-
+        it('downloads the picture and banner from public https hosts without following redirects', async () => {
             const transformedContact: any =
                 await ContactUtils.transformContactData({
                     name: 'Friend',
@@ -156,16 +200,127 @@ describe('ContactUtils', () => {
                     banner: 'https://cdn.example/banner.png'
                 });
 
-            expect(
-                (RNFS.downloadFile as jest.Mock).mock.calls.map(
-                    ([options]) => options.fromUrl
-                )
-            ).toEqual([
-                'https://cdn.example/banner.png',
-                'https://cdn.example/friend.png'
+            expect(mockFetch.mock.calls).toEqual([
+                ['GET', 'https://cdn.example/banner.png'],
+                ['GET', 'https://cdn.example/friend.png']
             ]);
-            expect(transformedContact.photo).toContain('rnfs://');
-            expect(transformedContact.banner).toContain('rnfs://');
+            expect(mockConfig.mock.calls).toEqual([
+                [
+                    {
+                        path: '/mocked/document/directory/nostrContactBanner_mocked-uuid.png',
+                        followRedirect: false
+                    }
+                ],
+                [
+                    {
+                        path: '/mocked/document/directory/nostrContactPhoto_mocked-uuid.png',
+                        followRedirect: false
+                    }
+                ]
+            ]);
+            expect(transformedContact.photo).toBe(
+                'rnfs://nostrContactPhoto_mocked-uuid.png'
+            );
+            expect(transformedContact.banner).toBe(
+                'rnfs://nostrContactBanner_mocked-uuid.png'
+            );
+            expect(RNFS.unlink).not.toHaveBeenCalled();
+        });
+
+        const mallory = {
+            name: 'Mallory',
+            picture: 'https://cdn.example/mallory.png'
+        };
+        const photoPath =
+            '/mocked/document/directory/nostrContactPhoto_mocked-uuid.png';
+
+        it.each([301, 302, 307, 404, 500])(
+            'keeps no picture when the host answers %p',
+            async (status) => {
+                mockFetch.mockImplementation(() => fakeTask({ status }));
+
+                const transformedContact: any =
+                    await ContactUtils.transformContactData(mallory);
+
+                expect(transformedContact.photo).toBe('');
+                expect(transformedContact.name).toBe('Mallory');
+                expect(RNFS.unlink).toHaveBeenCalledWith(photoPath);
+            }
+        );
+
+        it('stops a download that passes the size limit', async () => {
+            const limit = ContactUtils.MAX_PROFILE_IMAGE_BYTES;
+            const task = fakeTask({
+                progress: [
+                    [1024, -1],
+                    [limit + 1, -1],
+                    [limit + 2048, -1]
+                ]
+            });
+            mockFetch.mockReturnValue(task);
+
+            const transformedContact: any =
+                await ContactUtils.transformContactData(mallory);
+
+            expect(task.cancel).toHaveBeenCalled();
+            expect(transformedContact.photo).toBe('');
+            expect(RNFS.unlink).toHaveBeenCalledWith(photoPath);
+        });
+
+        it('stops a download whose Content-Length is over the limit', async () => {
+            const task = fakeTask({
+                progress: [[0, ContactUtils.MAX_PROFILE_IMAGE_BYTES + 1]]
+            });
+            mockFetch.mockReturnValue(task);
+
+            const transformedContact: any =
+                await ContactUtils.transformContactData(mallory);
+
+            expect(task.cancel).toHaveBeenCalledTimes(1);
+            expect(transformedContact.photo).toBe('');
+            expect(RNFS.unlink).toHaveBeenCalledWith(photoPath);
+        });
+
+        it('deletes a file over the limit that finished before any progress report', async () => {
+            (RNFS.stat as jest.Mock).mockResolvedValue({
+                size: String(ContactUtils.MAX_PROFILE_IMAGE_BYTES + 1)
+            });
+
+            const transformedContact: any =
+                await ContactUtils.transformContactData(mallory);
+
+            expect(RNFS.stat).toHaveBeenCalledWith(photoPath);
+            expect(transformedContact.photo).toBe('');
+            expect(RNFS.unlink).toHaveBeenCalledWith(photoPath);
+        });
+
+        it('keeps a picture at the size limit', async () => {
+            (RNFS.stat as jest.Mock).mockResolvedValue({
+                size: String(ContactUtils.MAX_PROFILE_IMAGE_BYTES)
+            });
+
+            const transformedContact: any =
+                await ContactUtils.transformContactData(mallory);
+
+            expect(transformedContact.photo).toBe(
+                'rnfs://nostrContactPhoto_mocked-uuid.png'
+            );
+            expect(RNFS.unlink).not.toHaveBeenCalled();
+        });
+
+        it('returns the contact without a picture when the download fails', async () => {
+            mockFetch.mockImplementation(() => {
+                throw new Error('network down');
+            });
+            (RNFS.unlink as jest.Mock).mockRejectedValue(
+                new Error('no such file')
+            );
+
+            const transformedContact: any =
+                await ContactUtils.transformContactData(mallory);
+
+            expect(transformedContact.photo).toBe('');
+            expect(transformedContact.name).toBe('Mallory');
         });
 
         it.each([
@@ -179,8 +334,6 @@ describe('ContactUtils', () => {
         ])(
             'does not download a picture or banner from %p',
             async (imageUrl) => {
-                (RNFS.downloadFile as jest.Mock).mockClear();
-
                 const transformedContact: any =
                     await ContactUtils.transformContactData({
                         name: 'Mallory',
@@ -188,7 +341,7 @@ describe('ContactUtils', () => {
                         banner: imageUrl
                     });
 
-                expect(RNFS.downloadFile).not.toHaveBeenCalled();
+                expect(mockFetch).not.toHaveBeenCalled();
                 expect(transformedContact.photo).toBe('');
                 expect(transformedContact.banner).toBe('');
             }
