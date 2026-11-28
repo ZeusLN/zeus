@@ -47,9 +47,10 @@ buildscript {
 allprojects {
     // op-sqlite's SQLCipher build depends on io.github.ronickg:openssl:3.3.2-1
     // (OpenSSL 3.3, out of support since 2026-04, published by one person).
-    // Use our own reproducible OpenSSL 3.6.2 build instead, matching iOS's
-    // OpenSSL-Universal 3.6.2. ZeusLN/openssl-android builds it;
-    // fetch-libraries.sh downloads it into android/openssl and checks it
+    // Use our own reproducible OpenSSL 3.6.2 build instead (iOS builds
+    // SQLCipher with CommonCrypto, see patch-op-sqlite-commoncrypto.mjs).
+    // ZeusLN/openssl-android builds it; fetch-libraries.sh downloads it
+    // into android/openssl and checks it
     // against fetch-libraries-versions.json. Keep the version here, the POM
     // under android/openssl and fetch-libraries-versions.json in step.
     configurations.all {
