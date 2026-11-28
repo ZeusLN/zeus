@@ -45,4 +45,13 @@ class StrongBoxFallbackTest {
             )
         }
     }
+
+    @Test
+    fun entryKeysUseStrongBoxOnlyFromAndroid12WithTheFeature() {
+        assertEquals(false, useStrongBoxForEntryKeys(28, hasStrongBox = true))
+        assertEquals(false, useStrongBoxForEntryKeys(30, hasStrongBox = true))
+        assertEquals(true, useStrongBoxForEntryKeys(31, hasStrongBox = true))
+        assertEquals(true, useStrongBoxForEntryKeys(36, hasStrongBox = true))
+        assertEquals(false, useStrongBoxForEntryKeys(31, hasStrongBox = false))
+    }
 }

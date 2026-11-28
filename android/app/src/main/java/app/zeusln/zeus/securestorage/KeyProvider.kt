@@ -22,12 +22,13 @@ interface KeyProvider {
 
 /**
  * Keys in the Android Keystore: AES-256, GCM, no padding, randomized IVs and
- * no user authentication. StrongBox is used when the device has it. This is
- * the same key shape react-native-keychain 10 creates for its
- * KeystoreAESGCM_NoAuth entries, so keys made here for the legacy format are
- * accepted by the library too.
+ * no user authentication. With [strongBox], a new key is made in StrongBox
+ * and falls back to a regular key when that fails; otherwise it is a regular
+ * key (TEE-backed where the device has one). This is the same key shape
+ * react-native-keychain creates for its KeystoreAESGCM_NoAuth entries, so
+ * keys made here for the legacy format are accepted by the library too.
  */
-class AndroidKeystoreKeyProvider : KeyProvider {
+class AndroidKeystoreKeyProvider(private val strongBox: Boolean) : KeyProvider {
     private val keyStore: KeyStore by lazy {
         KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
     }
@@ -42,10 +43,14 @@ class AndroidKeystoreKeyProvider : KeyProvider {
     }
 
     private fun generate(alias: String): SecretKey =
-        withStrongBoxFallback(
-            { generate(alias, strongBox = true) },
-            { generate(alias, strongBox = false) }
-        )
+        if (strongBox) {
+            withStrongBoxFallback(
+                { generate(alias, strongBox = true) },
+                { generate(alias, strongBox = false) }
+            )
+        } else {
+            generate(alias, strongBox = false)
+        }
 
     private fun generate(alias: String, strongBox: Boolean): SecretKey {
         val spec = KeyGenParameterSpec.Builder(
@@ -66,6 +71,19 @@ class AndroidKeystoreKeyProvider : KeyProvider {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
     }
 }
+
+/**
+ * Whether new per-entry keys for the legacy format go in StrongBox. Matches
+ * react-native-keychain 11, which uses StrongBox only from Android 12 (API
+ * 31) and only when the device reports the feature (oblador/
+ * react-native-keychain#754, for speed on older phones), so this build makes
+ * the same keys master does.
+ */
+internal fun useStrongBoxForEntryKeys(sdk: Int, hasStrongBox: Boolean): Boolean =
+    sdk >= STRONGBOX_MIN_SDK && hasStrongBox
+
+// Build.VERSION_CODES.S
+private const val STRONGBOX_MIN_SDK = 31
 
 /**
  * Tries [strongBox], then [regular]. Devices without StrongBox throw

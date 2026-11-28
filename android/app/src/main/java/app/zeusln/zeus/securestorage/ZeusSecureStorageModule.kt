@@ -1,6 +1,8 @@
 package app.zeusln.zeus.securestorage
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -66,10 +68,23 @@ class ZeusSecureStorageModule(context: ReactApplicationContext) :
         /** The app's store, for native code outside this module. Blocks on I/O. */
         @JvmStatic
         fun open(context: Context): SecureStorage {
-            val keys = AndroidKeystoreKeyProvider()
+            val entryKeys = AndroidKeystoreKeyProvider(
+                strongBox = useStrongBoxForEntryKeys(
+                    Build.VERSION.SDK_INT,
+                    context.packageManager.hasSystemFeature(
+                        PackageManager.FEATURE_STRONGBOX_KEYSTORE
+                    )
+                )
+            )
+            // The new store's one key is never in StrongBox. In release K
+            // every read decrypts with it and every write encrypts with it,
+            // on top of the legacy entry's own key, and from K+1 every read
+            // uses it. StrongBox is a separate, slower chip; a regular
+            // Keystore key is still hardware-backed and never leaves it.
+            val storeKey = AndroidKeystoreKeyProvider(strongBox = false)
             return SecureStorage(
-                SecureFileStore(File(context.filesDir, STORE_DIR), keys),
-                LegacyKeychainStore(DataStorePrefsBackend(context), keys)
+                SecureFileStore(File(context.filesDir, STORE_DIR), storeKey),
+                LegacyKeychainStore(DataStorePrefsBackend(context), entryKeys)
             )
         }
     }
