@@ -51,7 +51,7 @@ export interface BudgetRenewalOption {
     title: string;
 }
 
-const PRESET_INDEX = {
+export const PRESET_INDEX = {
     FIRST: 0,
     SECOND: 1,
     THIRD: 2,
