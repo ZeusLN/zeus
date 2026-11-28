@@ -39,12 +39,14 @@ jest.mock('../utils/PhotoUtils', () => ({
     getPhoto: (photo: string) => photo
 }));
 jest.mock('../storage', () => ({
-    getItem: jest.fn(() => Promise.resolve(null))
+    getItem: jest.fn(() => Promise.resolve(null)),
+    setItem: jest.fn(() => Promise.resolve(true))
 }));
 
 import * as React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { act, render, screen, waitFor } from '@testing-library/react-native';
 import ContactDetails from './ContactDetails';
+import Storage from '../storage';
 
 const renderNostrContact = async (nostrContact: any) => {
     await render(
@@ -84,5 +86,80 @@ describe('ContactDetails', () => {
         const nostrichIcons = iconsOfType('NostrichIcon');
         expect(nostrichIcons).toHaveLength(1);
         expect(nostrichIcons[0].props.fill).toBe('#FFD93F');
+    });
+
+    // a zeuscontact: card for a contact saved before v0.8.1 has an empty
+    // contactId (#5908)
+    it('saves a card with an empty contactId under a new one and keeps the stored contacts', async () => {
+        const stored = [
+            {
+                contactId: 'contact-alice',
+                name: 'Alice',
+                lnAddress: ['alice@example.com']
+            },
+            {
+                contactId: 'contact-carol',
+                name: 'Carol',
+                lnAddress: ['carol@example.com']
+            }
+        ];
+        (Storage.getItem as jest.Mock).mockResolvedValue(
+            JSON.stringify(stored)
+        );
+        const navigation = {
+            addListener: jest.fn(),
+            navigate: jest.fn(),
+            popTo: jest.fn()
+        };
+        await render(
+            <ContactDetails
+                {...({
+                    navigation,
+                    route: {
+                        params: {
+                            nostrContact: {
+                                contactId: '',
+                                name: 'Bob',
+                                description: '',
+                                lnAddress: ['bob@example.com'],
+                                bolt12Address: [],
+                                bolt12Offer: [],
+                                noffer: [],
+                                onchainAddress: [],
+                                nip05: [],
+                                nostrNpub: [],
+                                pubkey: [],
+                                cashuPubkey: []
+                            },
+                            isNostrContact: true
+                        }
+                    },
+                    ContactStore: { setPrefillContact: jest.fn() }
+                } as any)}
+            />
+        );
+        await waitFor(() =>
+            expect(screen.getByText('bob@example.com')).toBeOnTheScreen()
+        );
+
+        const saveButton = screen.root!.queryAll(
+            (n: any) => n.props.title === 'views.ContactDetails.saveToContacts'
+        )[0];
+        await act(async () => saveButton.props.onPress());
+
+        expect(Storage.setItem).toHaveBeenCalledTimes(1);
+        const [key, saved] = (Storage.setItem as jest.Mock).mock.calls[0];
+        expect(key).toBe('contacts');
+        expect(saved.map((c: any) => c.name)).toEqual([
+            'Alice',
+            'Bob',
+            'Carol'
+        ]);
+        expect(saved).toEqual(expect.arrayContaining(stored));
+        const bob = saved.find((c: any) => c.name === 'Bob');
+        expect(bob.contactId).toEqual(expect.any(String));
+        expect(bob.contactId).not.toBe('');
+        expect(bob.lnAddress).toEqual(['bob@example.com']);
+        expect(navigation.popTo).toHaveBeenCalledWith('Contacts');
     });
 });

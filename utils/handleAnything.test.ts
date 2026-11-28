@@ -60,6 +60,7 @@ let mockIsPsbt = false;
 let mockIsValidTxHex = false;
 let mockIsValidXpub = false;
 let mockIsJsonWalletExport = false;
+let mockIsKeystoreWalletExport = false;
 let mockIsValidWithdrawalRequest = false;
 let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
@@ -86,7 +87,12 @@ jest.mock('./AddressUtils', () => ({
     isValidNpub: () => mockIsValidNpub,
     isPsbt: () => mockIsPsbt,
     isValidTxHex: () => mockIsValidTxHex,
-    isKeystoreWalletExport: () => false,
+    isKeystoreWalletExport: () => mockIsKeystoreWalletExport,
+    // the real parser, so the route gets what it returns for a real export
+    processKeystoreWalletExport: (input: string) =>
+        jest
+            .requireActual('./AddressUtils')
+            .default.processKeystoreWalletExport(input),
     isJsonWalletExport: () => mockIsJsonWalletExport,
     isStringWalletExport: () => false,
     isWpkhDescriptor: () => false,
@@ -243,6 +249,7 @@ describe('handleAnything', () => {
         mockIsValidTxHex = false;
         mockIsValidXpub = false;
         mockIsJsonWalletExport = false;
+        mockIsKeystoreWalletExport = false;
         mockIsValidWithdrawalRequest = false;
         mockNodeNetwork = 'regtest';
     });
@@ -838,6 +845,50 @@ describe('handleAnything', () => {
             await handleAnything(lnurlValue);
 
             expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(lnurlValue);
+        });
+    });
+
+    describe('lnurl params with no route', () => {
+        const url = 'https://example.com/api/v1/lnurl/pay';
+
+        beforeEach(() => {
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+        });
+
+        it('alerts the tag of an lnurl it cannot handle', async () => {
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'unknownRequest',
+                domain: 'example.com'
+            });
+
+            const result = await handleAnything(url);
+
+            expect(result).toBeUndefined();
+            expect(alertSpy).toHaveBeenCalledTimes(1);
+            expect(alertSpy).toHaveBeenCalledWith(
+                localeString('general.error'),
+                `${localeString(
+                    'utils.handleAnything.unsupportedLnurlType'
+                )}: unknownRequest`,
+                [expect.objectContaining({ text: localeString('general.ok') })],
+                { cancelable: false }
+            );
+            alertSpy.mockRestore();
+        });
+
+        // a host policy refusal keeps its own message (see above); any other
+        // failure to fetch the params is reported as invalid params
+        it('rejects with the invalid params message when fetching them fails', async () => {
+            mockGetLnurlParamsFn.mockRejectedValue(
+                new Error('Network request failed')
+            );
+
+            await expect(handleAnything(url)).rejects.toThrow(
+                localeString('utils.handleAnything.invalidLnurlParams')
+            );
         });
     });
 
@@ -3759,6 +3810,39 @@ describe('handleAnything', () => {
             expect(result).toBeUndefined();
             expect(alertSpy).toHaveBeenCalledTimes(1);
             alertSpy.mockRestore();
+        });
+
+        describe('Keystore wallet export', () => {
+            // a Passport export, as in AddressUtils.test.ts
+            const PASSPORT_EXPORT =
+                '{"keystore": {"ckcc_xpub": "xpub6CikkQWpo5GK4aDK8KCkmZcHKdANfNorMPfVz2QoS4x6FMg38SeTahR8i666uEUk1ZoZhyM5uctHf1Rpddbbf4YpoaVcieYvZWRG6UU7gzN", "xpub": "zpub6rPHMjrf6SMGmAbYo2n1BjoHfZTGYcnrBchwYpCaC5hrMZJVdkyappjQkW1Gu3napr3BCvYCpwbPRaex52RdFXv2YFtTtUBu6xYYscVK2n9", "label": "Passport (AB88DE89)", "ckcc_xfp": 2313062571, "type": "hardware", "hw_type": "passport", "derivation": "m/84\'/0\'/0\'"}, "wallet_type": "standard", "use_encryption": false, "seed_version": 17}';
+
+            beforeEach(() => {
+                mockIsKeystoreWalletExport = true;
+                mockProcessBIP21Uri.mockReturnValue({ value: PASSPORT_EXPORT });
+            });
+
+            it('should route it to ImportAccount when accounts are supported', async () => {
+                mockSupportsAccounts = true;
+
+                const result = await handleAnything(PASSPORT_EXPORT);
+
+                expect(result).toStrictEqual([
+                    'ImportAccount',
+                    {
+                        name: 'Passport (AB88DE89)',
+                        extended_public_key:
+                            'zpub6rPHMjrf6SMGmAbYo2n1BjoHfZTGYcnrBchwYpCaC5hrMZJVdkyappjQkW1Gu3napr3BCvYCpwbPRaex52RdFXv2YFtTtUBu6xYYscVK2n9',
+                        master_key_fingerprint: 'AB88DE89'
+                    }
+                ]);
+            });
+
+            it('should not route it to ImportAccount when accounts are unsupported', async () => {
+                await expect(handleAnything(PASSPORT_EXPORT)).rejects.toThrow(
+                    localeString('utils.handleAnything.notValid')
+                );
+            });
         });
 
         it('should not route an xpub to ImportAccount when accounts are unsupported', async () => {
