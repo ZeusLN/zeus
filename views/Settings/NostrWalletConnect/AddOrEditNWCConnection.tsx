@@ -30,8 +30,10 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import NostrConnectUtils, {
     PermissionOption,
-    IndividualPermissionOption
+    IndividualPermissionOption,
+    PRESET_INDEX
 } from '../../../utils/NostrConnectUtils';
+import DateTimeUtils from '../../../utils/DateTimeUtils';
 import { numberWithCommas } from '../../../utils/UnitsUtils';
 import BackendUtils from '../../../utils/BackendUtils';
 import ValidationUtils from '../../../utils/ValidationUtils';
@@ -45,6 +47,9 @@ import NWCConnection, {
     PermissionType,
     TimeUnit
 } from '../../../models/NWCConnection';
+
+// selectedExpiryPresetIndex when the stored expiry is kept as it is
+const NO_EXPIRY_PRESET = -1;
 
 interface AddOrEditNWCConnectionProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -191,12 +196,24 @@ export default class AddOrEditNWCConnection extends React.Component<
                 ? parseInt(connection.maxAmountSats.toString(), 10)
                 : 0;
 
-            const selectedExpiryPresetIndex =
+            // The presets count from the moment they are picked, but this
+            // maps the span from createdAt. An expiry picked with a preset
+            // on a later day matches none of them, and the Custom input would
+            // open empty and block saving. Keep the stored date then, with no
+            // preset selected, until the user picks one.
+            const matchedExpiryPresetIndex =
                 NostrConnectUtils.getExpiryPresetIndex(
                     connection.expiresAt!,
                     connection.createdAt
                 );
-            const showCustomExpiryInput = selectedExpiryPresetIndex === 4;
+            const keepStoredExpiry =
+                matchedExpiryPresetIndex === PRESET_INDEX.CUSTOM &&
+                !connection.customExpiryValue;
+            const selectedExpiryPresetIndex = keepStoredExpiry
+                ? NO_EXPIRY_PRESET
+                : matchedExpiryPresetIndex;
+            const showCustomExpiryInput =
+                selectedExpiryPresetIndex === PRESET_INDEX.CUSTOM;
             let customExpiryValue = connection.customExpiryValue || null;
             let customExpiryUnit =
                 connection.customExpiryUnit || NostrConnectUtils.TIME_UNITS[1];
@@ -884,7 +901,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryUnit,
             budgetValue,
             selectedPermissions,
-            customRelayUrl
+            customRelayUrl,
+            expiresAt
         } = this.state;
         const budgetRenewalButtons: any =
             NostrConnectUtils.getBudgetRenewalOptions().map(
@@ -1429,6 +1447,29 @@ export default class AddOrEditNWCConnection extends React.Component<
                                             color: themeColor('secondary')
                                         }}
                                     />
+
+                                    {/* The stored expiry, kept until a preset is picked */}
+                                    {selectedExpiryPresetIndex ===
+                                        NO_EXPIRY_PRESET &&
+                                        expiresAt && (
+                                            <View
+                                                style={{
+                                                    marginHorizontal: 10,
+                                                    marginTop: 10
+                                                }}
+                                            >
+                                                <Body
+                                                    small
+                                                    color="secondaryText"
+                                                >
+                                                    {`${localeString(
+                                                        'general.expiresAt'
+                                                    )}: ${DateTimeUtils.formatDate(
+                                                        expiresAt
+                                                    )}`}
+                                                </Body>
+                                            </View>
+                                        )}
 
                                     {/* Custom Expiry Input */}
                                     {showCustomExpiryInput && (

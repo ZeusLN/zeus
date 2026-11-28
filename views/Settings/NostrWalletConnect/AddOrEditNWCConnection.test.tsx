@@ -9,7 +9,11 @@ jest.mock('../../../components/Screen', () => {
     const { View } = require('react-native');
     return ({ children }: any) => <View>{children}</View>;
 });
-jest.mock('../../../components/Accordion', () => () => null);
+// Renders its content, so the Advanced settings (expiry) can be checked
+jest.mock('../../../components/Accordion', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
 jest.mock('../../../components/Header', () => () => null);
 jest.mock('../../../components/Button', () => () => null);
 jest.mock('../../../components/TextInput', () => () => null);
@@ -75,7 +79,8 @@ const INFO_LABEL =
 
 const renderScreen = async (
     connectionPermissions?: string[],
-    relayUrl: string = 'wss://relay.example'
+    relayUrl: string = 'wss://relay.example',
+    connectionOverrides: Record<string, any> = {}
 ) => {
     const ref = React.createRef<any>();
     const ModalStore = { toggleInfoModal: jest.fn() };
@@ -91,7 +96,8 @@ const renderScreen = async (
                 permissions: connectionPermissions,
                 relayUrl,
                 createdAt: new Date(),
-                expiresAt: undefined
+                expiresAt: undefined,
+                ...connectionOverrides
             }
         }))
     };
@@ -179,5 +185,95 @@ describe('AddOrEditNWCConnection custom relay validation', () => {
         expect(screenInstance.isValidRelayUrl('ws://other.example.com')).toBe(
             false
         );
+    });
+});
+
+describe('AddOrEditNWCConnection editing the expiry', () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    const EXPIRES_AT_LABEL = 'general.expiresAt';
+
+    // Created 30 days ago, then set to 1 week on a later day: 37 days after
+    // createdAt, which matches no preset, with no custom expiry stored
+    const extendedLater = () => {
+        const now = Date.now();
+        return {
+            createdAt: new Date(now - 30 * DAY),
+            expiresAt: new Date(now + 7 * DAY),
+            customExpiryValue: undefined,
+            customExpiryUnit: undefined
+        };
+    };
+
+    it('keeps an expiry picked with a preset on a later day, instead of an empty Custom input', async () => {
+        const connection = extendedLater();
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getReadOnlyPermissions(),
+            'wss://relay.example',
+            connection
+        );
+
+        expect(ref.current.state.selectedExpiryPresetIndex).toBe(-1);
+        expect(ref.current.state.showCustomExpiryInput).toBe(false);
+        expect(ref.current.state.expiresAt).toEqual(connection.expiresAt);
+        expect(ref.current.isFormValid()).toBe(true);
+        expect(
+            screen.getByText(new RegExp(`^${EXPIRES_AT_LABEL}: `))
+        ).toBeTruthy();
+    });
+
+    it('saves a rename of such a connection without changing its expiry', async () => {
+        const connection = extendedLater();
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getReadOnlyPermissions(),
+            'wss://relay.example',
+            connection
+        );
+
+        await act(async () => {
+            ref.current.setState({ connectionName: 'Renamed' });
+        });
+        const params = await ref.current.buildConnectionParams(true, 'id');
+
+        expect(params.name).toBe('Renamed');
+        expect(params.expiresAt).toEqual(connection.expiresAt);
+        expect(params.customExpiryValue).toBeUndefined();
+    });
+
+    it('still opens the Custom input with the stored custom expiry', async () => {
+        const now = Date.now();
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getReadOnlyPermissions(),
+            'wss://relay.example',
+            {
+                createdAt: new Date(now - 30 * DAY),
+                expiresAt: new Date(now + 14 * DAY),
+                customExpiryValue: 2,
+                customExpiryUnit: NostrConnectUtils.TIME_UNITS[1]
+            }
+        );
+
+        expect(ref.current.state.selectedExpiryPresetIndex).toBe(4);
+        expect(ref.current.state.showCustomExpiryInput).toBe(true);
+        expect(ref.current.state.customExpiryValue).toBe(2);
+        expect(
+            screen.queryByText(new RegExp(`^${EXPIRES_AT_LABEL}: `))
+        ).toBeNull();
+    });
+
+    it('still selects the preset an expiry set on the day of creation matches', async () => {
+        const now = Date.now();
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getReadOnlyPermissions(),
+            'wss://relay.example',
+            {
+                createdAt: new Date(now),
+                expiresAt: new Date(now + 7 * DAY)
+            }
+        );
+
+        expect(ref.current.state.selectedExpiryPresetIndex).toBe(0);
+        expect(
+            screen.queryByText(new RegExp(`^${EXPIRES_AT_LABEL}: `))
+        ).toBeNull();
     });
 });
