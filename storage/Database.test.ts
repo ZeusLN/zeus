@@ -7,6 +7,9 @@ const mockFaults = {
     closes: 0,
     // SQL that should throw when executed on a keyed connection
     failSql: null as string | null,
+    // errors for the unkeyed encryption check: from open(), or from its query
+    probeOpen: null as string | null,
+    probeQuery: null as string | null,
     // every statement executed on a keyed connection, in order
     sql: [] as string[]
 };
@@ -57,6 +60,9 @@ jest.mock('@op-engineering/op-sqlite', () => ({
             location: string;
             encryptionKey?: string;
         }) => {
+            if (!encryptionKey && mockFaults.probeOpen) {
+                throw new Error(mockFaults.probeOpen);
+            }
             const path = `${location}/${name}`;
             let entry = mockDbs.get(path);
             if (!entry) {
@@ -79,6 +85,10 @@ jest.mock('@op-engineering/op-sqlite', () => ({
             };
             return {
                 execute: async (sql: string, params?: any[]) => {
+                    if (!encryptionKey && mockFaults.probeQuery) {
+                        if (closed) throw new Error('closed');
+                        throw new Error(mockFaults.probeQuery);
+                    }
                     guard();
                     if (encryptionKey) {
                         mockFaults.sql.push(sql);
@@ -150,6 +160,8 @@ describe('Database', () => {
         mockFaults.transaction = false;
         mockFaults.closes = 0;
         mockFaults.failSql = null;
+        mockFaults.probeOpen = null;
+        mockFaults.probeQuery = null;
         mockFaults.sql = [];
         mockPlatform.OS = 'ios';
         newSession();
@@ -314,6 +326,74 @@ describe('Database', () => {
         expect(open).toHaveBeenCalledWith(
             expect.objectContaining({ readOnly: true })
         );
+    });
+
+    describe('when the encryption check fails for a reason other than the key', () => {
+        const seedRow = async () => {
+            const first = await getDatabase();
+            await first!.execute(
+                "INSERT INTO lnurlpay_metadata VALUES ('m', 'meta', 1)"
+            );
+            newSession();
+            mockFaults.closes = 0;
+        };
+
+        const expectRowInLaterSession = async () => {
+            mockFaults.probeOpen = null;
+            mockFaults.probeQuery = null;
+            newSession();
+            const later = await getDatabase();
+            expect(
+                (await later!.execute('SELECT metadata FROM lnurlpay_metadata'))
+                    .rows
+            ).toEqual([{ metadata: 'meta' }]);
+        };
+
+        it('keeps the database when the check cannot open the file', async () => {
+            await seedRow();
+            const key = mockKeychain.get(DB_KEY_STORAGE_KEY);
+            mockFaults.probeOpen = 'unable to open database file';
+
+            await expect(getDatabase()).resolves.toBeNull();
+
+            expect(mockFiles.has(DB_PATH)).toBe(true);
+            expect(mockFiles.has(`${IOS_DIR}/zeus.db.unreadable`)).toBe(false);
+            expect(mockKeychain.get(DB_KEY_STORAGE_KEY)).toBe(key);
+            // the keyed connection; the check never opened one
+            expect(mockFaults.closes).toBe(1);
+            await expectRowInLaterSession();
+        });
+
+        it('keeps the database when the check cannot read the file', async () => {
+            await seedRow();
+            mockFaults.probeQuery = 'disk I/O error';
+
+            await expect(getDatabase()).resolves.toBeNull();
+
+            expect(mockFiles.has(DB_PATH)).toBe(true);
+            expect(mockFiles.has(`${IOS_DIR}/zeus.db.unreadable`)).toBe(false);
+            // the check's connection and the keyed one
+            expect(mockFaults.closes).toBe(2);
+            await expectRowInLaterSession();
+        });
+
+        it('takes a wrong-key error from opening the check as encrypted', async () => {
+            await seedRow();
+            const key = mockKeychain.get(DB_KEY_STORAGE_KEY);
+            mockFaults.probeOpen = 'file is not a database';
+
+            const database = await getDatabase();
+
+            expect(
+                (
+                    await database!.execute(
+                        'SELECT metadata FROM lnurlpay_metadata'
+                    )
+                ).rows
+            ).toEqual([{ metadata: 'meta' }]);
+            expect(mockFiles.has(`${IOS_DIR}/zeus.db.unreadable`)).toBe(false);
+            expect(mockKeychain.get(DB_KEY_STORAGE_KEY)).toBe(key);
+        });
     });
 
     it('closes the connection when the schema step fails', async () => {

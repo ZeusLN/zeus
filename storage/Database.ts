@@ -156,25 +156,33 @@ const deleteDatabaseFiles = async (dir: string) => {
 };
 
 /**
- * Whether the file is unreadable without its key. Opens it a second time,
+ * Whether the file can be read without its key. Opens it a second time,
  * read-only and with no key: SQLCipher encrypts every page, so the query
  * fails ("file is not a database") unless the key was never applied.
  * Nothing in op-sqlite 18.2.5 skips the key, but a later version that did
  * would otherwise store payment data unencrypted. (RNFS.read cannot do this
  * check: it fails on iOS under the New Architecture.)
+ *
+ * Only a successful read means plaintext. Any other failure (an I/O error,
+ * or the open itself failing) is thrown, so the caller keeps the file: it
+ * may hold records that are only in the database. A wrong-key error is
+ * never thrown from here, since openDatabase would take it for a key that
+ * does not open the file and move a good database aside.
  */
-const isEncrypted = async (dir: string): Promise<boolean> => {
+const isPlaintext = async (dir: string): Promise<boolean> => {
     let probe: DB;
     try {
         probe = open({ name: DB_NAME, location: dir, readOnly: true });
     } catch (e) {
-        return isWrongKeyError(e);
+        if (isWrongKeyError(e)) return false;
+        throw e;
     }
     try {
         await probe.execute('SELECT count(*) FROM sqlite_master');
-        return false;
+        return true;
     } catch (e) {
-        return isWrongKeyError(e);
+        if (isWrongKeyError(e)) return false;
+        throw e;
     } finally {
         probe.close();
     }
@@ -208,16 +216,19 @@ const enableWal = async (database: DB) => {
 /**
  * Bring an open database up to date, confirm it is encrypted, then switch
  * it to WAL. On any failure before that the connection is closed; a
- * plaintext file is also deleted.
+ * plaintext file is also deleted. A failed encryption check leaves the file
+ * in place, and the database is unavailable until the next attempt.
  */
 const prepare = async (dir: string, database: DB): Promise<DB> => {
+    let plaintext: boolean;
     try {
         await migrate(database);
+        plaintext = await isPlaintext(dir);
     } catch (e) {
         database.close();
         throw e;
     }
-    if (!(await isEncrypted(dir))) {
+    if (plaintext) {
         database.close();
         await deleteDatabaseFiles(dir);
         throw new Error('Database file is not encrypted');
