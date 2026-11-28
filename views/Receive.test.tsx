@@ -45,7 +45,8 @@ jest.mock('../utils/NFCUtils', () => ({
 }));
 jest.mock('../utils/UnitsUtils', () => ({
     SATS_PER_BTC: 100000000,
-    numberWithCommas: (x: string | number) => `${x}`
+    numberWithCommas: (x: string | number) => `${x}`,
+    satsToBip21Amount: (sats: string | number) => `${Number(sats) / 1e8}`
 }));
 jest.mock('../utils/AmountUtils', () => ({ getAmountFromSats: jest.fn() }));
 jest.mock('../utils/ExpiryUtils', () => ({
@@ -1271,21 +1272,22 @@ describe('Receive NFC lookups that were superseded', () => {
     });
 });
 
+// every element in a render() tree, without rendering child components
+const collect = (node: any, out: any[] = []): any[] => {
+    if (Array.isArray(node)) {
+        node.forEach((n) => collect(n, out));
+    } else if (node && typeof node === 'object' && node.props) {
+        out.push(node);
+        collect(node.props.children, out);
+    }
+    return out;
+};
+
 // What the payer and the user see next to an LSP-wrapped invoice: the fee
 // row and the amount under the QR. Both have to come from the quote the
 // shown invoice was priced with.
 describe('Receive LSP fee shown with the invoice', () => {
     beforeEach(() => jest.clearAllMocks());
-
-    const collect = (node: any, out: any[] = []): any[] => {
-        if (Array.isArray(node)) {
-            node.forEach((n) => collect(n, out));
-        } else if (node && typeof node === 'object' && node.props) {
-            out.push(node);
-            collect(node.props.children, out);
-        }
-        return out;
-    };
 
     const makeShownView = ({
         invoicesStore,
@@ -1468,6 +1470,106 @@ describe('Receive LSP fee shown with the invoice', () => {
         });
 
         expect(bareText(view.render())).toEqual([]);
+    });
+});
+
+// Neutrino does not see mempool transactions, so an embedded LND wallet shows
+// nothing for an incoming on-chain payment until its first confirmation
+describe('Receive unconfirmed on-chain payment warning', () => {
+    const WARNING = 'views.Receive.warningEmbeddedLndUnconfirmed';
+
+    const shown = ({
+        implementation = 'embedded-lnd',
+        selectedIndex = 2,
+        satAmount = '0',
+        invoicesStore = {}
+    }: {
+        implementation?: string;
+        selectedIndex?: number;
+        satAmount?: string;
+        invoicesStore?: any;
+    }) => {
+        const view = new Receive({
+            navigation: { navigate: jest.fn(), addListener: jest.fn() },
+            route: { params: {} },
+            SettingsStore: { settings: {}, implementation },
+            NodeInfoStore: { nodeInfo: {}, testnet: false },
+            InvoicesStore: {
+                payment_request: 'lnbc-unified',
+                onChainAddress: 'bc1qreceive',
+                creatingInvoice: false,
+                creatingInvoiceError: false,
+                ...invoicesStore
+            },
+            LSPStore: { flow_error_msg: '' },
+            UnitsStore: {},
+            LightningAddressStore: {},
+            ChannelsStore: {},
+            ModalStore: {}
+        } as unknown as React.ComponentProps<typeof Receive>);
+        view.state = {
+            ...view.state,
+            selectedIndex,
+            satAmount,
+            value: satAmount,
+            initialLoad: false
+        };
+        const elements = collect(view.render());
+        return {
+            warning: elements.some(
+                (e) =>
+                    e.type === 'WarningMessage' && e.props.message === WARNING
+            ),
+            onChainQR: elements.some(
+                (e) =>
+                    e.type === 'CollapsedQR' &&
+                    e.props.value === 'bitcoin:BC1QRECEIVE'
+            )
+        };
+    };
+
+    it('warns above the on-chain QR of an embedded LND wallet', () => {
+        expect(shown({})).toEqual({ warning: true, onChainQR: true });
+    });
+
+    it.each(['lnd', 'ldk-node', 'cln-rest', 'lightning-node-connect'])(
+        'does not warn on %s',
+        (implementation) => {
+            expect(shown({ implementation })).toEqual({
+                warning: false,
+                onChainQR: true
+            });
+        }
+    );
+
+    it.each([
+        ['unified', 0],
+        ['lightning', 1]
+    ])('does not warn on the %s tab', (_tab, selectedIndex) => {
+        expect(shown({ selectedIndex }).warning).toBe(false);
+    });
+
+    it('does not warn while the address is being created', () => {
+        expect(shown({ invoicesStore: { creatingInvoice: true } })).toEqual({
+            warning: false,
+            onChainQR: false
+        });
+    });
+
+    it('does not warn before an address exists', () => {
+        // a Lightning-only invoice is on screen and the on-chain tab has no
+        // address yet
+        expect(shown({ invoicesStore: { onChainAddress: null } })).toEqual({
+            warning: false,
+            onChainQR: false
+        });
+    });
+
+    it('does not warn below the dust limit, where no address is shown', () => {
+        expect(shown({ satAmount: '100' })).toEqual({
+            warning: false,
+            onChainQR: false
+        });
     });
 });
 

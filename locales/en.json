@@ -883,6 +883,7 @@
     "views.Receive.successCreateAndSentTo": "Successfully created invoice and sent to {{domain}}",
     "views.Receive.createInvoiceAndSubmitTo": "Create invoice and submit to {{domain}}",
     "views.Receive.warningLndHub": "Please note that LNDHub has a fixed on-chain address",
+    "views.Receive.warningEmbeddedLndUnconfirmed": "Your embedded node can't see unconfirmed transactions. Incoming payments to this address won't show as a pending balance and will appear after 1 confirmation.",
     "views.Receive.errorCreate": "Error creating invoice",
     "views.Receive.nfcNotWithdraw": "This card can't pay this invoice. Tap a Bolt Card or another LNURL-withdraw card.",
     "views.Receive.copyInvoice": "Copy Invoice",
